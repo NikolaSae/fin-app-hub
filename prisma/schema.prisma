@@ -1,0 +1,238 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String?
+  email                 String?                @unique
+  emailVerified         DateTime?              @map("email_verified")
+  image                 String?
+  password              String?
+  role                  UserRole               @default(USER)
+  accounts              Account[]
+  sessions              Session[]
+  //complaints     Complaint[]   @relation("UserComplaints") // Relation to Complaints
+  providers             Provider[]             @relation("UserProviders")
+  isTwoFactorEnabled    Boolean                @default(false)
+  twoFactorConfirmation TwoFactorConfirmation?
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at") // Last account update timestamp
+
+  @@map("users")
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+  @@map("password_reset_tokens")
+}
+
+model TwoFactorToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+  @@map("two_factor_tokens")
+}
+
+model TwoFactorConfirmation {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Provider {
+  id          String              @id @default(cuid()) // Unique identifier for the provider
+  name        String              @map("name") // Name of the provider
+  description String?             @map("description") // Optional description of the provider
+  categories  ProviderCategory[]  @relation("ProviderToCategories") // Many-to-Many Relation with Category
+  createdAt   DateTime            @default(now()) @map("created_at") // Timestamp for record creation
+  updatedAt   DateTime            @updatedAt @map("updated_at") // Timestamp for record update
+}
+
+
+model Category {
+  id               Int                 @id @default(autoincrement())
+  name             String              @map("name") // Name of the category
+  description      String?             @map("description") // Optional description
+  providerCategories ProviderCategory[] @relation("CategoryToProviders") // Relation to ProviderCategory
+  serviceCategories ServiceCategory[]  @relation("CategoryToServices") // Relation to ServiceCategory
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+}
+
+
+model ProviderCategory {
+  id          Int         @id @default(autoincrement())
+  providerId  String      @map("provider_id") // Foreign key for Provider
+  provider    Provider    @relation("ProviderToCategories", fields: [providerId], references: [id])
+  categoryId  Int         @map("category_id") // Foreign key for Category
+  category    Category    @relation("CategoryToProviders", fields: [categoryId], references: [id])
+  assignedAt  DateTime    @default(now()) @map("assigned_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+}
+
+
+model Service {
+  id          String   @id @default(cuid()) // Unique service ID
+  name        String   @map("name") // Name of the service
+  description String?  @map("description") // Optional description
+  price       Float?   @map("price") // Price of the service
+  providerId  String   @map("provider_id") // Foreign key for Provider
+  provider    Provider @relation("ServiceToProvider", fields: [providerId], references: [id])
+  complaints  Complaint[]      @relation("ComplaintToService") // Relation to Complaints
+  serviceCategories ServiceCategory[] @relation("ServiceToCategories")
+  createdAt   DateTime @default(now()) @map("created_at") // Created timestamp
+  updatedAt   DateTime @updatedAt @map("updated_at") // Last updated timestamp
+}
+
+model Customer {
+  id          String   @id @default(cuid()) // Unique customer ID
+  name        String   @map("name") // Customer's name
+  email       String?  @unique @map("email") // Optional, unique email
+  phoneNumber String   @map("phone_number") // Customer's phone number
+  address     String?  @map("address") // Optional address
+  createdAt   DateTime @default(now()) @map("created_at") // Created timestamp
+  updatedAt   DateTime @updatedAt @map("updated_at") // Last updated timestamp
+}
+
+model VasPostpaid {
+  id                                            Int      @id @default(autoincrement()) // Unique identifier
+  mesecPruzanjaUsluge                           String   @map("mesec_pruzanja_usluge") // Service month
+  jedinicnaCena                                 Decimal  @map("jedinicna_cena") // Unit price
+  brojTransakcija                               Int      @map("broj_transakcija") // Number of transactions
+  fakturisanIznos                               Decimal  @map("fakturisan_iznos") // Invoiced amount
+  fakturisanKorigovanIznos                      Decimal  @map("fakturisan_korigovan_iznos") // Adjusted invoice amount
+  naplacenIznos                                 Decimal  @map("naplacen_iznos") // Amount paid
+  kumulativNaplacenihIznosa                     Decimal  @map("kumulativ_naplacenih_iznosa") // Total amount paid cumulatively
+  nenaplacenIznos                               Decimal  @map("nenaplacen_iznos") // Unpaid amount
+  nenaplacenKorigovanIznos                      Decimal  @map("nenaplacen_korigovan_iznos") // Adjusted unpaid amount
+  storniranIznosUTekucemMesecuIzPeriodaPracenja Decimal  @map("storniran_iznos_u_tekucem_mesecu_iz_perioda_pracenja") // Reversed amount in the current month
+  otkazanIznos                                  Decimal  @map("otkazan_iznos") // Canceled amount
+  kumulativOtkazanihIznosa                      Decimal  @map("kumulativ_otkazanih_iznosa") // Canceled cumulative amount
+  iznosZaPrenosSredstava                        Decimal  @map("iznos_za_prenos_sredstava_") // Amount for transfer
+  createdAt                                     DateTime @default(now()) @map("created_at") // Timestamp for record creation
+  updatedAt                                     DateTime @updatedAt @map("updated_at") // Timestamp for record update
+}
+
+model BulkServisi {
+  id             Int      @id @default(autoincrement()) // Unique identifier
+  nazivUsluge    String   @map("naziv_usluge") // Name of the service
+  opisUsluge     String?  @map("opis_usluge") // Optional description of the service
+  cena           Decimal? @map("cena") // Price of the service
+  brojPorudzbina Int      @map("broj_porudzbina") // Number of requests/orders
+  datumKreiranja DateTime @default(now()) @map("datum_kreiranja") // Service creation date
+  createdAt      DateTime @default(now()) @map("created_at") // Timestamp for record creation
+  updatedAt      DateTime @updatedAt @map("updated_at") // Timestamp for record update
+}
+
+model VasServisi {
+  id              Int       @id @default(autoincrement()) // Unique identifier
+  grupaUsluga     String    @map("grupa_usluga") // Group or category of the service
+  nazivServisa    String    @map("naziv_servisa") // Service name
+  cena            Decimal?  @map("cena") // Price of the service
+  ukupno          Decimal?  @map("ukupno") // Total revenue or amount
+  brojTransakcija Int?      @map("broj_transakcija") // Number of transactions
+  datumKreiranja  DateTime? @map("datum_kreiranja") // Optional creation date
+  createdAt       DateTime  @default(now()) @map("created_at") // Timestamp for record creation
+  updatedAt       DateTime  @updatedAt @map("updated_at") // Timestamp for record update
+}
+
+model ServiceCategory {
+  id          Int         @id @default(autoincrement())
+  serviceId   String      @map("service_id") // Foreign key for Service
+  service     Service     @relation("ServiceToCategories", fields: [serviceId], references: [id])
+  categoryId  Int         @map("category_id") // Foreign key for Category
+  category    Category    @relation("CategoryToServices", fields: [categoryId], references: [id])
+  assignedAt  DateTime    @default(now()) @map("assigned_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+}
+
+
+model Complaint {
+  id             String    @id @default(cuid()) // Unique identifier for the complaint
+  description    String    @map("description") // Description of the complaint
+  phoneNumber    String?   @map("phone_number") // Phone number related to the complaint
+  serviceRequest String?   @map("service_request") // Service request description
+  price          Float?    @map("price") // Price related to the complaint
+  quantity       Int?      @map("quantity") // Quantity involved in the complaint
+  isResolved     Boolean   @default(false) @map("is_resolved") // Resolution status of the complaint
+  isCanceled     Boolean   @default(false) @map("is_canceled") // Cancellation status of the request
+  fromMonth      DateTime? @map("from_month") // Start date or month of the service issue
+  toMonth        DateTime? @map("to_month") // End date or month of the service issue
+  numberOfMonths Int?      @map("number_of_months") // Duration of the complaint in months
+  firstSender    String?   @map("first_sender") // Name of the first sender
+  firstSendDate  DateTime? @map("first_send_date") // Date when the issue was first reported
+  serviceId      String?   @map("service_id") // Foreign key for Service
+  service        Service?  @relation("ComplaintToService", fields: [serviceId], references: [id])
+  providerId     String?   @map("provider_id") // Foreign key for Provider
+  provider       Provider? @relation("ComplaintToProvider", fields: [providerId], references: [id])
+  categoryId     Int?      @map("category_id") // Foreign key for Category
+  category       Category? @relation("ComplaintToCategory", fields: [categoryId], references: [id])
+  createdAt      DateTime  @default(now()) @map("created_at") // When the complaint was created
+  updatedAt      DateTime  @updatedAt @map("updated_at") // When the complaint was last updated
+}
