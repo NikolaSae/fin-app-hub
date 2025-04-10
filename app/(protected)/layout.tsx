@@ -14,9 +14,16 @@ export default async function ProtectedLayout({
 
   return (
     <SessionProvider session={session}>
-      <div className="h-full w-full flex flex-col gap-y-10 items-center justify-center">
-        <Navbar />
-        {children}
+      {/* Ensure the root container is properly styled */}
+      <div className="h-full w-full flex flex-col items-center">
+        {/* Sticky and centered Navbar */}
+        <div className="sticky top-0 z-10 w-full flex justify-center bg-white border-b">
+          <Navbar />
+        </div>
+        {/* Content Section */}
+        <div className="w-full flex flex-col gap-y-10 items-center justify-center">
+          {children}
+        </div>
       </div>
     </SessionProvider>
   );

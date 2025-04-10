@@ -11,16 +11,16 @@ export const Navbar = () => {
     <nav className="bg-secondary flex justify-between items-center p-4 rounded-xl w-[600px] shadow-sm">
       <div className="flex gap-x-2">
         <Button
-          variant={pathname === "/server" ? "default" : "outline"}
+          variant={pathname === "/complaints" ? "default" : "outline"}
           asChild
         >
-          <Link href="/server">Server</Link>
+          <Link href="/complaints">Reklamacije</Link>
         </Button>
         <Button
-          variant={pathname === "/client" ? "default" : "outline"}
+          variant={pathname === "/complaints/admin" ? "default" : "outline"}
           asChild
         >
-          <Link href="/client">Client</Link>
+          <Link href="/complaints/admin">Upravljanje reklamacijama</Link>
         </Button>
         <Button variant={pathname === "/admin" ? "default" : "outline"} asChild>
           <Link href="/admin">Admin</Link>

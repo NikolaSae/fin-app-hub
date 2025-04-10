@@ -71,3 +71,10 @@ export const SettingsSchema = z
       path: ["password"],
     }
   );
+export * from "./complaint";
+
+export type ComplaintFormValues = z.infer<typeof ComplaintFormSchema>;
+export type CommentFormValues = z.infer<typeof CommentFormSchema>;
+export type AssignComplaintFormValues = z.infer<typeof AssignComplaintFormSchema>;
+export type ResolveComplaintFormValues = z.infer<typeof ResolveComplaintFormSchema>;
+export type AttachmentFormValues = z.infer<typeof AttachmentFormSchema>;

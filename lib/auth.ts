@@ -5,6 +5,11 @@ export const currentUser = async () => {
 
   return session?.user;
 };
+export async function getCurrentUser() {
+    // Replace with your logic to get the current authenticated user
+    const session = await auth(); // Example for NextAuth v5
+    return session?.user;
+}
 
 export const currentRole = async () => {
   const session = await auth();

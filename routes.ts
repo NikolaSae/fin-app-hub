@@ -17,6 +17,27 @@ export const authRoutes = [
   "/auth/reset",
   "/auth/new-password",
 ];
+/**
+ * Rute koje su dostupne samo korisnicima sa admin ulogom
+ * @type {string[]}
+ */
+export const adminRoutes = [
+  "/admin",
+  "/complaints/admin",
+];
+/**
+* Rute koje su dostupne samo autentifikovanim korisnicima
+ * @type {string[]}
+ */
+export const protectedRoutes = [
+  "/settings",
+  "/server",
+  "/client",
+  "/admin",
+  "/complaints",
+  "/complaints/new",
+  "/complaints/admin",
+];
 
 /**
  * The prefix for API authentication routes
@@ -29,4 +50,5 @@ export const apiAuthPrefix = "/api/auth";
  * The default redirect path after logging in
  * @type {string}
  */
-export const DEFAULT_LOGIN_REDIRECT = "/settings";
+// Glavna putanja
+export const DEFAULT_LOGIN_REDIRECT = "/dashboard";
