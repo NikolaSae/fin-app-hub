@@ -64,7 +64,11 @@ model User {
   twoFactorConfirmation TwoFactorConfirmation?
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at") // Last account update timestamp
-
+  // Relationships for claim system
+  submittedClaims       Claim[]                @relation("ClaimSubmitter")
+  assignedClaims        Claim[]                @relation("ClaimHandler")
+  claimNotes            ClaimNote[]
+  claimActions          ClaimAction[]
   @@map("users")
 }
 
@@ -105,134 +109,225 @@ model TwoFactorConfirmation {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Provider {
-  id          String              @id @default(cuid()) // Unique identifier for the provider
-  name        String              @map("name") // Name of the provider
-  description String?             @map("description") // Optional description of the provider
-  categories  ProviderCategory[]  @relation("ProviderToCategories") // Many-to-Many Relation with Category
-  createdAt   DateTime            @default(now()) @map("created_at") // Timestamp for record creation
-  updatedAt   DateTime            @updatedAt @map("updated_at") // Timestamp for record update
+// Claim statuses
+enum ClaimStatus {
+  DRAFT
+  NEW
+  PROCESSING
+  WAITING_FOR_INFO
+  RESOLVED
+  REJECTED
+  CLOSED
 }
 
-
-model Category {
-  id               Int                 @id @default(autoincrement())
-  name             String              @map("name") // Name of the category
-  description      String?             @map("description") // Optional description
-  providerCategories ProviderCategory[] @relation("CategoryToProviders") // Relation to ProviderCategory
-  serviceCategories ServiceCategory[]  @relation("CategoryToServices") // Relation to ServiceCategory
-  createdAt        DateTime            @default(now()) @map("created_at")
-  updatedAt        DateTime            @updatedAt @map("updated_at")
+// Claim types
+enum ClaimType {
+  PRODUCT_DEFECT
+  SHIPPING_DAMAGE
+  WRONG_ITEM
+  MISSING_ITEM
+  RETURN_REFUND
+  SERVICE_COMPLAINT
+  WARRANTY
+  OTHER
 }
 
-
-model ProviderCategory {
-  id          Int         @id @default(autoincrement())
-  providerId  String      @map("provider_id") // Foreign key for Provider
-  provider    Provider    @relation("ProviderToCategories", fields: [providerId], references: [id])
-  categoryId  Int         @map("category_id") // Foreign key for Category
-  category    Category    @relation("CategoryToProviders", fields: [categoryId], references: [id])
-  assignedAt  DateTime    @default(now()) @map("assigned_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+// Main Claim model
+model Claim {
+  id                String        @id @default(cuid())
+  claimNumber       String        @unique // Auto-generated claim reference number
+  status            ClaimStatus   @default(NEW)
+  type              ClaimType
+  priority          Int           @default(3) // 1-5 where 1 is highest priority
+  
+  // User relationships
+  submitterId       String
+  submitter         User          @relation("ClaimSubmitter", fields: [submitterId], references: [id])
+  
+  assignedToId      String?
+  assignedTo        User?         @relation("ClaimHandler", fields: [assignedToId], references: [id])
+  
+  // Email data 
+  sourceEmailId     String?       @map("source_email_id")
+  sourceEmail       EmailSource?  @relation(fields: [sourceEmailId], references: [id])
+  
+  // Content
+  subject           String
+  description       String        @db.Text
+  
+  // Extracted and processed data
+  originalData      Json?         // Raw extracted data
+  processedData     Json?         // AI-processed structured data
+  
+  // Customer information
+  customerName      String?
+  customerEmail     String?
+  customerPhone     String?
+  customerReference String?       // External reference number
+  
+  // Dates
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  dueDate           DateTime?     @map("due_date")
+  resolvedAt        DateTime?     @map("resolved_at")
+  
+  // Related entities
+  attachments       Attachment[]
+  notes             ClaimNote[]
+  actions           ClaimAction[]
+  history           ClaimHistory[]
+  
+  @@index([submitterId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("claims")
 }
 
-
-model Service {
-  id          String   @id @default(cuid()) // Unique service ID
-  name        String   @map("name") // Name of the service
-  description String?  @map("description") // Optional description
-  price       Float?   @map("price") // Price of the service
-  providerId  String   @map("provider_id") // Foreign key for Provider
-  provider    Provider @relation("ServiceToProvider", fields: [providerId], references: [id])
-  complaints  Complaint[]      @relation("ComplaintToService") // Relation to Complaints
-  serviceCategories ServiceCategory[] @relation("ServiceToCategories")
-  createdAt   DateTime @default(now()) @map("created_at") // Created timestamp
-  updatedAt   DateTime @updatedAt @map("updated_at") // Last updated timestamp
+// Email source data
+model EmailSource {
+  id              String    @id @default(cuid())
+  sender          String
+  recipients      String    @db.Text // JSON array of email addresses
+  subject         String
+  body            String    @db.Text
+  receivedAt      DateTime  @map("received_at")
+  rawContent      String    @db.LongText // Original email content
+  threadId        String?   @map("thread_id") // For tracking email conversations
+  
+  // Email metadata
+  headers         Json?
+  
+  // Relationships
+  claims          Claim[]
+  attachments     Attachment[]
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@index([sender])
+  @@index([threadId])
+  @@index([receivedAt])
+  @@map("email_sources")
 }
 
-model Customer {
-  id          String   @id @default(cuid()) // Unique customer ID
-  name        String   @map("name") // Customer's name
-  email       String?  @unique @map("email") // Optional, unique email
-  phoneNumber String   @map("phone_number") // Customer's phone number
-  address     String?  @map("address") // Optional address
-  createdAt   DateTime @default(now()) @map("created_at") // Created timestamp
-  updatedAt   DateTime @updatedAt @map("updated_at") // Last updated timestamp
+// Attachments (for both emails and claims)
+model Attachment {
+  id              String    @id @default(cuid())
+  fileName        String    @map("file_name")
+  fileType        String    @map("file_type")
+  fileSize        Int       @map("file_size")
+  path            String    // Storage path
+  contentType     String    @map("content_type")
+  
+  // Relations - an attachment can belong to a claim, email, or both
+  claimId         String?
+  claim           Claim?    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  
+  emailSourceId   String?   @map("email_source_id")
+  emailSource     EmailSource? @relation(fields: [emailSourceId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@index([claimId])
+  @@index([emailSourceId])
+  @@map("attachments")
 }
 
-model VasPostpaid {
-  id                                            Int      @id @default(autoincrement()) // Unique identifier
-  mesecPruzanjaUsluge                           String   @map("mesec_pruzanja_usluge") // Service month
-  jedinicnaCena                                 Decimal  @map("jedinicna_cena") // Unit price
-  brojTransakcija                               Int      @map("broj_transakcija") // Number of transactions
-  fakturisanIznos                               Decimal  @map("fakturisan_iznos") // Invoiced amount
-  fakturisanKorigovanIznos                      Decimal  @map("fakturisan_korigovan_iznos") // Adjusted invoice amount
-  naplacenIznos                                 Decimal  @map("naplacen_iznos") // Amount paid
-  kumulativNaplacenihIznosa                     Decimal  @map("kumulativ_naplacenih_iznosa") // Total amount paid cumulatively
-  nenaplacenIznos                               Decimal  @map("nenaplacen_iznos") // Unpaid amount
-  nenaplacenKorigovanIznos                      Decimal  @map("nenaplacen_korigovan_iznos") // Adjusted unpaid amount
-  storniranIznosUTekucemMesecuIzPeriodaPracenja Decimal  @map("storniran_iznos_u_tekucem_mesecu_iz_perioda_pracenja") // Reversed amount in the current month
-  otkazanIznos                                  Decimal  @map("otkazan_iznos") // Canceled amount
-  kumulativOtkazanihIznosa                      Decimal  @map("kumulativ_otkazanih_iznosa") // Canceled cumulative amount
-  iznosZaPrenosSredstava                        Decimal  @map("iznos_za_prenos_sredstava_") // Amount for transfer
-  createdAt                                     DateTime @default(now()) @map("created_at") // Timestamp for record creation
-  updatedAt                                     DateTime @updatedAt @map("updated_at") // Timestamp for record update
+// Notes added to claims
+model ClaimNote {
+  id              String    @id @default(cuid())
+  claimId         String
+  claim           Claim     @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  
+  authorId        String
+  author          User      @relation(fields: [authorId], references: [id])
+  
+  content         String    @db.Text
+  isInternal      Boolean   @default(true) @map("is_internal") // Whether visible to customer
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  @@index([claimId])
+  @@index([authorId])
+  @@map("claim_notes")
 }
 
-model BulkServisi {
-  id             Int      @id @default(autoincrement()) // Unique identifier
-  nazivUsluge    String   @map("naziv_usluge") // Name of the service
-  opisUsluge     String?  @map("opis_usluge") // Optional description of the service
-  cena           Decimal? @map("cena") // Price of the service
-  brojPorudzbina Int      @map("broj_porudzbina") // Number of requests/orders
-  datumKreiranja DateTime @default(now()) @map("datum_kreiranja") // Service creation date
-  createdAt      DateTime @default(now()) @map("created_at") // Timestamp for record creation
-  updatedAt      DateTime @updatedAt @map("updated_at") // Timestamp for record update
+// Action types
+enum ClaimActionType {
+  STATUS_CHANGE
+  ASSIGNMENT
+  CUSTOMER_REPLY
+  INTERNAL_COMMENT
+  ATTACHMENT_ADDED
+  AI_PROCESSING
+  MANUAL_UPDATE
 }
 
-model VasServisi {
-  id              Int       @id @default(autoincrement()) // Unique identifier
-  grupaUsluga     String    @map("grupa_usluga") // Group or category of the service
-  nazivServisa    String    @map("naziv_servisa") // Service name
-  cena            Decimal?  @map("cena") // Price of the service
-  ukupno          Decimal?  @map("ukupno") // Total revenue or amount
-  brojTransakcija Int?      @map("broj_transakcija") // Number of transactions
-  datumKreiranja  DateTime? @map("datum_kreiranja") // Optional creation date
-  createdAt       DateTime  @default(now()) @map("created_at") // Timestamp for record creation
-  updatedAt       DateTime  @updatedAt @map("updated_at") // Timestamp for record update
+// Actions performed on claims
+model ClaimAction {
+  id              String          @id @default(cuid())
+  claimId         String
+  claim           Claim           @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  
+  actionType      ClaimActionType
+  description     String          @db.Text
+  metadata        Json?           // Additional data about the action
+  
+  createdAt       DateTime        @default(now()) @map("created_at")
+  
+  @@index([claimId])
+  @@index([userId])
+  @@index([actionType])
+  @@map("claim_actions")
 }
 
-model ServiceCategory {
-  id          Int         @id @default(autoincrement())
-  serviceId   String      @map("service_id") // Foreign key for Service
-  service     Service     @relation("ServiceToCategories", fields: [serviceId], references: [id])
-  categoryId  Int         @map("category_id") // Foreign key for Category
-  category    Category    @relation("CategoryToServices", fields: [categoryId], references: [id])
-  assignedAt  DateTime    @default(now()) @map("assigned_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+// History of claim changes (audit trail)
+model ClaimHistory {
+  id              String    @id @default(cuid())
+  claimId         String
+  claim           Claim     @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  
+  field           String    // Field that changed
+  oldValue        String?   @db.Text
+  newValue        String?   @db.Text
+  
+  changedAt       DateTime  @default(now()) @map("changed_at")
+  changedBy       String    @map("changed_by") // User ID
+  
+  @@index([claimId])
+  @@index([changedAt])
+  @@map("claim_history")
 }
 
-
-model Complaint {
-  id             String    @id @default(cuid()) // Unique identifier for the complaint
-  description    String    @map("description") // Description of the complaint
-  phoneNumber    String?   @map("phone_number") // Phone number related to the complaint
-  serviceRequest String?   @map("service_request") // Service request description
-  price          Float?    @map("price") // Price related to the complaint
-  quantity       Int?      @map("quantity") // Quantity involved in the complaint
-  isResolved     Boolean   @default(false) @map("is_resolved") // Resolution status of the complaint
-  isCanceled     Boolean   @default(false) @map("is_canceled") // Cancellation status of the request
-  fromMonth      DateTime? @map("from_month") // Start date or month of the service issue
-  toMonth        DateTime? @map("to_month") // End date or month of the service issue
-  numberOfMonths Int?      @map("number_of_months") // Duration of the complaint in months
-  firstSender    String?   @map("first_sender") // Name of the first sender
-  firstSendDate  DateTime? @map("first_send_date") // Date when the issue was first reported
-  serviceId      String?   @map("service_id") // Foreign key for Service
-  service        Service?  @relation("ComplaintToService", fields: [serviceId], references: [id])
-  providerId     String?   @map("provider_id") // Foreign key for Provider
-  provider       Provider? @relation("ComplaintToProvider", fields: [providerId], references: [id])
-  categoryId     Int?      @map("category_id") // Foreign key for Category
-  category       Category? @relation("ComplaintToCategory", fields: [categoryId], references: [id])
-  createdAt      DateTime  @default(now()) @map("created_at") // When the complaint was created
-  updatedAt      DateTime  @updatedAt @map("updated_at") // When the complaint was last updated
+// AI processing records
+model AIProcessingLog {
+  id              String    @id @default(cuid())
+  claimId         String
+  
+  promptUsed      String    @db.Text @map("prompt_used")
+  aiResponse      String    @db.Text @map("ai_response")
+  processingTime  Int       @map("processing_time") // In milliseconds
+  success         Boolean   @default(true)
+  errorMessage    String?   @db.Text @map("error_message")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@index([claimId])
+  @@map("ai_processing_logs")
 }
+
+// Template for AI prompts based on claim type
+model AIPromptTemplate {
+  id              String    @id @default(cuid())
+  claimType       ClaimType @unique
+  promptTemplate  String    @db.Text @map("prompt_template")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  @@map("ai_prompt_templates")
