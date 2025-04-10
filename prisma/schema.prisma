@@ -58,17 +58,17 @@ model User {
   role                  UserRole               @default(USER)
   accounts              Account[]
   sessions              Session[]
-  //complaints     Complaint[]   @relation("UserComplaints") // Relation to Complaints
-  providers             Provider[]             @relation("UserProviders")
   isTwoFactorEnabled    Boolean                @default(false)
   twoFactorConfirmation TwoFactorConfirmation?
   createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime               @updatedAt @map("updated_at") // Last account update timestamp
-  // Relationships for claim system
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  
+  // Dodaj relacije za reklamacije
   submittedClaims       Claim[]                @relation("ClaimSubmitter")
   assignedClaims        Claim[]                @relation("ClaimHandler")
   claimNotes            ClaimNote[]
   claimActions          ClaimAction[]
+  
   @@map("users")
 }
 
@@ -193,7 +193,7 @@ model EmailSource {
   subject         String
   body            String    @db.Text
   receivedAt      DateTime  @map("received_at")
-  rawContent      String    @db.LongText // Original email content
+  rawContent      String    @db.Text // Original email content
   threadId        String?   @map("thread_id") // For tracking email conversations
   
   // Email metadata
@@ -331,3 +331,4 @@ model AIPromptTemplate {
   updatedAt       DateTime  @updatedAt @map("updated_at")
   
   @@map("ai_prompt_templates")
+}
