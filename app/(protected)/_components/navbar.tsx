@@ -17,15 +17,20 @@ export const Navbar = () => {
           <Link href="/complaints">Reklamacije</Link>
         </Button>
         <Button
-          variant={pathname === "/complaints/admin" ? "default" : "outline"}
+          variant={pathname === "/services" ? "default" : "outline"}
           asChild
         >
-          <Link href="/complaints/admin">Upravljanje reklamacijama</Link>
+          <Link href="/services">Servisi</Link>
 
         </Button>
         <Button variant={pathname === "/organizations" ? "default" : "outline"} asChild>
           <Link href="/organizations">HO panel</Link>
         </Button>
+
+        <Button variant={pathname === "/novastra" ? "default" : "outline"} asChild>
+          <Link href="/novastra">Servisi</Link>
+        </Button>
+
         <Button
           variant={pathname === "/settings" ? "default" : "outline"}
           asChild

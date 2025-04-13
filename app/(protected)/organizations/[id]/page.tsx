@@ -271,7 +271,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Broj računa</p>
-                <p>{organization.brojRacuna || "Nije navedeno"}</p>
+                <p>{organization.racun || "Nije navedeno"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Poziv na broj</p>
@@ -329,8 +329,8 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
         </CardHeader>
         <CardContent>
           <div className="prose prose-sm max-w-none">
-            {organization.opis ? (
-              <div dangerouslySetInnerHTML={{ __html: organization.opis }} />
+            {organization.namena ? (
+              <div dangerouslySetInnerHTML={{ __html: organization.namena }} />
             ) : (
               <p className="text-muted-foreground italic">Nema dodatnih informacija o ovoj organizaciji.</p>
             )}

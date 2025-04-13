@@ -13,9 +13,9 @@ export async function POST(
     const session = await auth();
     
     // Check authentication
-    if (!session || !session.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    if (!session?.user?.role === "ADMIN") {
+    return new Response("Unauthorized", { status: 401 });
+  }
     
     // Only allow admins to assign complaints
     if (session.user.role !== "ADMIN") {
@@ -23,7 +23,7 @@ export async function POST(
     }
     
     const { id } = await params;
-    const { assignedToId } = await req.json();
+    const { assignedToId, assignedById  } = await req.json();
     
     if (!assignedToId) {
       return new NextResponse("Missing required fields", { status: 400 });

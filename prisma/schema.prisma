@@ -318,3 +318,121 @@ model HumanitarnaOrganizacija {
 
   @@map("humanitarne_organizacije")
 }
+
+
+// Provajder model - glavni model za provajdere
+model Provajder {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  
+  // Veze sa različitim tipovima servisa
+  vasServices     VasService[]
+  bulkServices    BulkService[]
+  parkingServices ParkingService[]
+  humanServices   HumanService[]
+  
+  @@map("providers")
+}
+
+// VAS (Value Added Service) servisi
+model VasService {
+  id                          String     @id @default(cuid())
+  proizvod                    String     // Proizvod iz CSV
+  mesec_pruzanja_usluge       DateTime   // Mesec_pruzanja_usluge iz CSV
+  jedinicna_cena              Float      // Jedinicna_cena iz CSV
+  broj_transakcija            Int        // Broj_transakcija iz CSV
+  fakturisan_iznos            Float      // Fakturisan_iznos iz CSV
+  fakturisan_korigovan_iznos  Float      // Fakturisan_korigovan_iznos iz CSV
+  naplacen_iznos              Float      // Naplacen_iznos iz CSV
+  kumulativ_naplacenih_iznosa Float      // Kumulativ_naplacenih_iznosa iz CSV
+  nenaplacen_iznos            Float      // Nenaplacen_iznos iz CSV
+  nenaplacen_korigovan_iznos  Float      // Nenaplacen_korigovan_iznos iz CSV
+  storniran_iznos             Float      // Storniran_iznos_u_tekucem_mesecu_iz_perioda_pracenja iz CSV
+  otkazan_iznos               Float      // Otkazan_iznos iz CSV
+  kumulativ_otkazanih_iznosa  Float      // Kumulativ_otkazanih_iznosa iz CSV
+  iznos_za_prenos_sredstava   Float      // Iznos_za_prenos_sredstava iz CSV
+  
+  type                        VasType    // Enum za prepaid/postpaid
+  provajder                   Provajder   @relation(fields: [provajderId], references: [id], onDelete: Cascade)
+  provajderId                 String
+  isActive                    Boolean    @default(true)
+  createdAt                   DateTime   @default(now()) @map("created_at")
+  updatedAt                   DateTime   @updatedAt @map("updated_at")
+  
+  // Unique ograničenje za proizvod, mesec pružanja usluge i provajder
+  @@unique([proizvod, mesec_pruzanja_usluge, provajderId])
+  @@map("vas_services")
+}
+
+// Enum za tipove VAS servisa
+enum VasType {
+  prepaid
+  postpaid
+}
+
+// Bulk servisi - ažurirano prema CSV-u
+model BulkService {
+  id              String    @id @default(cuid())
+  provider_name   String    // Provider Name iz CSV
+  agreement_name  String    // Agreement Name iz CSV
+  service_name    String    // Service Name iz CSV
+  step_name       String    // Step Name iz CSV
+  sender_name     String    // Sender Name iz CSV
+  requests        Int       // Requests iz CSV
+  message_parts   Int       // Message parts iz CSV
+  
+  provajder       Provajder  @relation(fields: [provajderId], references: [id], onDelete: Cascade)
+  provajderId     String
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // Unique ograničenje za provider_name, agreement_name, service_name, sender_name, requests, message_parts
+  @@unique([provider_name, agreement_name, service_name, sender_name, requests, message_parts])
+  @@map("bulk_services")
+}
+
+// Parking servisi
+model ParkingService {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  provajder   Provajder  @relation(fields: [provajderId], references: [id], onDelete: Cascade)
+  provajderId String
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  // Ovde bi došla specifična polja za parking servise
+  // koja možete dodati na osnovu CSV podataka za parking
+  
+  @@map("parking_services")
+}
+
+// HumanServi servisi
+model HumanService {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  type        HumanType    // Enum za prepaid/postpaid
+  provajder   Provajder     @relation(fields: [provajderId], references: [id], onDelete: Cascade)
+  provajderId String
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  
+  // Ovde bi došla specifična polja za humanitarne servise
+  // koja možete dodati na osnovu CSV podataka za humanitarne servise
+  
+  @@map("human_services")
+}
+
+// Enum za tipove Human servisa
+enum HumanType {
+  prepaid
+  postpaid
+}

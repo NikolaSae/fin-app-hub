@@ -51,4 +51,4 @@ export const apiAuthPrefix = "/api/auth";
  * @type {string}
  */
 // Glavna putanja
-export const DEFAULT_LOGIN_REDIRECT = "/dashboard";
+export const DEFAULT_LOGIN_REDIRECT = "/";

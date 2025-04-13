@@ -10,19 +10,27 @@ import {
 } from "@/lib/organizations";
 import { UserRole } from "@prisma/client";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const organization = await getOrganizationById(params.id);
+    // Wait for params to resolve
+    const { id } = await params;  
+
+    // Fetch organization data using the id
+    const organization = await getOrganizationById(id);
+    
     if (!organization) {
+      // If no organization is found, return 404 status
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
-    return NextResponse.json(organization);
+    
+    // Return the organization data with a 200 status code
+    return NextResponse.json(organization, { status: 200 });
   } catch (error) {
-    console.error("Error:", error);
-    return NextResponse.json({ error: "Failed to fetch organization" }, { status: 500 });
+    console.error("Error fetching organization:", error);
+    // If an error occurs, return a 500 status code with a message
+    return NextResponse.json({ error: "Failed to fetch organization data" }, { status: 500 });
   }
 }
-
 
 // PATCH /api/organizations/[id]
 export async function PATCH(
