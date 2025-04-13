@@ -2,6 +2,7 @@
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { Navbar } from "./_components/navbar";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -14,15 +15,18 @@ export default async function ProtectedLayout({
 
   return (
     <SessionProvider session={session}>
-      {/* Ensure the root container is properly styled */}
-      <div className="h-full w-full flex flex-col items-center">
-        {/* Sticky and centered Navbar */}
-        <div className="sticky top-0 z-10 w-full flex justify-center bg-white border-b">
+      {/* Додај bg-background за главни контејнер */}
+      <div className="h-full w-full flex flex-col items-center bg-background">
+        
+        {/* Исправљен navbar контејнер */}
+        <div className="sticky top-0 z-10 w-full flex justify-center bg-card border-b border-border">
           <Navbar />
         </div>
-        {/* Content Section */}
-        <div className="w-full flex flex-col gap-y-10 items-center justify-center">
+        
+        {/* Контент секција са позадином */}
+        <div className="w-full flex flex-col gap-y-10 items-center justify-center bg-background">
           {children}
+          <ThemeToggle />
         </div>
       </div>
     </SessionProvider>

@@ -14,14 +14,37 @@ body,
   .text-balance {
     text-wrap: balance;
   }
+
+  .hover-tilt {
+    transition: transform 0.3s ease;
+    will-change: transform;
+  }
+  
+  .hover-tilt:hover {
+    transform: perspective(1000px) rotateX(2deg) rotateY(2deg) scale(1.02);
+  }
+}
+
+@layer components {
+  .shadow-container {
+    transform: translateZ(0);
+    transition: box-shadow 0.5s ease;
+    box-shadow: 0 10px 18px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.9));
+  }
+
+  .shadow-hover {
+    box-shadow: 0 15px 25px -2px hsl(var(--disgusting-green) / calc(var(--shadow-strength) + 1));
+  }
 }
 
 @layer base {
   :root {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
+    --disgusting-green: 90 55% 30%;
+    --disgusting-green-dark: 90 45% 30%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 150 8% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
     --primary: 240 5.9% 10%;
@@ -43,6 +66,8 @@ body,
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --shadow-color: 330 100% 71%;
+    --shadow-strength: 1;
   }
 
   .dark {
@@ -50,12 +75,14 @@ body,
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
+    --disgusting-green: 90 45% 30%;
+    --disgusting-green-dark: 90 45% 30%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
     --primary: 0 0% 98%;
     --primary-foreground: 240 5.9% 10%;
     --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary-foreground: 240 3.7% 15.9%;
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
     --accent: 240 3.7% 15.9%;
@@ -70,14 +97,20 @@ body,
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --shadow-color: 330 100% 71%;
+    --shadow-strength: 1;
   }
-}
+.dark {
+    /* ... остале варијабле остају исте ... */
+    --shadow-color: 330 100% 71%;
+    --shadow-strength: 1;
+  }
 
-@layer base {
   * {
     @apply border-border;
   }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
 }

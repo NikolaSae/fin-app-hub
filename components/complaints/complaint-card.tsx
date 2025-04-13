@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Calendar, AlertCircle, CheckCircle, Clock, XCircle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface ComplaintCardProps {
   complaint: Complaint & {
     user?: User;
     product?: Product | null;
-    assignedTo?: User | null;
+    assignedTo?: string | null;
   };
   showUserInfo?: boolean;
 }
@@ -50,12 +51,25 @@ const ComplaintStatusIcon = ({ status }: { status: ComplaintStatus }) => {
   }
 };
 
-export function ComplaintCard({ complaint, showUserInfo = false }: ComplaintCardProps) {
+
+ export function ComplaintCard({ complaint, showUserInfo = false }: ComplaintCardProps) {
+ console.log('assignedToId:', complaint.assignedToId);
   const status = statusMap[complaint.status];
   const priority = priorityMap[complaint.priority];
   
   return (
-    <Card className="w-full mb-4 hover:shadow-md transition-shadow">
+    <Card className="
+    w-full 
+    mb-4 
+    shadow-container 
+    hover:shadow-hover 
+    transition-shadow 
+    duration-500
+    before:content-[''] 
+    before:absolute 
+    before:inset-0 
+    before:-z-10
+  ">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg font-medium">{complaint.title}</CardTitle>
@@ -90,15 +104,15 @@ export function ComplaintCard({ complaint, showUserInfo = false }: ComplaintCard
           </div>
         )}
         
-        {complaint.assignedTo && (
+        {complaint.assignedTo?.name && (
           <div className="mt-1 text-xs text-muted-foreground">
-            Zadužen: <span className="font-medium">{complaint.assignedTo.name || complaint.assignedTo.email}</span>
+            Zadužen: <span className="font-medium">{complaint.assignedTo.name || complaint.assignedTo.name}</span>
           </div>
         )}
         
         {complaint.assignedTo && (
           <div className="mt-1 text-xs text-muted-foreground">
-            Zadužen: <span className="font-medium">{complaint.assignedTo.name || complaint.assignedTo.email}</span>
+            Zadužen: <span className="font-medium">{complaint.assignedTo.name || complaint.assignedTo.name}</span>
           </div>
         )}
       </CardContent>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { ResolveComplaintFormSchema, ResolveComplaintFormValues } from "@/schemas";
 import { resolveComplaint } from "@/actions/complaints";
@@ -14,8 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormError } from "@/components/form-error";
-import { FormSuccess } from "@/components/form-success";
 import { ComplaintStatus } from "@prisma/client";
 
 interface ResolveFormProps {
@@ -24,8 +23,6 @@ interface ResolveFormProps {
 
 export function ResolveForm({ complaintId }: ResolveFormProps) {
   const router = useRouter();
-  const [error, setError] = useState<string | undefined>();
-  const [success, setSuccess] = useState<string | undefined>();
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<ResolveComplaintFormValues>({
@@ -37,28 +34,23 @@ export function ResolveForm({ complaintId }: ResolveFormProps) {
   });
 
   const onSubmit = async (values: ResolveComplaintFormValues) => {
-    setError(undefined);
-    setSuccess(undefined);
     setIsPending(true);
-
-    try {
-      const response = await resolveComplaint(complaintId, values);
-
-      if (response.error) {
-        setError(response.error);
-      }
-
-      if (response.success) {
-        setSuccess(response.success);
-        setTimeout(() => {
+    
+    toast.promise(
+      resolveComplaint(complaintId, values),
+      {
+        loading: "Procesiram rešenje reklamacije...",
+        success: (response) => {
+          if (response?.error) {
+            throw new Error(response.error);
+          }
           router.refresh();
-        }, 1000);
+          return "Reklamacija uspešno rešena";
+        },
+        error: (error) => error.message || "Došlo je do greške prilikom obrade",
+        finally: () => setIsPending(false)
       }
-    } catch (err) {
-      setError("Došlo je do greške prilikom rešavanja reklamacije.");
-    } finally {
-      setIsPending(false);
-    }
+    );
   };
 
   return (
@@ -113,9 +105,6 @@ export function ResolveForm({ complaintId }: ResolveFormProps) {
                 </FormItem>
               )}
             />
-            
-            <FormError message={error} />
-            <FormSuccess message={success} />
           </form>
         </Form>
       </CardContent>

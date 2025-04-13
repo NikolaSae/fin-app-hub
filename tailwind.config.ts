@@ -32,6 +32,12 @@ const config: Config = {
   				DEFAULT: 'hsl(var(--muted))',
   				foreground: 'hsl(var(--muted-foreground))'
   			},
+        boxShadow: {
+    container: '0 2px 8px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.1))',
+    hover: '0 4px 16px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.2))',
+    'inner-xl': 'inset 0 4px 12px 0 rgb(0 0 0 / 0.15)'
+  },
+
   			accent: {
   				DEFAULT: 'hsl(var(--accent))',
   				foreground: 'hsl(var(--accent-foreground))'

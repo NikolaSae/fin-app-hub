@@ -29,7 +29,7 @@ interface ComplaintFormProps {
   users: Array<{ id: string; name: string }>;
 }
 
-export function ComplaintForm({ products }: ComplaintFormProps) {
+export function ComplaintForm({ products, users = [] }: ComplaintFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | undefined>();
   const [success, setSuccess] = useState<string | undefined>();

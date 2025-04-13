@@ -5,7 +5,7 @@ interface ComplaintsListProps {
   complaints: Array<Complaint & {
     user?: User;
     product?: Product | null;
-    assignedTo?: User | null;
+    assignedToId?: User | null;
     closedBy?: User | null; // Added this field to support displaying who closed the complaint
   }>;
   showUserInfo?: boolean;

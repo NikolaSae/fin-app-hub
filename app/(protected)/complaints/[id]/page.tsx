@@ -1,4 +1,4 @@
-// app/(protected)/complaints/[id]/page.tsx - Stranica za detalje reklamacije
+// app/(protected)/complaints/[id]/page.tsx
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth"
 import { getComplaintById } from "@/data/complaint";
@@ -7,37 +7,32 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-interface ComplaintPageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default async function ComplaintPage({ params }: ComplaintPageProps) {
+export default async function ComplaintPage(props: { params: Promise<{ id: string }> }) {
   try {
-    const sessionPromise = auth(); // Start fetching session as a promise
-    const complaintPromise = getComplaintById(params.id); // Fetch complaint as a promise
+  const { id } = await props.params;
 
-    const [session, complaint] = await Promise.all([sessionPromise, complaintPromise]);
+  const session = await auth();
+  if (!session || !session.user) {
+    console.warn("No session or user found. Redirecting to login...");
+    redirect("/auth/login");
+  }
 
-    // Handle session validation
-    if (!session || !session.user) {
-      redirect("/auth/login");
-    }
+  console.log("Fetching complaint by ID:", id);
+  const complaint = await getComplaintById(id);
 
-    // Handle case when complaint is not found
-    if (!complaint) {
-      notFound();
-    }
+  if (!complaint) {
+    console.warn("Complaint not found for ID:", id);
+    notFound();
+  }
 
-    // Provera dozvola - samo admin, vlasnik reklamacije ili zaduženi agent mogu videti detalje
-    if (
-      session.user.role !== "ADMIN" &&
-      complaint.userId !== session.user.id &&
-      complaint.assignedToId !== session.user.id
-    ) {
-      redirect("/complaints");
-    }
+  if (
+    session.user.role !== "ADMIN" &&
+    complaint.userId !== session.user.id &&
+    complaint.assignedToId !== session.user.id
+  ) {
+    console.warn("User is not authorized to view this complaint:", session.user.id);
+    redirect("/complaints");
+  }
 
   return (
     <div className="container mx-auto py-6">
@@ -47,12 +42,12 @@ export default async function ComplaintPage({ params }: ComplaintPageProps) {
           Nazad na listu reklamacija
         </Link>
       </Button>
-      
+
       <ComplaintDetails complaint={complaint} />
     </div>
   );
 } catch (error) {
-    console.error("Error fetching complaint or session:", error);
-    notFound(); // Handle errors gracefully by redirecting to a 404 page
-  }
+  console.error("Error in ComplaintPage:", error);
+  notFound(); // Redirect or show a 404 page
+}
 }

@@ -28,7 +28,9 @@ export async function createComplaint(values: ComplaintFormValues) {
         type: values.type as ComplaintType,
         priority: values.priority as Priority,
         userId: user.id,
+        assignedToId: user.id,
         productId: values.productId,
+        status: "PENDING",
       },
     });
     

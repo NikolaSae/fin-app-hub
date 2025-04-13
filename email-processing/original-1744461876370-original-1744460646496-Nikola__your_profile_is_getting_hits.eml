@@ -1,0 +1,1156 @@
+Delivered-To: jov.nikola.333@gmail.com
+Received: by 2002:a05:7022:441c:b0:99:fe3a:10e1 with SMTP id ca28csp1073552dlb;
+        Thu, 20 Mar 2025 10:14:54 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IGSSILbMU9V/4AVGPfZ6FzcKDgwTMUk71KEB6IuHQqgrwtGpfBmPTsJdDUcCZUh+7WmybBh
+X-Received: by 2002:a05:6602:378d:b0:85b:4319:2a2a with SMTP id ca18e2360f4ac-85e1f4d1c90mr533384739f.6.1742490894595;
+        Thu, 20 Mar 2025 10:14:54 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1742490894; cv=none;
+        d=google.com; s=arc-20240605;
+        b=FzKtewiHoKYN3Ue33Bxq9NhfgzZKaTFQse6b7ACmGznyinv83VRnf5ehOITxey6Wkr
+         uhSa5dymNQlFjlVtcIF3tA4J7RcBG46qNOwA/J/NfEwioJZMWAVCDcrCaYQqbHEUFDna
+         vf+onsW39jRWlqUxj8WzFxBHP1oDdnxZ7wxJJrV+mYzoKpdX3rA2qfBoHbRVMX0syY/9
+         da1G/qilf4/pq5EUYmuY1dXRI0TIRBH0Dqa8avK91BMBRLDp4KTz6vmqDFWj8bsXOyrJ
+         Ocz3FXF+uUuoK71+90XunNfGrz1/bM6gCYJy2P//O3G63b8IgodGjd0aVwb/U0g3x4H5
+         tVZw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=message-id:list-unsubscribe-post:list-unsubscribe:feedback-id
+         :subject:reply-to:from:to:date:content-transfer-encoding
+         :mime-version:dkim-signature:dkim-signature;
+        bh=SfV9B8NlxiB3z+wVkAT9fGNLsavP1+fi5swpUBSdmaI=;
+        fh=vezwMw8WbQQ6goLf5oBsL7HtXt/rYolEIL78+rw9kbQ=;
+        b=ZSw7i/yh+fWQqSMTbGj0wEeRN7719NNqccpCfhwhOJra5f2MyYz0MX/cslA3fWg2uV
+         k8nRDwxVsSSA/FYgE5mLHQStDZufN0oHedEKOl5Mipwv6ukSXRH6tJdjC/Mf2AjpwQrc
+         h/adcU7chOs2Kil2tCvl+i+AGyPLdPVHYyc2fXMfYi+r+7jeJfR/pNl238eSoPDYD51p
+         swEsQP1jW1RspZcPVyB49/bKmxHMrjSr4UdINhvpbNpA0QJ2y9QM8T3zLen8Y+Dmbowc
+         kg0R1abc9SUkKy+jS0hRxOjxyse+k5KLSNVc1iUCKtmt1vtC8dCDB1O94bipnLlInh5C
+         M3Sg==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@e.linkedin.com header.s=linkedin header.b=WbCtjUQe;
+       dkim=pass header.i=@responsys.net header.s=oraclersys header.b=C+Qeo2l+;
+       spf=pass (google.com: domain of linkedin@e.linkedin.com designates 199.7.207.193 as permitted sender) smtp.mailfrom=linkedin@e.linkedin.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=e.linkedin.com
+Return-Path: <linkedin@e.linkedin.com>
+Received: from omp.e.linkedin.com (omp.e.linkedin.com. [199.7.207.193])
+        by mx.google.com with ESMTPS id ca18e2360f4ac-85e2bc2821fsi25870839f.44.2025.03.20.10.14.54
+        for <jov.nikola.333@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Thu, 20 Mar 2025 10:14:54 -0700 (PDT)
+Received-SPF: pass (google.com: domain of linkedin@e.linkedin.com designates 199.7.207.193 as permitted sender) client-ip=199.7.207.193;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@e.linkedin.com header.s=linkedin header.b=WbCtjUQe;
+       dkim=pass header.i=@responsys.net header.s=oraclersys header.b=C+Qeo2l+;
+       spf=pass (google.com: domain of linkedin@e.linkedin.com designates 199.7.207.193 as permitted sender) smtp.mailfrom=linkedin@e.linkedin.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=e.linkedin.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; s=linkedin; d=e.linkedin.com;
+ h=MIME-Version:Content-Type:Content-Transfer-Encoding:Date:To:From:Reply-To:
+ Subject:Feedback-ID:List-Unsubscribe:List-Unsubscribe-Post:Message-ID;
+ i=linkedin@e.linkedin.com;
+ bh=SfV9B8NlxiB3z+wVkAT9fGNLsavP1+fi5swpUBSdmaI=;
+ b=WbCtjUQeZ2nBKGozYnKZFR3T4mlo8pWbNTGNVj4EFwkTeN2XOLIH0K/0N4sP10/mV74OKPCKKdtW
+   txWoUGbQME0tpaIf0+POXPT2rj4OQtj2/bhUWOIm8we3f/xlSp8L9lm7c62QpwNMNxsl4Vg5sG0i
+   wCNvtUlS6W4BQBfYO5U=
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; s=oraclersys; d=responsys.net;
+ h=MIME-Version:Content-Type:Content-Transfer-Encoding:Date:To:From:Reply-To:
+ Subject:Feedback-ID:List-Unsubscribe:List-Unsubscribe-Post:Message-ID;
+ bh=SfV9B8NlxiB3z+wVkAT9fGNLsavP1+fi5swpUBSdmaI=;
+ b=C+Qeo2l+HJ/2vpLvPxkYakDAFkDZL/sW5B/HB+2BLwt0B4cOhYz+vegyXijwOs4wxB0NXkGVhbpv
+   EhHt24T8bHsl40RTrjQGL5biMDWoG6ey3j1MT1fxt3kLPzWAi/LFecs/f9WEoWHTl4SN5ObRG+Zd
+   sjeFdVF9U9sXP32xkbw=
+Received: by mta116-dc2.dc2.responsys.com id hrh6ci35r74t for <jov.nikola.333@gmail.com>; Thu, 20 Mar 2025 10:13:45 -0700 (envelope-from <linkedin@e.linkedin.com>)
+MIME-Version: 1.0
+Content-Type: text/html;
+	charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+Date: Thu, 20 Mar 2025 10:13:45 -0700
+To: jov.nikola.333@gmail.com
+From: =?UTF-8?B?TGlua2VkSW4=?= <linkedin@e.linkedin.com>
+Reply-To: =?UTF-8?B?TGlua2VkSW4=?= <donotreply@e.linkedin.com>
+Subject: Nikola, your profile is getting hits
+Feedback-ID: 50563:39019415:oraclersys
+List-Unsubscribe: <mailto:unsubscribe-AQpglLjHJlYQGf43Nhzgeq8aM9rzgXcia9UzddJHdSwJzgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD6f@imh.rsys5.com?subject=List-Unsubscribe>, <https://e.linkedin.com/pub/optout/UnsubscribeOneStepConfirmAction?YES=true&_ri_=X0Gzc2X%3DAQpglLjHJlYQGf43Nhzgeq8aM9rzgXcia9UzddJHdSwJzgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD6f&_ei_=E-vnpMJdK3gUKB0FeStv1Ax71BMMwbqbFEFymUbUtAKi6GRkwyvqGaOwoHs2A2bYuiJfLTHFA1_pLX0n_ym9msRd34FzK6u_K0uRn1n2DseUGg.>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+X-sgxh1: rhNQgpshtHQUUUxnuHptQJhu
+X-rext: 6.interact5.EMWUvoFL-CHfDjF_JpHD3ZKcaK1OcFZqD0J9chNYht2EZtJ-6FF-hap0Q6kAVjRj-Iq9AM
+X-cid: linkedin.21499235
+X-ei: EYPdcXD_rks5VvNvWb8Buko9uAtJSTJI
+X-cp: Eyb5t28EFCSdLCj0jGt7b9cB26SXpJulwMQG
+X-CSA-Complaints: whitelist-complaints@eco.de
+Message-ID: <0.1.F.33.1DB99BB7032803C.0@mta116-dc2.dc2.responsys.com>
+
+<=21DOCTYPE html PUBLIC =22-//W3C//DTD XHTML 1=2E0 Strict//EN=22 =22http://=
+www=2Ew3=2Eorg/TR/xhtml1/DTD/xhtml1-strict=2Edtd=22>
+<html lang=3D=22en=22 style=3D=22width: 100%;=22 xml:lang=3D=22en=22 xmlns=
+=3D=22http://www=2Ew3=2Eorg/1999/xhtml=22 xmlns:o=3D=22urn:schemas-microsof=
+t-com:office:office=22 xmlns:v=3D=22urn:schemas-microsoft-com:vml=22>
+<head>
+   <meta content=3D=22text/html; charset=3Dutf-8=22 http-equiv=3D=22Content=
+-Type=22 />
+   <meta content=3D=22width=3Ddevice-width; initial-scale=3D1=2E0; maximum-=
+scale=3D1=2E0; user-scalable=3Dno;=22 name=3D=22viewport=22 />
+   <meta content=3D=22width=3Ddevice-width=22 name=3D=22viewport=22 />
+   <meta content=3D=22noindex, no follow=22 name=3D=22robots=22 />
+   <meta name=3D=22x-apple-disable-message-reformatting=22 />
+   <title>LinkedIn</title>
+   <style type=3D=22text/css=22>=2EExternalClass =7B
+      width:100%;
+      =7D
+      =2EExternalClass, =2EExternalClass p, =2EExternalClass span, =2EExter=
+nalClass font, =2EExternalClass td, =2EExternalClass div =7B
+        line-height: 100%;
+      =7D
+      table td p =7B
+        border-collapse: collapse;
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      =7D
+      h1, h2, h3, h4, h5, h6 =7B
+        font-size: inherit;
+        padding: 0;
+        margin: 0;
+        color: black;
+        line-height: 100%;
+      =7D
+      =2Eapplelinks a =7B
+        text-decoration: none;
+        color: inherit =21important;
+      =7D
+      a =7B
+        color: black;
+        text-decoration: none;
+      =7D
+      a, a:link, a:visited =7B
+        color: inherit;
+        text-decoration: none;
+      =7D
+      span=2EMsoHyperlink =7B
+        mso-style-priority: 99;
+        color: inherit;
+      =7D
+      span=2EMsoHyperlinkFollowed =7B
+        mso-style-priority: 99;
+        color: inherit;
+      =7D
+      img =7B
+        border: 0px =21important;
+      =7D
+      body =7B
+        font-family: Segoe UI, Arial, sans-serif;
+        font-size: 14px;
+        -webkit-text-size-adjust: none;
+        -ms-text-size-adjust: none;
+        -webkit-font-smoothing: antialiased;
+        margin: 0;
+        padding: 0;
+        width: 100% =21important;
+      =7D
+      =2Elinkopacity:hover =7B
+        opacity: 0=2E8 =21important;
+      =7D
+      =2Ebutton =7B
+        -webkit-border-radius: 50px;
+        -moz-border-radius: 50px;
+        border-radius: 50px;
+        overflow: hidden;
+      =7D
+      =40media only screen and (max-width: 480px) =7B
+        =2Ew100m, =2Ecolumn50, =2Ecolumn33, =2Ecolumn25, =2Ecolumn75, =2Eco=
+lumn66 =7B
+          width: 100% =21important;
+        =7D
+        =2Ew90m =7B
+          width: 90% =21important;
+        =7D
+        =2Eexpandm =7B
+          width: 100% =21important;
+          display: block =21important;
+        =7D
+        =2Eresizem =7B
+          width: 100% =21important;
+          height: auto =21important;
+        =7D
+        =2Ehidem =7B
+          display: none =21important;
+        =7D
+        =2Eh1m =7B
+          font-size: 22px =21important;
+        =7D
+        =2Eh2m =7B
+          font-size: 15px =21important;
+        =7D
+        =2Eh3m =7B
+          font-size: 13px =21important;
+        =7D
+        =2Etcenterm =7B
+          text-align: center =21important;
+        =7D
+        =2Etleftm =7B
+          text-align: left =21important;
+        =7D
+        =2Etrightm =7B
+          text-align: right =21important;
+        =7D
+        =2Eheight0m =7B
+          height: 0 =21important;
+        =7D
+        =2Eshowm =7B
+          display: block =21important;
+          max-height: 1000px =21important;
+          width: 100% =21important;
+          overflow: visible =21important;
+          align: center =21important;
+        =7D
+        =2Elogo =7B
+          width: 150px =21important;
+          height: auto =21important;
+        =7D
+        =2Eborder0m =7B
+          border: 0px =21important;
+        =7D
+        =2Eborderlr0m =7B
+          border-left: 0px =21important;
+          border-right: 0px =21important;
+        =7D
+        =2Epad0m =7B
+          padding: 0px =21important;
+        =7D
+        =2Epadlr0m =7B
+          padding-left: 0px =21important;
+          padding-right: 0px =21important;
+        =7D
+        =2Epadt0m =7B
+          padding-top: 0px =21important;
+        =7D
+        =2Epadt5m =7B
+          padding-top: 5px =21important;
+        =7D
+        =2Epadt10m =7B
+          padding-top: 10px =21important;
+        =7D
+        =2Epadt20m =7B
+          padding-top: 20px =21important;
+        =7D
+        =2Epadt30m =7B
+          padding-top: 30px =21important;
+        =7D
+        =2Epadb0m =7B
+          padding-bottom: 0px =21important;
+        =7D
+        =2Epadb5m =7B
+          padding-bottom: 5px =21important;
+        =7D
+        =2Epadb10m =7B
+          padding-bottom: 10px =21important;
+        =7D
+        =2Epadb20m =7B
+          padding-bottom: 20px =21important;
+        =7D
+        =2Epadb30m =7B
+          padding-bottom: 30px =21important;
+        =7D
+      =7D
+      =40media only screen and (max-width: 512px) =7B
+        =2Eow100 =7B
+          width: 100% =21important;
+        =7D
+        =2Ew100 =7B
+          width: 100% =21important;
+        =7D
+        =2Ew90 =7B
+          width: 90% =21important;
+        =7D
+        =2Ehide =7B
+          display: none =21important;
+        =7D
+        =2Eresize =7B
+          width: 100% =21important;
+          height: auto =21important;
+        =7D
+        =2Eresize img =7B
+          max-width: 100% =21important;
+          height: auto =21important;
+        =7D
+        =2Eresize a =7B
+          width: auto =21important;
+          height: auto =21important;
+        =7D
+        =2Eexpand =7B
+          width: 100% =21important;
+          display: block =21important;
+        =7D
+        =2Eheight0 =7B
+          height: 0 =21important;
+        =7D
+        =2Ecolumn50 =7B
+          width: 50%;
+        =7D
+        =2Ecolumn50a =7B
+          width: 50%;
+        =7D
+        =2Ecolumn33 =7B
+          width: 33=2E33%;
+        =7D
+        =2Ecolumn25 =7B
+          width: 25%;
+        =7D
+        =2Ecolumn75 =7B
+          width: 75%;
+        =7D
+        =2Ecolumn66 =7B
+          width: 66%;
+        =7D
+        =2Etcenter =7B
+          text-align: center =21important;
+        =7D
+        =2Eshow =7B
+          display: block =21important;
+          max-height: 1000px =21important;
+          width: 100% =21important;
+          overflow: visible =21important;
+          align: center =21important;
+        =7D
+        =2Ebannerside =7B
+          padding-top: 105px =21important;
+        =7D
+        =2Eborder0 =7B
+          border: 0px =21important;
+        =7D
+        =2Eborderlr0 =7B
+          border-left: 0px =21important;
+          border-right: 0px =21important;
+        =7D
+        =2Epad0 =7B
+          padding: 0px =21important;
+        =7D
+        =2Epadlr0 =7B
+          padding-left: 0px =21important;
+          padding-right: 0px =21important;
+        =7D
+        =2Epadt0 =7B
+          padding-top: 0px =21important;
+        =7D
+        =2Epadt5 =7B
+          padding-top: 5px =21important;
+        =7D
+        =2Epadt10 =7B
+          padding-top: 10px =21important;
+        =7D
+        =2Epadt20 =7B
+          padding-top: 20px =21important;
+        =7D
+        =2Epadt30 =7B
+          padding-top: 30px =21important;
+        =7D
+        =2Epadb0 =7B
+          padding-bottom: 0px =21important;
+        =7D
+        =2Epadb5 =7B
+          padding-bottom: 5px =21important;
+        =7D
+        =2Epadb10 =7B
+          padding-bottom: 10px =21important;
+        =7D
+        =2Epadb20 =7B
+          padding-bottom: 20px =21important;
+        =7D
+        =2Epadb30 =7B
+          padding-bottom: 30px =21important;
+        =7D
+      =7D
+   </style>
+   <=21--=5Bif mso>
+<style type=3D=22text/css=22>
+body =7B margin: 0 =21important; padding: 0 =21important; font-family: Sego=
+e UI, Arial, sans-serif; =7D
+table, td, div, p =7B font-family: Segoe UI, Arial, sans-serif; line-height=
+: normal; =7D
+</style>
+<xml>
+<o:OfficeDocumentSettings>
+<o:AllowPNG/>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+<=21=5Bendif-->
+</head>
+<body class=3D=22tli=22 data-gr-ext-installed=3D=22=22 data-new-gr-c-s-chec=
+k-loaded=3D=2214=2E1094=2E0=22 data-new-gr-c-s-loaded=3D=2214=2E1094=2E0=22=
+ style=3D=22-webkit-text-size-adjust: none;-ms-text-size-adjust: none; padd=
+ing: 0; margin: 0; background-color: white;=22>
+<table align=3D=22center=22 border=3D=220=22 cellpadding=3D=220=22 cellspac=
+ing=3D=220=22 role=3D=22presentation=22 style=3D=22width: 100%;=22 width=3D=
+=22100%=22>
+   <tbody>
+      <tr>
+         <td align=3D=22center=22 style=3D=22background-color: =23F3F2EF;=
+=22>
+         <table align=3D=22center=22 border=3D=220=22 cellpadding=3D=220=22=
+ cellspacing=3D=220=22 class=3D=22w100=22 role=3D=22presentation=22 width=
+=3D=22512=22>
+            <tbody>
+               <tr>
+                  <td align=3D=22center=22>
+                  <table align=3D=22center=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 role=3D=22presentation=22 width=3D=22100%=
+=22><=21-- /// HEADER START -->
+                     <tbody>
+                        <tr>
+                           <td data-content-region-name=3D=22BODY=22>
+
+					<div lang=3D=22en=22>
+	=09
+	=09
+											=09
+						<div style=3D=22font-size:0px; display:none; visibility:hidden; opaci=
+ty:0; color:transparent; max-height:0px; height:0; width:0; mso-hide:all;=
+=22>
+						Make new connections and unlock new opportunities=2E
+																&=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238=
+199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199=
+;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=
+=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23=
+847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847=
+; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=
+=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23=
+8199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23819=
+9;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=
+=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23=
+847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847=
+; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=
+=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23=
+8199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23819=
+9;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=
+=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23=
+847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847=
+; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=
+=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23=
+8199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23819=
+9;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=
+=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23=
+847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847=
+; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=
+=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23=
+8199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23819=
+9;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=
+=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23=
+847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847=
+; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=
+=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23=
+8199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23819=
+9;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=
+=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23=
+847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847=
+; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=
+=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23=
+8199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=23819=
+9;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=
+=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23=
+847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847=
+; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &=
+=238199;&=23847; &=238199;&=23847; &=238199;&=23847; &shy; &shy; &shy; &shy=
+; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &=
+shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy=
+; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &=
+shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy=
+; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &=
+shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy=
+; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &=
+shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy=
+; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &=
+shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy=
+; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &=
+shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy=
+; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &=
+shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy; &shy=
+; &shy; &shy; &shy; &nbsp;
+														</div>
+						<table role=3D=22presentation=22 width=3D=22100%=22 cellpadding=3D=22=
+0=22 cellspacing=3D=220=22 border=3D=220=22 bgcolor=3D=22=23F3F2EF=22 class=
+=3D=22st-wrapper-table=22 style=3D=22width: 100%;=22>
+  <tr>
+    <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22center=22 class=3D=
+=22st-dynamic-765-5=22> <=21-- LINK TABLE CONTENT START -->
+      <div style=3D=22display:none;=22>
+              </div>
+      <=21-- LINK TABLE CONTENT END -->
+      <table role=3D=22presentation=22 border=3D=220=22 cellpadding=3D=220=
+=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22512=22 class=3D=
+=22st-wrapper st-wrapper-background st-module-wrapper-table=22 style=3D=22w=
+idth: 512px;=22>
+        <tr>
+          <td width=3D=22100%=22 bgcolor=3D=22=23FCE2BA=22 valign=3D=22top=
+=22 style=3D=22width: 100%;=22>
+            <table role=3D=22presentation=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22100%=22 st=
+yle=3D=22width: 100%;=22>
+              <tr>
+                <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22left=
+=22>
+                  <table role=3D=22presentation=22 cellpadding=3D=220=22 ce=
+llspacing=3D=220=22 border=3D=220=22 width=3D=22512=22 class=3D=22st-mso-fu=
+ll-width st-mobile-full-width=22 style=3D=22width: 512px;=22>
+                    <tr>
+                      <td align=3D=22center=22 valign=3D=22top=22 width=3D=
+=22512=22>
+                        <table width=3D=22100%=22 border=3D=220=22 cellpadd=
+ing=3D=220=22 cellspacing=3D=220=22 role=3D=22presentation=22>
+                          <tr>
+                            <td width=3D=22100%=22 valign=3D=22top=22 align=
+=3D=22center=22 style=3D=22width: 100%;=22>
+                              <table role=3D=22presentation=22 width=3D=221=
+00%=22 border=3D=220=22 align=3D=22center=22 cellpadding=3D=220=22 cellspac=
+ing=3D=220=22>
+                                <tr>
+                                  <=21-- /// HEADER START -->
+                                  <td class=3D=22padt10m=22 align=3D=22cent=
+er=22 style=3D=22padding-top: 16px; padding-bottom: 16px;=22>
+                                    <table role=3D=22presentation=22 width=
+=3D=2287%=22 border=3D=220=22 align=3D=22center=22 cellpadding=3D=220=22 ce=
+llspacing=3D=220=22>
+                                      <tr>
+
+                                        <=21-- LOGO START -->
+                                        <td width=3D=22100=22 align=3D=22le=
+ft=22 style=3D=22padding-right: 12px;=22><a href=3D=22https://e=2Elinkedin=
+=2Ecom/pub/cc?_ri_=3DX0Gzc2X%3DAQpglLjHJlYQGf43Nhzgeq8aM9rzgXcia9UzddJHdSwJ=
+zgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD6fVXtpKX%3DTTSTBCBY&_ei_=3D=
+EZ8ytgxEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY6sN1deYNPZ60HT_n7x2y9sdKSinBJuyCMpSNn=
+fKxuJ003b1v11C4WcEU4U1NJLX6lKm2xYcIGXivyq9Yy5=2E&_di_=3Dr0eoboahuq57mjjflse=
+jguptu5gmlhe3k54p9etldkl93mrik6d0=22><img src=3D=22https://static=2Ecdn=2Er=
+esponsys=2Enet/i5/responsysimages/linkedin/contentlibrary/jeangrey/logos/li=
+nkedin-blue-200x51=2Epng=22 width=3D=22100=22 alt=3D=22LinkedIn=22 style=3D=
+=22width: 100%; max-width: 84px; display: block; border: 0; color: black; f=
+ont-size: 20px; font-weight: bold; font-family: sans-serif;=22></a></td>
+                                        <=21-- LOGO END -->
+
+                                        <=21-- NAME/PROFILE START -->
+                                        <td class=3D=22h3m=22 width=3D=2215=
+0=22 valign=3D=22top=22 align=3D=22right=22 style=3D=22padding-top:3px; fon=
+t-size: 14px; color: =23191919; font-family: Helvetica Neue, Arial, sans-se=
+rif;=22>
+                                          <a href=3D=22https://e=2Elinkedin=
+=2Ecom/pub/cc?_ri_=3DX0Gzc2X%3DAQpglLjHJlYQGf43Nhzgeq8aM9rzgXcia9UzddJHdSwJ=
+zgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD6fVXtpKX%3DTTSTBCDY&_ei_=3D=
+EZ8ytgxEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY6sN1deYNPZ60HT_n7x2y9sdKSinBJuyCMpSNn=
+fKxuJ003b1v11C4WcEU4U1NJLX6lKm2xYcIGXivyq9Yy5=2E&_di_=3D4cr8k41at8jf1rtvq0n=
+a19f84puou9f7dfuooma5nguu06mmmn0g=22><img alt src=3D=22https://media=2Elicd=
+n=2Ecom/dms/image/v2/C5603AQFtkDfbNLWaSw/profile-displayphoto-shrink_400_40=
+0/profile-displayphoto-shrink_400_400/0/1549657339355?e=3D2147483647&v=3Dbe=
+ta&t=3DafMqTuqElrVTW325MKRigXrCYj9pj_gWeIby-ETtjp4=22 style=3D=22display:bl=
+ock; border: 0; background-color: =23ffffff; -webkit-border-radius: 50%; -m=
+oz-border-radius: 50%; border-radius: 50%; overflow: hidden;=22 width=3D=22=
+32=22></a>
+                                        </td>
+                                        <=21-- NAME/PROFILE END -->
+
+                                      </tr>
+                                    </table>
+                                  </td>
+                                </tr>
+                              </table>
+                              <=21-- HEADER END /// -->
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22center=22 class=3D=
+=22st-dynamic-765-5=22>
+      <table role=3D=22presentation=22 border=3D=220=22 cellpadding=3D=220=
+=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22512=22 class=3D=
+=22st-wrapper st-wrapper-background st-module-wrapper-table=22 style=3D=22w=
+idth: 512px;=22>
+        <tr>
+          <td width=3D=22100%=22 bgcolor=3D=22=23FCE2BA=22 valign=3D=22top=
+=22 style=3D=22width: 100%; padding: 16px 33px;=22>
+            <table role=3D=22presentation=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22100%=22 st=
+yle=3D=22width: 100%;=22>
+              <tr>
+                <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22left=
+=22>
+                  <table role=3D=22presentation=22 cellpadding=3D=220=22 ce=
+llspacing=3D=220=22 border=3D=220=22 width=3D=22446=22 class=3D=22st-mso-fu=
+ll-width st-mobile-full-width=22 style=3D=22width: 446px;=22>
+                    <tr>
+                      <td align=3D=22center=22 valign=3D=22top=22 width=3D=
+=22446=22>
+                        <table width=3D=22100%=22 border=3D=220=22 cellpadd=
+ing=3D=220=22 cellspacing=3D=220=22 role=3D=22presentation=22>
+                          <tr>
+                            <td width=3D=22100%=22 valign=3D=22top=22 align=
+=3D=22left=22 style=3D=22text-align: left; font-family: Helvetica, Arial, s=
+ans-serif; color: =23191919; font-size: 24px; font-weight: 700; letter-spac=
+ing: normal; line-height: 29px; padding-top: 16px; width: 100%;=22>
+                              <p style=3D=22margin: 0px;=22><span style=3D=
+=22font-size: 24px; line-height: 29px;=22>Your profile is getting&nbsp;noti=
+ced=21</span></p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22left=
+=22>
+                  <table role=3D=22presentation=22 cellpadding=3D=220=22 ce=
+llspacing=3D=220=22 border=3D=220=22 width=3D=22446=22 class=3D=22st-mso-fu=
+ll-width st-mobile-full-width=22 style=3D=22width: 446px;=22>
+                    <tr>
+                      <td align=3D=22center=22 valign=3D=22top=22 width=3D=
+=22446=22>
+                        <table width=3D=22100%=22 border=3D=220=22 cellpadd=
+ing=3D=220=22 cellspacing=3D=220=22 role=3D=22presentation=22>
+                          <tr>
+                            <td width=3D=22100%=22 valign=3D=22top=22 align=
+=3D=22left=22 style=3D=22padding-top: 16px; width: 100%;=22><=21--=5Bif mso=
+=5D>
+        <v:roundrect xmlns:v=3D=22urn:schemas-microsoft-com:vml=22 xmlns:w=
+=3D=22urn:schemas-microsoft-com:office:word=22 style=3D=22height:35pt; v-te=
+xt-anchor:middle; width:121pt; mso-position-horizontal: left=22 arcsize=3D=
+=22109%=22 strokecolor=3D=22=230A66C2=22 strokeweight=3D=221pt=22 fillcolor=
+=3D=22=230A66C2=22>
+          <w:anchorlock/>
+          <v:textbox inset=3D=220,0,0,0=22><p style=3D=22text-align: center=
+; font-family: Helvetica, Arial, Sans-serif; color: =23FFFFFF; font-size: 1=
+6px; font-weight: 700; letter-spacing: normal; mso-line-height-rule: exactl=
+y; line-height: 16px=22><=21=5Bendif=5D-->
+                              <=21--=5Bif =21mso=5D><=21-->
+                              <table role=3D=22presentation=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 border=3D=220=22 style=3D=22border-collaps=
+e: initial;=22>
+                                <tr>
+                                  <td data-content-region-name=3D=22Region1=
+=22 width=3D=22100%=22 bgcolor=3D=22=230A66C2=22 align=3D=22center=22 heigh=
+t=3D=2245=22 valign=3D=22middle=22 style=3D=22mso-padding-alt:0px 24px 0px =
+24px; border-radius:50px; border-width: 1px; border-style: solid; border-co=
+lor: =230a66c2; height: 45px; width: 100%; text-align: center; background-c=
+olor: =230a66c2; vertical-align: middle=22><=21--<=21=5Bendif=5D--> <a href=
+=3D=22https://e=2Elinkedin=2Ecom/pub/acc?_ri_=3DX0Gzc2X%3DAQpglLjHJlYQGf43N=
+hzgeq8aM9rzgXcia9UzddJHdSwJzgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD=
+6fVXtpKX%3DTTSTBDSY&_ei_=3DEZ8ytgxEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY6sN1deYNPZ=
+60HT_n7x2y9sdKSinBJuyCMpSNnfKxuJ003b1v11C4WcEU4U1NJLX6lKm2xYcIGXivyq9Yy5=2E=
+&_di_=3Dhhucacb89tlv3bss0iihfrflbuusvcd4c468a14dcod8d7ra8r30=22 target=3D=
+=22_blank=22 bgcolor=3D=22=230A66C2=22 valign=3D=22middle=22 style=3D=22mso=
+-line-height-rule:exactly; text-align:center; font-family: Helvetica, Arial=
+, sans-serif; color: =23ffffff; font-size: 16px; font-weight: 700; letter-s=
+pacing: normal; line-height: 20px; padding-right: 24px; padding-left: 24px;=
+ text-decoration: none; display: table-cell; height: 45px; border-radius: 5=
+0px; vertical-align: middle; box-sizing: content-box=22 rilt=3D=22UNLOCK_FO=
+R_FREE=22 rilc=3D=22CTA=22> <span style=3D=22margin: 0px; color: =23ffffff;=
+=22><span style=3D=22font-size: 16px; line-height: 20px;=22>Unlock for free=
+</span></span></a> <=21--=5Bif =21mso=5D><=21--></td>
+                                </tr>
+                              </table> <=21--<=21=5Bendif=5D-->
+                              <=21--=5Bif mso=5D>
+            </p></v:textbox>
+          </v:roundrect>
+        <=21=5Bendif=5D-->
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22center=22 class=3D=
+=22st-dynamic-765-5=22>
+      <table role=3D=22presentation=22 border=3D=220=22 cellpadding=3D=220=
+=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22512=22 class=3D=
+=22st-wrapper st-wrapper-background st-module-wrapper-table=22 style=3D=22w=
+idth: 512px;=22>
+        <tr>
+          <td width=3D=22100%=22 bgcolor=3D=22=23FFFFFF=22 valign=3D=22top=
+=22 style=3D=22width: 100%; padding: 16px 33px;=22>
+            <table role=3D=22presentation=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22100%=22 st=
+yle=3D=22width: 100%;=22>
+              <tr>
+                <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22left=
+=22>
+                  <table role=3D=22presentation=22 cellpadding=3D=220=22 ce=
+llspacing=3D=220=22 border=3D=220=22 width=3D=22446=22 class=3D=22st-mso-fu=
+ll-width st-mobile-full-width=22 style=3D=22width: 446px;=22>
+                    <tr>
+                      <td align=3D=22center=22 valign=3D=22top=22 width=3D=
+=22446=22>
+                        <table width=3D=22100%=22 border=3D=220=22 cellpadd=
+ing=3D=220=22 cellspacing=3D=220=22 role=3D=22presentation=22>
+                          <tr>
+                            <td width=3D=22100%=22 valign=3D=22top=22 align=
+=3D=22left=22 class=3D=22aligned-bullets bullets-pb-12=22 style=3D=22text-a=
+lign: left; font-family: Helvetica, Arial, sans-serif; color: =23191919; fo=
+nt-size: 16px; font-weight: 400; letter-spacing: normal; line-height: 24px;=
+ padding-top: 4px; width: 100%;=22>
+                              <p style=3D=22margin: 0px;=22>Hi Nikola,</p>
+                              <p style=3D=22margin: 0px;=22>&zwnj;<br></p>
+                                <p style=3D=22margin: 0px;=22><b>4</b> peop=
+le looked you up in the last 90 days=2E See who they are with a free month =
+of <a href=3D=22https://e=2Elinkedin=2Ecom/pub/acc?_ri_=3DX0Gzc2X%3DAQpglLj=
+HJlYQGf43Nhzgeq8aM9rzgXcia9UzddJHdSwJzgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6=
+zer0rqbzbD6fVXtpKX%3DTTSTBDUY&_ei_=3DEZ8ytgxEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY=
+6sN1deYNPZ60HT_n7x2y9sdKSinBJuyCMpSNnfKxuJ003b1v11C4WcEU4U1NJLX6lKm2xYcIGXi=
+vyq9Yy5=2E&_di_=3Dlbt6cop440ocg732iub7u9chjo8m2voi2hiai7jvakcu52kfnktg=22><=
+span style=3D=22color: =230a66c2;text-decoration: underline;=22 >LinkedIn&n=
+bsp;Premium</span></a>=2E</p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+<td width=3D=22100%=22 valign=3D=22top=22 align=3D=22center=22 class=3D=22s=
+t-dynamic-786-5=22>
+      <table role=3D=22presentation=22 border=3D=220=22 cellpadding=3D=220=
+=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22512=22 class=3D=
+=22st-wrapper st-wrapper-background st-module-wrapper-table=22 style=3D=22w=
+idth: 512px;=22>
+        <tr>
+          <td width=3D=22100%=22 bgcolor=3D=22=23FFFFFF=22 valign=3D=22top=
+=22 style=3D=22width: 100%; padding: 16px 33px;=22>
+            <table role=3D=22presentation=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22100%=22 st=
+yle=3D=22width: 100%;=22>
+              <tr>
+                <td width=3D=2264=22 valign=3D=22top=22 style=3D=22width: 6=
+4px;=22>
+                  <table role=3D=22presentation=22 width=3D=22100%=22 cells=
+pacing=3D=220=22 cellpadding=3D=220=22 border=3D=220=22>
+                    <tr>
+                      <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22=
+left=22 class=3D=22img-w-48 st-dynamic-826-27=22 style=3D=22padding-right: =
+16px; width: 100%;=22><img border=3D=220=22 valign=3D=22top=22 width=3D=224=
+8=22 src=3D=22https://static=2Ecdn=2Eresponsys=2Enet/i5/responsysimages/lin=
+kedin/contentlibrary/premium/winback/images/66452b6e14ac6-1715809134=2E0847=
+=2Epng=22 height=3D=2248=22 alt title class=3D=22st-mobile-width-constraint=
+=22 style=3D=22border: 0px; display: block; width: 48px; max-width: 100%;=
+=22> </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width=3D=22382=22 valign=3D=22middle=22 style=3D=22widt=
+h: 382px;=22>
+                  <table role=3D=22presentation=22 width=3D=22100%=22 cells=
+pacing=3D=220=22 cellpadding=3D=220=22 border=3D=220=22>
+                    <tr>
+                      <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22=
+left=22 style=3D=22text-align: left; font-family: Helvetica, Arial, sans-se=
+rif; color: =23191919; font-size: 16px; font-weight: 400; letter-spacing: n=
+ormal; line-height: 20px; width: 100%;=22>
+                          <p style=3D=22margin: 0px;=22><b>1</b> viewer wor=
+ks at&nbsp;Wiener St=C3=A4dtische osiguranje a=2Ed=2Eo=2E Beograd</p>
+                                =20
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+</tr>
+
+<tr>
+<td width=3D=22100%=22 valign=3D=22top=22 align=3D=22center=22 class=3D=22s=
+t-dynamic-786-5=22>
+      <table role=3D=22presentation=22 border=3D=220=22 cellpadding=3D=220=
+=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22512=22 class=3D=
+=22st-wrapper st-wrapper-background st-module-wrapper-table=22 style=3D=22w=
+idth: 512px;=22>
+        <tr>
+          <td width=3D=22100%=22 bgcolor=3D=22=23FFFFFF=22 valign=3D=22top=
+=22 style=3D=22width: 100%; padding: 16px 33px;=22>
+            <table role=3D=22presentation=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22100%=22 st=
+yle=3D=22width: 100%;=22>
+              <tr>
+                <td width=3D=2264=22 valign=3D=22top=22 style=3D=22width: 6=
+4px;=22>
+                  <table role=3D=22presentation=22 width=3D=22100%=22 cells=
+pacing=3D=220=22 cellpadding=3D=220=22 border=3D=220=22>
+                    <tr>
+                      <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22=
+left=22 class=3D=22img-w-48 st-dynamic-826-27=22 style=3D=22padding-right: =
+16px; width: 100%;=22><img border=3D=220=22 valign=3D=22top=22 width=3D=224=
+8=22 src=3D=22https://www=2Eemailimagecdntsxk=2Ecom/b95ovenmr3/en_us/images=
+/65df970c1223b-1709152012=2E0743=2Epng=22 height=3D=2248=22 alt title class=
+=3D=22st-mobile-width-constraint=22 style=3D=22border: 0px; display: block;=
+ width: 48px; max-width: 100%;=22> </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width=3D=22382=22 valign=3D=22middle=22 style=3D=22widt=
+h: 382px;=22>
+                  <table role=3D=22presentation=22 width=3D=22100%=22 cells=
+pacing=3D=220=22 cellpadding=3D=220=22 border=3D=220=22>
+                    <tr>
+                      <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22=
+left=22 style=3D=22text-align: left; font-family: Helvetica, Arial, sans-se=
+rif; color: =23191919; font-size: 16px; font-weight: 400; letter-spacing: n=
+ormal; line-height: 20px; width: 100%;=22>
+                          <p style=3D=22margin: 0px;=22><span style=3D=22fo=
+nt-size: 16px; line-height: 20px;=22><b>1</b> viewer has the job title&nbsp=
+;Insurance Agent</span></p>
+                             =20
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+</tr>
+
+<tr>
+<td width=3D=22100%=22 valign=3D=22top=22 align=3D=22center=22 class=3D=22s=
+t-dynamic-786-5=22>
+      <table role=3D=22presentation=22 border=3D=220=22 cellpadding=3D=220=
+=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22512=22 class=3D=
+=22st-wrapper st-wrapper-background st-module-wrapper-table=22 style=3D=22w=
+idth: 512px;=22>
+        <tr>
+          <td width=3D=22100%=22 bgcolor=3D=22=23FFFFFF=22 valign=3D=22top=
+=22 style=3D=22width: 100%; padding: 16px 33px;=22>
+            <table role=3D=22presentation=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22100%=22 st=
+yle=3D=22width: 100%;=22>
+              <tr>
+                <td width=3D=2264=22 valign=3D=22top=22 style=3D=22width: 6=
+4px;=22>
+                  <table role=3D=22presentation=22 width=3D=22100%=22 cells=
+pacing=3D=220=22 cellpadding=3D=220=22 border=3D=220=22>
+                    <tr>
+                      <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22=
+left=22 class=3D=22img-w-48 st-dynamic-826-27=22 style=3D=22padding-right: =
+16px; width: 100%;=22><img border=3D=220=22 valign=3D=22top=22 width=3D=224=
+8=22 src=3D=22https://www=2Eemailimagecdntsxk=2Ecom/b95ovenmr3/en_us/images=
+/65df971d8a258-1709152029=2E5659=2Epng=22 height=3D=2248=22 alt title class=
+=3D=22st-mobile-width-constraint=22 style=3D=22border: 0px; display: block;=
+ width: 48px; max-width: 100%;=22> </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width=3D=22382=22 valign=3D=22middle=22 style=3D=22widt=
+h: 382px;=22>
+                  <table role=3D=22presentation=22 width=3D=22100%=22 cells=
+pacing=3D=220=22 cellpadding=3D=220=22 border=3D=220=22>
+                    <tr>
+                      <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22=
+left=22 style=3D=22text-align: left; font-family: Helvetica, Arial, sans-se=
+rif; color: =23191919; font-size: 16px; font-weight: 400; letter-spacing: n=
+ormal; line-height: 20px; width: 100%;=22>
+                          <p style=3D=22margin: 0px;=22><span style=3D=22fo=
+nt-size: 16px; line-height: 20px;=22><b>1</b> viewer is from the Financial =
+Services&nbsp;industry</span></p>
+                         =20
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+</tr>
+  <tr>
+    <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22center=22 class=3D=
+=22st-dynamic-765-5=22>
+      <table role=3D=22presentation=22 border=3D=220=22 cellpadding=3D=220=
+=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22512=22 class=3D=
+=22st-wrapper st-wrapper-background st-module-wrapper-table=22 style=3D=22w=
+idth: 512px;=22>
+        <tr>
+          <td width=3D=22100%=22 bgcolor=3D=22=23FFFFFF=22 valign=3D=22top=
+=22 style=3D=22width: 100%; padding: 16px 33px;=22>
+            <table role=3D=22presentation=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22100%=22 st=
+yle=3D=22width: 100%;=22>
+              <tr>
+                <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22left=
+=22>
+                  <table role=3D=22presentation=22 cellpadding=3D=220=22 ce=
+llspacing=3D=220=22 border=3D=220=22 width=3D=22446=22 class=3D=22st-mso-fu=
+ll-width st-mobile-full-width=22 style=3D=22width: 446px;=22>
+                    <tr>
+                      <td align=3D=22center=22 valign=3D=22top=22 width=3D=
+=22446=22>
+                        <table width=3D=22100%=22 border=3D=220=22 cellpadd=
+ing=3D=220=22 cellspacing=3D=220=22 role=3D=22presentation=22>
+                          <tr>
+                            <td width=3D=22100%=22 valign=3D=22top=22 align=
+=3D=22left=22 class=3D=22aligned-bullets bullets-pb-12=22 style=3D=22text-a=
+lign: left; font-family: Helvetica, Arial, sans-serif; color: =23191919; fo=
+nt-size: 16px; font-weight: 400; letter-spacing: normal; line-height: 24px;=
+ padding-top: 4px; width: 100%;=22>
+                              <p style=3D=22margin: 0px;=22>Don't miss out =
+on your chance to meet your next employer, customer, or business&nbsp;partn=
+er=2E</p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22left=
+=22>
+                  <table role=3D=22presentation=22 cellpadding=3D=220=22 ce=
+llspacing=3D=220=22 border=3D=220=22 width=3D=22446=22 class=3D=22st-mso-fu=
+ll-width st-mobile-full-width=22 style=3D=22width: 446px;=22>
+                    <tr>
+                      <td align=3D=22center=22 valign=3D=22top=22 width=3D=
+=22446=22>
+                        <table width=3D=22100%=22 border=3D=220=22 cellpadd=
+ing=3D=220=22 cellspacing=3D=220=22 role=3D=22presentation=22>
+                          <tr>
+                            <td width=3D=22100%=22 valign=3D=22top=22 align=
+=3D=22left=22 style=3D=22padding-top: 16px; width: 100%;=22><=21--=5Bif mso=
+=5D>
+        <v:roundrect xmlns:v=3D=22urn:schemas-microsoft-com:vml=22 xmlns:w=
+=3D=22urn:schemas-microsoft-com:office:word=22 style=3D=22height:35pt; v-te=
+xt-anchor:middle; width:121pt; mso-position-horizontal: left=22 arcsize=3D=
+=22109%=22 strokecolor=3D=22=230A66C2=22 strokeweight=3D=221pt=22 fillcolor=
+=3D=22=23FFFFFF=22>
+          <w:anchorlock/>
+          <v:textbox inset=3D=220,0,0,0=22><p style=3D=22text-align: center=
+; font-family: Helvetica, Arial, Sans-serif; color: =230A66C2; font-size: 1=
+6px; font-weight: 700; letter-spacing: normal; mso-line-height-rule: exactl=
+y; line-height: 16px=22><=21=5Bendif=5D-->
+                              <=21--=5Bif =21mso=5D><=21-->
+                              <table role=3D=22presentation=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 border=3D=220=22 style=3D=22border-collaps=
+e: initial;=22>
+                                <tr>
+                                  <td width=3D=22100%=22 align=3D=22center=
+=22 height=3D=2245=22 valign=3D=22middle=22 style=3D=22mso-padding-alt:0px =
+24px 0px 24px; border-radius:50px; border-width: 1px; border-style: solid; =
+border-color: =230a66c2; height: 45px; width: 100%; text-align: center; ver=
+tical-align: middle=22><=21--<=21=5Bendif=5D--> <a href=3D=22https://e=2Eli=
+nkedin=2Ecom/pub/acc?_ri_=3DX0Gzc2X%3DAQpglLjHJlYQGf43Nhzgeq8aM9rzgXcia9Uzd=
+dJHdSwJzgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD6fVXtpKX%3DTTSTBDYY&=
+_ei_=3DEZ8ytgxEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY6sN1deYNPZ60HT_n7x2y9sdKSinBJu=
+yCMpSNnfKxuJ003b1v11C4WcEU4U1NJLX6lKm2xYcIGXivyq9Yy5=2E&_di_=3Dpfq9f9gr8t0t=
+uquh6cfo4hvoqrnbkqihvbqi3tlvsh636gce5tt0=22 target=3D=22_blank=22 valign=3D=
+=22middle=22 style=3D=22mso-line-height-rule:exactly; text-align:center; fo=
+nt-family: Helvetica, Arial, sans-serif; color: =230a66c2; font-size: 16px;=
+ font-weight: 700; letter-spacing: normal; line-height: 20px; padding-right=
+: 24px; padding-left: 24px; text-decoration: none; display: table-cell; hei=
+ght: 45px; border-radius: 50px; vertical-align: middle; box-sizing: content=
+-box=22 rilt=3D=22UNLOCK_FOR_FREE_1=22 rilc=3D=22CTA=22> <span style=3D=22m=
+argin: 0px; color: =230a66c2;=22><span style=3D=22font-size: 16px; line-hei=
+ght: 20px;=22>Unlock for free</span></span></a> <=21--=5Bif =21mso=5D><=21-=
+-></td>
+                                </tr>
+                              </table> <=21--<=21=5Bendif=5D-->
+                              <=21--=5Bif mso=5D>
+            </p></v:textbox>
+          </v:roundrect>
+        <=21=5Bendif=5D-->
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22center=22 class=3D=
+=22st-dynamic-765-5=22>
+      <table role=3D=22presentation=22 border=3D=220=22 cellpadding=3D=220=
+=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22512=22 class=3D=
+=22st-wrapper st-wrapper-background st-module-wrapper-table=22 style=3D=22w=
+idth: 512px;=22>
+        <tr>
+          <td width=3D=22100%=22 valign=3D=22top=22 style=3D=22width: 100%;=
+=22>
+            <table role=3D=22presentation=22 border=3D=220=22 cellpadding=
+=3D=220=22 cellspacing=3D=220=22 align=3D=22center=22 width=3D=22100%=22 st=
+yle=3D=22width: 100%;=22>
+              <tr>
+                <td width=3D=22100%=22 valign=3D=22top=22 align=3D=22left=
+=22>
+                  <table role=3D=22presentation=22 cellpadding=3D=220=22 ce=
+llspacing=3D=220=22 border=3D=220=22 width=3D=22512=22 class=3D=22st-mso-fu=
+ll-width st-mobile-full-width=22 style=3D=22width: 512px;=22>
+                    <tr>
+                      <td align=3D=22center=22 valign=3D=22top=22 width=3D=
+=22512=22>
+                        <table width=3D=22100%=22 border=3D=220=22 cellpadd=
+ing=3D=220=22 cellspacing=3D=220=22 role=3D=22presentation=22>
+                          <tr>
+                            <td width=3D=22100%=22 valign=3D=22top=22 align=
+=3D=22center=22 style=3D=22width: 100%;=22><=21-- /// FOOTER START -->
+                          </td></tr><tr>
+                            <td style=3D=22background-color: =23F3F2EF; pad=
+ding-top: 12px; padding-bottom: 36px;=22>
+<html lang=3D=22en=22>
+<head>
+<title>Footer Mercado English</title>
+</head>
+<body>
+                        <table role=3D=22presentation=22  width=3D=2287%=22=
+ border=3D=220=22 align=3D=22center=22 cellpadding=3D=220=22 cellspacing=3D=
+=220=22 >
+
+                            <=21-- COPY START -->
+                            <tr>
+                                <td style=3D=22padding-top: 24px; text-alig=
+n: left; font-size: 14px; line-height: 1=2E3em; color: =23191919; font-fami=
+ly: Helvetica Neue, Arial, sans-serif;=22>
+                                    This email was intended for Nikola Jova=
+novic (Web Developer)
+                                    <br /><a href=3D=22https://e=2Elinkedin=
+=2Ecom/pub/cc?_ri_=3DX0Gzc2X%3DAQpglLjHJlYQGf43Nhzgeq8aM9rzgXcia9UzddJHdSwJ=
+zgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD6fVXtpKX%3DTTSTBDBY&_ei_=3D=
+EZ8ytgxEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY6sN1deYNPZ60HT_n7x2y9sdKSinBJuyCMpSNn=
+fKxuJ003b1v11C4WcEU4U1NJLX6lKm2xYcIGXivyq9Yy5=2E&_di_=3Da2rc7c4hk2ejsndkf2e=
+k2f22gvu17aqokell9ftdo98cff7qi2k0=22><span style=3D=22color: =230A66C2; tex=
+t-decoration: underline;=22>Learn why we included&nbsp;this=2E</span></a>
+                                    <br /><br />This is an occasional email=
+ to help you get the most out&nbsp;of&nbsp;LinkedIn=2E
+                                    <br><br>
+                                    <a href=3D=22https://e=2Elinkedin=2Ecom=
+/pub/cc?_ri_=3DX0Gzc2X%3DAQpglLjHJlYQGf43Nhzgeq8aM9rzgXcia9UzddJHdSwJzgzdzb=
+9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD6fVXtpKX%3DTTSTBDDY&_ei_=3DEZ8ytg=
+xEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY6sN1deYNPZ60HT_n7x2y9sdKSinBJuyCMpSNnfKxuJ0=
+03b1v1d3y2qNUvczRnwjL2up5XGanfw_1LYmieAhYYWXi2KQLvmdOZfuOTLas8LFYZbtafypplm=
+85je6Ov0sXwjs00YvNvJfCuNdHctWNJriXgIy_BgDL6lg6Gcu4orqMknBQFiMXWtSC-EakBRDOR=
+AbzO8Qn0tYYs=2E&_di_=3Dtiubjo0vsp9ppr8r10lgc6eemm0hhbplukh664mcdn7rhimnq8vg=
+=22><span style=3D=22color: =230A66C2; text-decoration: underline;=22>Unsub=
+scribe</span></a>&nbsp;&nbsp;&=23183;&nbsp;&nbsp;<a href=3D=22https://e=2El=
+inkedin=2Ecom/pub/cc?_ri_=3DX0Gzc2X%3DAQpglLjHJlYQGf43Nhzgeq8aM9rzgXcia9Uzd=
+dJHdSwJzgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD6fVXtpKX%3DTTSTCRSY&=
+_ei_=3DEZ8ytgxEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY6sN1deYNPZ60HT_n7x2y9sdKSinBJu=
+yCMpSNnfKxuJ003b1v11C4WcEU4U1NJLX6lKm2xYcIGXivyq9Yy5=2E&_di_=3D4qmj9f02d0nb=
+qr70ss90s9dilaophv1aj9q8eu8glc1t1boal6qg=22><span style=3D=22color: =230A66=
+C2; text-decoration: underline;=22>Help</span></a>
+                                </td>
+                            </tr>
+                            <=21-- COPY END -->
+
+                            <=21-- IMAGE START -->
+                            <tr>
+                                <td style=3D=22padding-top: 25px;=22><a hre=
+f=3D=22https://e=2Elinkedin=2Ecom/pub/cc?_ri_=3DX0Gzc2X%3DAQpglLjHJlYQGf43N=
+hzgeq8aM9rzgXcia9UzddJHdSwJzgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs6zer0rqbzbD=
+6fVXtpKX%3DTTSTBCBY&_ei_=3DEZ8ytgxEdJsiu_q7dOiXv4EbegmjnLT9Xux4CY6sN1deYNPZ=
+60HT_n7x2y9sdKSinBJuyCMpSNnfKxuJ003b1v11C4WcEU4U1NJLX6lKm2xYcIGXivyq9Yy5=2E=
+&_di_=3Dr0eoboahuq57mjjflsejguptu5gmlhe3k54p9etldkl93mrik6d0=22><img src=3D=
+=22https://e=2Elinkedin=2Ecom/assets/responsysimages/content/linkedin/linke=
+din-blue-80x20=2Epng=22 width=3D=2280=22 alt=3D=22LinkedIn=22 style=3D=22di=
+splay: block; border: 0; color: black; font-size: 20px; font-weight: bold; =
+font-family: sans-serif;=22/></a></td>
+                            </tr>
+                            <=21-- IMAGE END -->
+
+                            <=21-- COPY START -->
+                            <tr>
+                                <td style=3D=22padding-top: 20px; text-alig=
+n: left; font-size: 14px; line-height: 1=2E3em; color: =23191919; font-fami=
+ly: Helvetica Neue, Arial, sans-serif;=22>&=23169; 2025, LinkedIn Ireland U=
+nlimited Company=2E All rights reserved=2E LinkedIn Ireland Unlimited Compa=
+ny, Gardner House, Wilton Plaza, Wilton Place, Dublin 2, Ireland=2E LinkedI=
+n and the LinkedIn logo are registered trademarks of&nbsp;LinkedIn=2E</td>
+                            </tr>
+                            <=21-- COPY END -->
+
+                        </table><table cellpadding=3D=220=22 cellspacing=3D=
+=220=22 style=3D=22border: 0px; padding: 0px; margin: 0px; position: absolu=
+te; display: none; float: left=22>
+<tr>
+<td height=3D=221=22 style=3D=22font-size: 1px; line-height: 1px; padding: =
+0px;=22>
+<br><img src=3D=22https://e=2Elinkedin=2Ecom/pub/as?_ri_=3DX0Gzc2X%3DAQpglL=
+jHJlYQGf43Nhzgeq8aM9rzgXcia9UzddJHdSwJzgzdzb9RcDJov5olTGzdlcqAzgzgqoHiRzaAs=
+6zer0rqbzbD6fVXHkMX%3Dw&_ei_=3DE-vnpMJdK3gUKB0FeStv1Ax71BMMwbqbFEFymUbUtAKi=
+6GRkwyvqGaOwoHs2A2bYuiJfLTHFA1_pLX0n_ym9msRd34FzK6u_K0uRn1n2DseUGg=2E=22></=
+img>
+</td>
+</tr>
+</table>
+</body>
+</html>                            </td>
+                          </tr>
+                          <=21-- FOOTER END /// -->
+                      </table></td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<=21--=5Bif false=5D><=21-->
+<tr>
+  <td class=3D=22st-gmail-fix=22 style=3D=22font-size:0; line-height: 0; he=
+ight: 0; min-width: 512px;=22>
+    &nbsp;
+  </td>
+</tr><=21--<=21=5Bendif=5D-->												</div></td>
+                        </tr>
+                     </tbody>
+                  </table>
+                  </td>
+               </tr>
+            </tbody>
+         </table>
+         </td>
+      </tr>
+   </tbody>
+</table>
+<grammarly-desktop-integration data-grammarly-shadow-root=3D=22true=22></gr=
+ammarly-desktop-integration></body>
+</html>
+
+

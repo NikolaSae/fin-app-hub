@@ -1,45 +1,71 @@
-// app/(protected)/complaints/page.tsx - Lista svih reklamacija
+// app/(protected)/complaints/page.tsx
 import { auth } from "@/auth"
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { toast } from "sonner";
 import ComplaintsList from "@/components/complaints/complaints-list";
 import { NewComplaintButton } from "@/components/complaints/new-complaint-button";
-import { getAllComplaints, getComplaintsByUserId, getAssignedComplaints } from "@/data/complaint";
+import { getAllComplaints, getComplaintsByUserId } from "@/data/complaint";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmailProcessorWrapper } from "@/components/email-processor/email-processor-wrapper";
 
 export default async function ComplaintsPage() {
   const session = await auth();
-
-  if (!session || !session.user) {
-    redirect("/auth/login");
+  if (!session?.user) {
+    redirect("/auth/login?error=unauthorized");
   }
-
-  // Dohvati reklamacije na osnovu uloge korisnika
   let complaints;
   let pageTitle = "Moje reklamacije";
   let emptyMessage = "Niste podneli nijednu reklamaciju";
   
-  if (session.user.role === "ADMIN") {
-    // Administratori vide sve reklamacije
-    complaints = await getAllComplaints();
-    pageTitle = "Sve reklamacije";
-    emptyMessage = "Nema reklamacija u sistemu";
-  } else {
-    // Običan korisnik vidi samo svoje reklamacije
-    complaints = await getComplaintsByUserId(session.user.id);
+  try {
+    if (session.user.role === "ADMIN") {
+      complaints = await getAllComplaints();
+      pageTitle = "Sve reklamacije";
+      emptyMessage = "Nema reklamacija u sistemu";
+    } else {
+      complaints = await getComplaintsByUserId(session.user.id);
+    }
+  } catch (error) {
+    console.error("Greška pri učitavanju reklamacija:", error);
+    toast.error("Došlo je do greške pri učitavanju reklamacija");
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-semibold text-destructive">
+          Greška pri učitavanju podataka
+        </h1>
+      </div>
+    );
   }
-
+  
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">{pageTitle}</h1>
+        <h1 className="text-foreground text-2xl font-semibold">{pageTitle}</h1>
         <NewComplaintButton />
       </div>
       
-      <ComplaintsList 
-        complaints={complaints} 
-        showUserInfo={session.user.role === "ADMIN"}
-        emptyMessage={emptyMessage}
-      />
+      <Tabs defaultValue="complaints" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="complaints">Reklamacije</TabsTrigger>
+          {session.user.role === "ADMIN" && (
+            <TabsTrigger value="email-processor">Email Processor</TabsTrigger>
+          )}
+        </TabsList>
+        
+        <TabsContent value="complaints">
+          <ComplaintsList 
+            complaints={complaints || []} 
+            showUserInfo={session.user.role === "ADMIN"}
+            emptyMessage={emptyMessage}
+          />
+        </TabsContent>
+        
+        {session.user.role === "ADMIN" && (
+          <TabsContent value="email-processor">
+            <EmailProcessorWrapper />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
