@@ -1,5 +1,4 @@
 // app/api/complaints/[id]/assign/route.ts
-
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -9,21 +8,20 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-
     const session = await auth();
     
     // Check authentication
-    if (!session?.user?.role === "ADMIN") {
-    return new Response("Unauthorized", { status: 401 });
-  }
+    if (!session?.user) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
     
     // Only allow admins to assign complaints
     if (session.user.role !== "ADMIN") {
       return new NextResponse("Forbidden", { status: 403 });
     }
     
-    const { id } = await params;
-    const { assignedToId, assignedById  } = await req.json();
+    const { id } = params;
+    const { assignedToId } = await req.json();
     
     if (!assignedToId) {
       return new NextResponse("Missing required fields", { status: 400 });

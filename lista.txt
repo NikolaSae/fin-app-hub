@@ -46,6 +46,7 @@ model Session {
 enum UserRole {
   ADMIN
   USER
+  AGENT
 }
 
 model User {
@@ -164,6 +165,19 @@ model Complaint {
   // Proizvod ili usluga na koji se odnosi reklamacija
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+    // Novi odnosi sa servisima:
+  vasServiceId     String?
+  vasService       VasService?     @relation(fields: [vasServiceId], references: [id])
+
+  bulkServiceId    String?
+  bulkService      BulkService?    @relation(fields: [bulkServiceId], references: [id])
+
+  parkingServiceId String?
+  parkingService   ParkingService? @relation(fields: [parkingServiceId], references: [id])
+
+  humanServiceId   String?
+  humanService     HumanService?   @relation(fields: [humanServiceId], references: [id])
 
   // Praćenje istorije
   history ComplaintHistory[]
@@ -355,14 +369,17 @@ model VasService {
   otkazan_iznos               Float      // Otkazan_iznos iz CSV
   kumulativ_otkazanih_iznosa  Float      // Kumulativ_otkazanih_iznosa iz CSV
   iznos_za_prenos_sredstava   Float      // Iznos_za_prenos_sredstava iz CSV
-  
+  kpi                         String?
+  status                      String?
+  remarks                     String?
   type                        VasType    // Enum za prepaid/postpaid
   provajder                   Provajder   @relation(fields: [provajderId], references: [id], onDelete: Cascade)
   provajderId                 String
   isActive                    Boolean    @default(true)
   createdAt                   DateTime   @default(now()) @map("created_at")
   updatedAt                   DateTime   @updatedAt @map("updated_at")
-  
+  complaints                  Complaint[] // One-to-many
+
   // Unique ograničenje za proizvod, mesec pružanja usluge i provajder
   @@unique([proizvod, mesec_pruzanja_usluge, provajderId])
   @@map("vas_services")
@@ -384,13 +401,17 @@ model BulkService {
   sender_name     String    // Sender Name iz CSV
   requests        Int       // Requests iz CSV
   message_parts   Int       // Message parts iz CSV
+  kpi             String?
+  status          String?
+  remarks         String?
   
   provajder       Provajder  @relation(fields: [provajderId], references: [id], onDelete: Cascade)
   provajderId     String
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
-  
+  complaints      Complaint[] // One-to-many
+
   // Unique ograničenje za provider_name, agreement_name, service_name, sender_name, requests, message_parts
   @@unique([provider_name, agreement_name, service_name, sender_name, requests, message_parts])
   @@map("bulk_services")
@@ -406,7 +427,10 @@ model ParkingService {
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  
+  kpi         String?
+  status      String?
+  remarks     String?
+  complaints  Complaint[] // One-to-many
   // Ovde bi došla specifična polja za parking servise
   // koja možete dodati na osnovu CSV podataka za parking
   
@@ -424,7 +448,11 @@ model HumanService {
   isActive    Boolean      @default(true)
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
+  kpi         String?
+  status      String?
+  remarks     String?
   
+  complaints  Complaint[] // One-to-many
   // Ovde bi došla specifična polja za humanitarne servise
   // koja možete dodati na osnovu CSV podataka za humanitarne servise
   
@@ -436,3 +464,34 @@ enum HumanType {
   prepaid
   postpaid
 }
+
+
+
+
+
+# Database connection string
+DATABASE_URL="postgresql://postgres:postgres@localhost/findatbas?"
+
+# Auth.js secret
+AUTH_SECRET="DFqGXRp39ZVqaCC3GMhmmlWEC1xsibNRQERaV1zI5QE="
+
+# GitHub OAuth credentials
+GITHUB_CLIENT_ID="your_github_client_id"
+GITHUB_CLIENT_SECRET="your_github_client_secret"
+
+# Google OAuth credentials
+GOOGLE_CLIENT_ID="your_google_client_id"
+GOOGLE_CLIENT_SECRET="your_google_client_secret"
+
+# Resend API key (for email services)
+RESEND_API_KEY="your_resend_api_key"
+
+# Application URL
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+GROQ_API_KEY=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
+EMAIL_STORAGE_PATH=./data/emails
+
+
+
+.env.local
+HTTPS=false

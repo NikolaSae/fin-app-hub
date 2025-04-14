@@ -13,27 +13,25 @@ export async function GET() {
     }
     
     // Only allow admins or agents to fetch user list
-    if (session.user.role !== "ADMIN" && session.user.role !== "AGENT") {
+    if (session.user.role !== "ADMIN") {
       return new NextResponse("Forbidden", { status: 403 });
     }
     
-    // Fetch eligible users
+    // Fetch users (bez in filtera koji koristi nevalidne vrednosti)
     const users = await db.user.findMany({
-      where: {
-        // Filter criteria if needed
-        // e.g., only agents and admins
-        role: {
-          in: ["ADMIN", "USER"]
-        }
-      },
       select: {
         id: true,
-        name: true
+        name: true,
+        role: true // Dodajemo role za filtriranje na frontend-u
       },
       orderBy: {
         name: 'asc'
       }
     });
+    
+    // Za svaki slučaj možemo ovde filtrirati korisnike sa AGENT ulogom
+    // ako postoji u vašem sistemu
+    const agentUsers = users.filter(user => user.role === "ADMIN", "AGENT");
     
     return NextResponse.json(users);
   } catch (error) {

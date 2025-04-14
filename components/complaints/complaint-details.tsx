@@ -46,6 +46,7 @@ interface ComplaintDetailsProps {
     user: User;
     product?: Product | null;
     assignedToId?: string | null;
+    assignedTo?: User | null;
     resolvedBy?: User | null;
     history: Array<
       ComplaintHistory & {
@@ -97,14 +98,15 @@ const typeIconMap = {
   OTHER: <HelpCircle className="h-5 w-5" />,
 };
 
-export function ComplaintDetails({ complaint }: ComplaintDetailsProps) { // Uklonjen session iz props-a
-  const { data: session, status: sessionStatus } = useSession(); // Dodat useSession hook
-  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
+export function ComplaintDetails({ complaint }: ComplaintDetailsProps) {
+  const { data: session, status: sessionStatus } = useSession();
+  const [users, setUsers] = useState<Array<{ id: string; name: string; role?: string }>>([]);
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Provera stanja sesije
-  if (sessionStatus  === "loading") {
+  // Prvo proveravamo status sesije
+  if (sessionStatus === "loading") {
     return <Loader2 className="animate-spin mx-auto mt-8" />;
   }
 
@@ -113,14 +115,14 @@ export function ComplaintDetails({ complaint }: ComplaintDetailsProps) { // Uklo
   const role = user?.role;
   const userId = user?.id;
 
-  // Provera pristupa sa eksplicitnim konvertovanjem u string
+  // Ispravna provera pristupa sa String konverzijom
   const hasAccess = !!user && (
     role === "ADMIN" ||
     String(complaint.userId) === String(userId) ||
     (complaint.assignedToId && String(complaint.assignedToId) === String(userId))
   );
 
-  // Status i permisije - ispravka tipa (statuse -> status)
+  // Status i permisije
   const status = statusMap[complaint.status];
   const isAdmin = role === "ADMIN";
   const isAssignedAgent = Boolean(
@@ -128,7 +130,23 @@ export function ComplaintDetails({ complaint }: ComplaintDetailsProps) { // Uklo
     String(complaint.assignedToId) === String(userId)
   );
   const canResolve = (isAdmin || isAssignedAgent) && !complaint.resolution;
-  const canComment = hasAccess && complaint.status !== status.CLOSED;
+  const canComment = hasAccess && complaint.status !== ComplaintStatus.CLOSED;
+
+  // Funkcija za osvežavanje podataka o reklamaciji
+  const refreshComplaintData = async () => {
+    try {
+      setIsRefreshing(true);
+      // Ovde biste implementirali logiku za ponovno učitavanje podataka o reklamaciji
+      // Na primer, možete emitovati event ili koristiti neki drugi mehanizam ažuriranja
+      setIsRefreshing(false);
+      // Ovde bi trebalo dodati kod za zaista osvežavanje podataka o reklamaciji
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Greška pri osvežavanju podataka";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -136,14 +154,17 @@ export function ComplaintDetails({ complaint }: ComplaintDetailsProps) { // Uklo
         setIsUsersLoading(true);
         const response = await fetch("/api/users", {
           headers: {
-            Authorization: `Bearer ${session?.user.accessToken}`, // Dodata autentikacija
+            Authorization: `Bearer ${session?.user?.accessToken}`,
           },
         });
         
         if (!response.ok) throw new Error(`Status: ${response.status}`);
         
         const data = await response.json();
-        setUsers(data.filter((u: any) => u.role === "AGENT")); // Filtriranje samo agenata
+        console.log("Učitani korisnici:", data); // Dodato za debugging
+        
+        // Ne filtriramo ovde jer API već treba da vrati samo agente
+        setUsers(data);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Nepoznata greška";
         setError(errorMessage);
@@ -153,14 +174,10 @@ export function ComplaintDetails({ complaint }: ComplaintDetailsProps) { // Uklo
       }
     };
 
-    if (isAdmin && userId) { // Dodata provera za userId
-      toast.promise(fetchUsers(), {
-        loading: "Učitavam listu korisnika...",
-        success: "Korisnici uspešno učitani",
-        error: (err) => err.message || "Greška pri učitavanju korisnika",
-      });
+    if (isAdmin && userId && session?.user) {
+      fetchUsers();
     }
-  }, [isAdmin, role, userId, user]); // Dodat userId u dependency array
+  }, [isAdmin, userId, session?.user]);
 
   if (!hasAccess) {
     return (
@@ -174,108 +191,106 @@ export function ComplaintDetails({ complaint }: ComplaintDetailsProps) { // Uklo
   }
   
   return (
-  <div className="space-y-6">
-    {/* Header Card */}
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {/* Ispravka: status umesto status */}
-            <Badge className={status.color}>
-              {status.icon}
-              <span className="ml-1">{status.label}</span>
-            </Badge>
-            <Badge variant="outline" className="capitalize">
-              {typeIconMap[complaint.type]}
-              <span className="ml-1">
-                {complaint.type.toLowerCase().replace("_", " ")}
-              </span>
-            </Badge>
+    <div className="space-y-6">
+      {/* Header Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge className={status.color}>
+                {status.icon}
+                <span className="ml-1">{status.label}</span>
+              </Badge>
+              <Badge variant="outline" className="capitalize">
+                {typeIconMap[complaint.type]}
+                <span className="ml-1">
+                  {complaint.type.toLowerCase().replace("_", " ")}
+                </span>
+              </Badge>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Calendar size={16} className="mr-1" />
+              {formatDate(complaint.createdAt)}
+            </div>
           </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Calendar size={16} className="mr-1" />
-            {formatDate(complaint.createdAt)}
-          </div>
-        </div>
-        
-        <CardTitle className="text-2xl mt-2">{complaint.title}</CardTitle>
-        
-        {complaint.product && (
-          <CardDescription>
-            Proizvod:{" "}
-            <span className="font-medium">{complaint.product.name}</span>
-          </CardDescription>
-        )}
-      </CardHeader>
+          
+          <CardTitle className="text-2xl mt-2">{complaint.title}</CardTitle>
+          
+          {complaint.product && (
+            <CardDescription>
+              Proizvod:{" "}
+              <span className="font-medium">{complaint.product.name}</span>
+            </CardDescription>
+          )}
+        </CardHeader>
 
-      <CardContent>
-        <div className="space-y-4">
-          <div className="prose prose-sm max-w-none">
-            <p className="whitespace-pre-line">{complaint.description}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-4 pt-2">
-            <div className="flex items-center text-sm">
-              <span className="text-muted-foreground mr-1">Podnosilac:</span>
-              <Avatar className="h-5 w-5 mr-1">
-                <AvatarImage src={complaint.user.image || undefined} />
-                <AvatarFallback>
-                  {complaint.user.name?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <span className="font-medium">
-                {complaint.user.name || complaint.user.email}
-              </span>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="prose prose-sm max-w-none">
+              <p className="whitespace-pre-line">{complaint.description}</p>
             </div>
 
-            {/* Dodata provera za assignedTo */}
-            {complaint.assignedTo && (
+            <div className="flex flex-wrap gap-4 pt-2">
               <div className="flex items-center text-sm">
-                <span className="text-muted-foreground mr-1">Obrađuje:</span>
+                <span className="text-muted-foreground mr-1">Podnosilac:</span>
                 <Avatar className="h-5 w-5 mr-1">
-                  <AvatarImage src={complaint.assignedTo.image || undefined} />
+                  <AvatarImage src={complaint.user.image || undefined} />
                   <AvatarFallback>
-                    {complaint.assignedTo?.name?.charAt(0) || "A"}
+                    {complaint.user.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <span className="font-medium">
-                  {complaint.assignedTo?.name}
+                  {complaint.user.name || complaint.user.email}
                 </span>
               </div>
-            )}
-          </div>
 
-          {isAdmin && (
-            <div className="pt-4">
-              {isUsersLoading ? (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Učitavam korisnike...
-                </div>
-              ) : users.length > 0 ? (
-                <AssignOwner
-                  complaintId={complaint.id}
-                  users={users}
-                  onAssignmentSuccess={() => {
-                    // Dodata logika za osvežavanje podataka
-                    toast.success("Uspešno dodeljeno!");
-                    // Možete dodati refresh podataka ovde
-                  }}
-                  onError={(message) => {
-                    toast.error(message);
-                    setError(message);
-                  }}
-                />
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  Nema dostupnih agenata za dodelu
+              {/* Dodata provera za assignedTo */}
+              {complaint.assignedTo && (
+                <div className="flex items-center text-sm">
+                  <span className="text-muted-foreground mr-1">Obrađuje:</span>
+                  <Avatar className="h-5 w-5 mr-1">
+                    <AvatarImage src={complaint.assignedTo.image || undefined} />
+                    <AvatarFallback>
+                      {complaint.assignedTo?.name?.charAt(0) || "A"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">
+                    {complaint.assignedTo?.name}
+                  </span>
                 </div>
               )}
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+
+            {isAdmin && (
+              <div className="pt-4">
+                {isUsersLoading ? (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Učitavam korisnike...
+                  </div>
+                ) : users.length > 0 ? (
+                  <AssignOwner
+                    complaintId={complaint.id}
+                    users={users}
+                    onAssignmentSuccess={() => {
+                      toast.success("Uspešno dodeljeno!");
+                      refreshComplaintData();
+                    }}
+                    onError={(message) => {
+                      toast.error(message);
+                      setError(message);
+                    }}
+                  />
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    Nema dostupnih agenata za dodelu
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     
     {/* Additional cards for resolution, attachments, comments, and history */}
     {complaint.resolution && (

@@ -1,3 +1,5 @@
+// app/api/users/[id]/route.ts
+
 import { getUserById } from "@/data/user";
 import { NextResponse } from "next/server";
 

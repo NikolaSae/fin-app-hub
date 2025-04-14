@@ -1,5 +1,5 @@
 // app/components/complaints/assign-owner.tsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Select, 
@@ -13,77 +13,57 @@ import { useSession } from "next-auth/react";
 
 interface AssignOwnerProps {
   complaintId: string;
-  onAssignmentSuccess: () => void; // Dodato za refresh podataka
+  users: Array<{ id: string; name: string; role?: string }>;
+  onAssignmentSuccess: () => void;
+  onError: (message: string) => void;
 }
 
-export function AssignOwner({ complaintId, onAssignmentSuccess }: AssignOwnerProps) {
+export function AssignOwner({ 
+  complaintId, 
+  users, 
+  onAssignmentSuccess, 
+  onError 
+}: AssignOwnerProps) {
   const { data: session } = useSession();
-  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/users", {
-          headers: {
-            Authorization: `Bearer ${session?.user?.accessToken}`,
-          },
-        });
-        
-        if (!response.ok) throw new Error(`Status: ${response.status}`);
-        
-        const data = await response.json();
-        setUsers(data.filter((user: any) => user.role === "AGENT")); // Filtriranje samo agenata
-      } catch (error) {
-        toast.error("Greška pri učitavanju korisnika");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (session?.user?.role === "ADMIN") {
-      fetchUsers();
-    }
-  }, [session]);
-
+  
   const handleAssign = async () => {
     if (!selectedUserId || !session?.user) return;
-
+    
     try {
+      setIsLoading(true);
       toast.loading("Dodeljujem reklamaciju...");
       
       const response = await fetch(`/api/complaints/${complaintId}/assign`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.accessToken}`,
         },
         body: JSON.stringify({ 
-          assignedToId: selectedUserId,
-          assignedById: session.user.id 
+          assignedToId: selectedUserId
         }),
       });
-
+      
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message);
+        throw new Error(error.message || "Greška pri dodeljivanju");
       }
-
+      
       toast.success("Uspešno dodeljeno!");
-      onAssignmentSuccess(); // Refresh parent komponente
+      onAssignmentSuccess(); // Poziv funkcije za osvežavanje podataka
       setSelectedUserId(""); // Reset selektovanog korisnika
-
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Neočekivana greška");
+      const errorMessage = error instanceof Error ? error.message : "Neočekivana greška";
+      onError(errorMessage);
     } finally {
+      setIsLoading(false);
       toast.dismiss();
     }
   };
-
+  
   if (session?.user?.role !== "ADMIN") return null;
-
+  
   return (
     <div className="flex gap-2">
       <Select 
@@ -92,14 +72,20 @@ export function AssignOwner({ complaintId, onAssignmentSuccess }: AssignOwnerPro
         disabled={isLoading}
       >
         <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder={isLoading ? "Učitavam..." : "Odaberite agenta"} />
+          <SelectValue placeholder="Odaberite agenta" />
         </SelectTrigger>
         <SelectContent>
-          {users.map((user) => (
-            <SelectItem key={user.id} value={user.id}>
-              {user.name}
+          {users.length === 0 ? (
+            <SelectItem value="no-agents" disabled>
+              Nema dostupnih agenata
             </SelectItem>
-          ))}
+          ) : (
+            users.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.name}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
       
