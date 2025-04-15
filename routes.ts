@@ -1,3 +1,4 @@
+// routes.ts
 /**_
  * An array of routes that are accessible to the public
  * These routes do not require authentication
@@ -51,4 +52,4 @@ export const apiAuthPrefix = "/api/auth";
  * @type {string}
  */
 // Glavna putanja
-export const DEFAULT_LOGIN_REDIRECT = "/";
+export const DEFAULT_LOGIN_REDIRECT = "/complaints";

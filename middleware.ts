@@ -24,7 +24,7 @@ export default auth((req) => {
 
   if (isAuthRoute) {
     if (isLoggedIn) {
-      return Response.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
+      return Response.redirect(new URL('https://friendly-invention-pg57976vrxxf7pgg-3000.app.github.dev' + DEFAULT_LOGIN_REDIRECT, nextUrl));
     }
     return;
   }
@@ -39,12 +39,13 @@ export default auth((req) => {
     const encodedCallbackUrl = encodeURIComponent(callbackUrl);
 
     return Response.redirect(
-      new URL(`/auth/login?callbackUrl=${encodedCallbackUrl}`, nextUrl)
+      new URL(`https://friendly-invention-pg57976vrxxf7pgg-3000.app.github.dev/auth/login?callbackUrl=${encodedCallbackUrl}`, nextUrl)
     );
   }
 
   return;
 });
+
 
 export const config = {
   matcher: [

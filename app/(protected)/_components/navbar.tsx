@@ -27,8 +27,8 @@ export const Navbar = () => {
           <Link href="/organizations">HO panel</Link>
         </Button>
 
-        <Button variant={pathname === "/novastra" ? "default" : "outline"} asChild>
-          <Link href="/novastra">Servisi</Link>
+        <Button variant={pathname === "/providers" ? "default" : "outline"} asChild>
+          <Link href="/providers">Provajderi</Link>
         </Button>
 
         <Button
