@@ -1,7 +1,7 @@
 # Next.js 15+ SaaS Platform with Multi-Tenancy & Advanced Analytics
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2.3-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.2.3-black?logo=next.js)](https://nextjs.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-5.12.0-blue?logo=prisma)](https://prisma.io/)
 
 A comprehensive service management platform with contract monitoring, financial analytics, and complaint resolution systems.
@@ -25,7 +25,7 @@ A comprehensive service management platform with contract monitoring, financial 
 ## 🛠 Technologies
 
 **Core Stack**
-- Next.js 14 (App Router)
+- Next.js 15 (App Router)
 - Prisma ORM + PostgreSQL
 - NextAuth.js v5
 - Resend (Email API)
