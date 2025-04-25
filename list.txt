@@ -355,7 +355,69 @@ Types & Schemas
 
 
 
-
+7. Contracts Structure
+7.1. App Routes
+/app/(protected)/contracts/page.tsx - Main contracts listing page
+/app/(protected)/contracts/new/page.tsx - Create new contract page
+/app/(protected)/contracts/[id]/page.tsx - Individual contract details view
+/app/(protected)/contracts/[id]/edit/page.tsx - Edit contract page
+/app/(protected)/contracts/expiring/page.tsx - Soon to expire contracts view
+/app/(protected)/contracts/providers/page.tsx - Provider contracts view
+/app/(protected)/contracts/humanitarian/page.tsx - Humanitarian org contracts view
+/app/(protected)/contracts/parking/page.tsx - Parking service contracts view
+/app/(protected)/admin/contracts/page.tsx - Admin contracts management dashboard
+7.2. Components
+/components/contracts/ContractForm.tsx - Form for creating/editing contracts
+/components/contracts/ContractList.tsx - Tabular list of all contracts
+/components/contracts/ContractDetails.tsx - Contract details display
+/components/contracts/ContractFilters.tsx - Filter controls for contracts
+/components/contracts/ContractStatusBadge.tsx - Visual status indicator
+/components/contracts/ExpiryWarning.tsx - Warning for soon-expiring contracts
+/components/contracts/AttachmentUpload.tsx - File upload for contract docs
+/components/contracts/AttachmentList.tsx - List of contract attachments
+/components/contracts/ServiceSelector.tsx - Service selection for contracts
+/components/contracts/RevenueBreakdown.tsx - Revenue split display
+/components/contracts/ReminderForm.tsx - Setting reminders for contracts
+/components/contracts/category/ProviderContractCard.tsx - Provider contract display
+/components/contracts/category/HumanitarianContractCard.tsx - Humanitarian contract display
+/components/contracts/category/ParkingContractCard.tsx - Parking contract display
+7.3. Actions & API Routes
+/actions/contracts/create.ts - Create new contract
+/actions/contracts/update.ts - Update existing contract
+/actions/contracts/delete.ts - Delete contract
+/actions/contracts/check-expiring.ts - Check for soon-expiring contracts
+/actions/contracts/add-attachment.ts - Add document attachment
+/actions/contracts/add-service.ts - Add service to contract
+/actions/contracts/remove-service.ts - Remove service from contract
+/actions/contracts/create-reminder.ts - Set contract reminder
+/actions/contracts/acknowledge-reminder.ts - Mark reminder as acknowledged
+/app/api/contracts/route.ts - Contracts CRUD API
+/app/api/contracts/[id]/route.ts - Individual contract API
+/app/api/contracts/[id]/attachments/route.ts - Contract attachments API
+/app/api/contracts/[id]/services/route.ts - Contract services API
+/app/api/contracts/[id]/reminders/route.ts - Contract reminders API
+/app/api/contracts/expiring/route.ts - Soon-expiring contracts API
+7.4. Hooks & Utils
+/hooks/use-contracts.ts - Custom hook for contract data
+/hooks/use-expiring-contracts.ts - Hook for soon-expiring contracts
+/hooks/use-contract-reminders.ts - Hook for contract reminders
+/lib/contracts/validators.ts - Contract validation utilities
+/lib/contracts/reminder-scheduler.ts - Scheduled reminder functionality
+/lib/contracts/expiration-checker.ts - Contract expiration utilities
+/lib/contracts/revenue-calculator.ts - Revenue calculation utilities
+/lib/contracts/notification-sender.ts - Contract notification utilities
+/lib/contracts/pdf-generator.ts - PDF contract generator
+7.5. Types & Schemas
+/schemas/contract.ts - Zod validation schema for contracts
+/schemas/contract-attachment.ts - Schema for contract attachments
+/schemas/contract-reminder.ts - Schema for contract reminders
+/lib/types/contract-types.ts - TypeScript types for contracts
+/lib/types/contract-status.ts - Contract status types and utilities
+7.6. Charts & Statistics
+/components/contracts/charts/ExpiryTimelineChart.tsx - Contract expiration timeline
+/components/contracts/charts/ContractTypeDistribution.tsx - Contract type breakdown
+/components/contracts/charts/RevenueProjection.tsx - Projected revenue from contracts
+/components/contracts/reports/ContractKpiDashboard.tsx - KPI visualization dashboard
 
 ovo treba da se provuce kroz claudie
 
