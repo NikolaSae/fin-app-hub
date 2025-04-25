@@ -1,0 +1,15 @@
+6.2. Type Definitions & Schemas
+
+/schemas/complaint.ts - Zod validation schema for complaint data validation
+/schemas/service.ts - Service types validation schemas
+/schemas/product.ts - Product validation for complaint association
+/schemas/provider.ts - Provider validation schemas
+/lib/types/interfaces.ts - TypeScript interfaces for complaint system
+/lib/types/enums.ts - Status enums and service category definitions
+/lib/types/complaint-types.ts - Specialized complaint type definitions
+
+3. API Routes
+
+/app/api/complaints/route.ts - Main endpoint for complaint management
+/app/api/complaints/[id]/route.ts - Operations on specific complaints
+/app/api/complaints/[id]/comments/route.ts - Comment management for complaints
