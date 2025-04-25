@@ -1,3 +1,5 @@
+spisak napravljenih fajlova
+
 6.2. Type Definitions & Schemas
 
 /schemas/complaint.ts - Zod validation schema for complaint data validation
@@ -8,8 +10,20 @@
 /lib/types/enums.ts - Status enums and service category definitions
 /lib/types/complaint-types.ts - Specialized complaint type definitions
 
-3. API Routes
+6.3. API Routes
 
 /app/api/complaints/route.ts - Main endpoint for complaint management
 /app/api/complaints/[id]/route.ts - Operations on specific complaints
 /app/api/complaints/[id]/comments/route.ts - Comment management for complaints
+/app/api/complaints/[id]/status/route.ts - Status change handling
+/app/api/complaints/[id]/attachments/route.ts - File attachment handling
+/app/api/complaints/statistics/route.ts - Statistics data endpoints
+/app/api/complaints/export/route.ts - Export complaint data
+/app/api/services/categories/route.ts - Service category information
+
+6.4. Server Actions
+6.4.1. /actions/complaints/create.ts - Create new complaint records
+/actions/complaints/update.ts - Update existing complaints
+/actions/complaints/delete.ts - Remove complaint entries
+/actions/complaints/comment.ts - Add tracking comments
+/actions/complaints/change-status.ts - Update complaint status
