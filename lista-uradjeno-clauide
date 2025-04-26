@@ -1,8 +1,14 @@
 spisak napravljenih fajlova
 
+ 6. complaints
+
+6.1. Database Schema Updates
+
+6.1.1. /prisma/schema.prisma - Add complaint models with proper relations to users, services, products, and providers
+
 6.2. Type Definitions & Schemas
 
-/schemas/complaint.ts - Zod validation schema for complaint data validation
+6.2.1. /schemas/complaint.ts - Zod validation schema for complaint data validation
 /schemas/service.ts - Service types validation schemas
 /schemas/product.ts - Product validation for complaint association
 /schemas/provider.ts - Provider validation schemas
@@ -12,7 +18,7 @@ spisak napravljenih fajlova
 
 6.3. API Routes
 
-/app/api/complaints/route.ts - Main endpoint for complaint management
+6.3.1. /app/api/complaints/route.ts - Main endpoint for complaint management
 /app/api/complaints/[id]/route.ts - Operations on specific complaints
 /app/api/complaints/[id]/comments/route.ts - Comment management for complaints
 /app/api/complaints/[id]/status/route.ts - Status change handling
@@ -22,8 +28,77 @@ spisak napravljenih fajlova
 /app/api/services/categories/route.ts - Service category information
 
 6.4. Server Actions
+
 6.4.1. /actions/complaints/create.ts - Create new complaint records
 /actions/complaints/update.ts - Update existing complaints
 /actions/complaints/delete.ts - Remove complaint entries
 /actions/complaints/comment.ts - Add tracking comments
 /actions/complaints/change-status.ts - Update complaint status
+/actions/complaints/import.ts - Import complaint data
+/actions/complaints/export.ts - Export complaint reports
+/actions/services/get-by-category.ts - Retrieve services by category
+/actions/products/get-by-service.ts - Get products associated with services
+/actions/providers/get-by-service.ts - Get providers by service type
+
+6.5. UI Pages
+
+6.5.1. /app/(protected)/complaints/page.tsx - Main complaints listing
+/app/(protected)/complaints/new/page.tsx - Create new complaint
+/app/(protected)/complaints/[id]/page.tsx - View complaint details
+/app/(protected)/complaints/[id]/edit/page.tsx - Edit complaint
+/app/(protected)/admin/complaints/page.tsx - Admin complaints management
+/app/(protected)/admin/complaints/statistics/page.tsx - Statistics dashboard
+/app/(protected)/admin/complaints/reports/page.tsx - Report generation
+
+6.6. Components
+
+6.6.1. /components/complaints/ComplaintForm.tsx - Form for creating/editing complaints
+/components/complaints/ComplaintList.tsx - Tabular list of complaints
+/components/complaints/CommentSection.tsx - Thread of complaint comments
+/components/complaints/StatusBadge.tsx - Visual status indicator
+/components/complaints/ComplaintFilters.tsx - Filter controls container
+/components/complaints/ServiceCategoryFilter.tsx - Filter by service category
+/components/complaints/ProviderFilter.tsx - Filter by provider
+/components/complaints/DateRangeFilter.tsx - Date-based filtering
+/components/complaints/ComplaintTimeline.tsx - Chronological view of changes
+/components/complaints/FileUpload.tsx - File attachment component
+/components/complaints/StatisticsCard.tsx - Statistics display card
+/components/complaints/NotificationBanner.tsx - Status change notifications
+/components/complaints/AmountSummary.tsx - Financial summary of complaints
+/components/complaints/ProductSelection.tsx - Product selector with validation
+/components/complaints/ServiceSelection.tsx - Service selection component
+
+6.7. Charts & Statistics
+
+6.7.1. /components/complaints/charts/TrendChart.tsx - Trend visualization
+/components/complaints/charts/StatusChart.tsx - Status distribution chart
+/components/complaints/charts/MonthlyComparisonChart.tsx - Monthly comparison visualization
+/components/complaints/charts/ServiceCategoryBreakdown.tsx - Service breakdown chart
+/components/complaints/charts/ProviderPerformance.tsx - Provider performance metrics
+/components/complaints/reports/ExcelExport.tsx - Excel export component
+/components/complaints/reports/KpiDashboard.tsx - KPI visualization dashboard
+
+6.8. Hooks & Utils
+
+6.8.1. /hooks/use-complaints.ts - Data fetching for complaints
+/hooks/use-service-categories.ts - Service category data hook
+/hooks/use-products-by-service.ts - Product filtering by service
+/hooks/use-providers-by-service.ts - Provider filtering by service
+/lib/actions/complaints.ts - Core complaint manipulation functions
+/utils/complaint-notification.ts - Notification generation utilities
+/utils/complaint-statistics.ts - Statistical calculation functions
+/utils/excel-generator.ts - Excel report generation
+/utils/anomaly-detection.ts - Unusual complaint pattern detection
+/utils/date-filters.ts - Date manipulation utilities
+
+6.9. Import & Validation
+
+
+/utils/csv-validator.ts - Validate imported data
+/utils/import-processor.ts - Process validated import data
+
+6.10. Notification System
+
+6.10.1 /lib/notifications/complaint-status.ts - Status change notifications
+/lib/notifications/anomaly-alert.ts - Anomaly detection alerts
+/components/notifications/AlertBanner.tsx - Alert display component
