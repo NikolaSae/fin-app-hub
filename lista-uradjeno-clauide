@@ -102,3 +102,23 @@ spisak napravljenih fajlova
 6.10.1 /lib/notifications/complaint-status.ts - Status change notifications
 /lib/notifications/anomaly-alert.ts - Anomaly detection alerts
 /components/notifications/AlertBanner.tsx - Alert display component
+
+
+7. Contracts Structure
+7.1. App Routes
+7.1.1. /app/(protected)/contracts/page.tsx - Main contracts listing page
+/app/(protected)/contracts/new/page.tsx - Create new contract page
+/app/(protected)/contracts/[id]/page.tsx - Individual contract details view
+/app/(protected)/contracts/[id]/edit/page.tsx - Edit contract page
+/app/(protected)/contracts/expiring/page.tsx - Soon to expire contracts view
+/app/(protected)/contracts/providers/page.tsx - Provider contracts view
+/app/(protected)/contracts/humanitarian/page.tsx - Humanitarian org contracts view
+/app/(protected)/contracts/parking/page.tsx - Parking service contracts view
+/app/(protected)/admin/contracts/page.tsx - Admin contracts management dashboard
+7.2. Components
+7.2.1. /components/contracts/ContractForm.tsx - Form for creating/editing contracts
+/components/contracts/ContractList.tsx - Tabular list of all contracts
+/components/contracts/ContractDetails.tsx - Contract details display
+/components/contracts/ContractFilters.tsx - Filter controls for contracts
+/components/contracts/ContractStatusBadge.tsx - Visual status indicator
+/components/contracts/ExpiryWarning.tsx - Warning for soon-expiring contracts
