@@ -122,3 +122,16 @@ spisak napravljenih fajlova
 /components/contracts/ContractFilters.tsx - Filter controls for contracts
 /components/contracts/ContractStatusBadge.tsx - Visual status indicator
 /components/contracts/ExpiryWarning.tsx - Warning for soon-expiring contracts
+/components/contracts/AttachmentUpload.tsx - File upload for contract docs
+/components/contracts/AttachmentList.tsx - List of contract attachments
+/components/contracts/ServiceSelector.tsx - Service selection for contracts
+/components/contracts/RevenueBreakdown.tsx - Revenue split display
+/components/contracts/ReminderForm.tsx - Setting reminders for contracts
+/components/contracts/category/ProviderContractCard.tsx - Provider contract display
+
+7.4. Hooks & Utils
+7.4.1. /hooks/use-contracts.ts - Custom hook for contract data
+
+
+7.6. Charts & Statistics
+7.6.1. /components/contracts/charts/ExpiryTimelineChart.tsx - Contract expiration timeline
