@@ -116,7 +116,6 @@ spisak napravljenih fajlova
 /app/(protected)/contracts/humanitarian/page.tsx - Humanitarian org contracts view
 /app/(protected)/contracts/parking/page.tsx - Parking service contracts view
 /app/(protected)/admin/contracts/page.tsx - Admin contracts management dashboard
-
 7.2. Components
 7.2.1. /components/contracts/ContractForm.tsx - Form for creating/editing contracts
 /components/contracts/ContractList.tsx - Tabular list of all contracts
@@ -132,11 +131,97 @@ spisak napravljenih fajlova
 /components/contracts/category/ProviderContractCard.tsx - Provider contract display
 /components/contracts/category/HumanitarianContractCard.tsx - Humanitarian contract display
 /components/contracts/category/ParkingContractCard.tsx - Parking contract display
-
+7.3. Actions & API Routes
+7.3.1. /actions/contracts/create.ts - Create new contract
+/actions/contracts/update.ts - Update existing contract
+/actions/contracts/delete.ts - Delete contract
+/actions/contracts/check-expiring.ts - Check for soon-expiring contracts
+/actions/contracts/add-attachment.ts - Add document attachment
+/actions/contracts/add-service.ts - Add service to contract
+/actions/contracts/remove-service.ts - Remove service from contract
+/actions/contracts/create-reminder.ts - Set contract reminder
+/actions/contracts/acknowledge-reminder.ts - Mark reminder as acknowledged
+/app/api/contracts/route.ts - Contracts CRUD API
+/app/api/contracts/[id]/route.ts - Individual contract API
+/app/api/contracts/[id]/attachments/route.ts - Contract attachments API
+/app/api/contracts/[id]/services/route.ts - Contract services API
+/app/api/contracts/[id]/reminders/route.ts - Contract reminders API
+/app/api/contracts/expiring/route.ts - Soon-expiring contracts API
 7.4. Hooks & Utils
 7.4.1. /hooks/use-contracts.ts - Custom hook for contract data
 /hooks/use-expiring-contracts.ts - Hook for soon-expiring contracts
+/hooks/use-contract-reminders.ts - Hook for contract reminders
 /lib/contracts/validators.ts - Contract validation utilities
-
+/lib/contracts/reminder-scheduler.ts - Scheduled reminder functionality
+/lib/contracts/expiration-checker.ts - Contract expiration utilities
+/lib/contracts/revenue-calculator.ts - Revenue calculation utilities
+/lib/contracts/notification-sender.ts - Contract notification utilities
+/lib/contracts/pdf-generator.ts - PDF contract generator
+7.5. Types & Schemas
+7.5.1. /schemas/contract.ts - Zod validation schema for contracts
+/schemas/contract-attachment.ts - Schema for contract attachments
+/schemas/contract-reminder.ts - Schema for contract reminders
+/lib/types/contract-types.ts - TypeScript types for contracts
+/lib/types/contract-status.ts - Contract status types and utilities
 7.6. Charts & Statistics
 7.6.1. /components/contracts/charts/ExpiryTimelineChart.tsx - Contract expiration timeline
+/components/contracts/charts/ContractTypeDistribution.tsx - Contract type breakdown
+/components/contracts/charts/RevenueProjection.tsx - Projected revenue from contracts
+/components/contracts/reports/ContractKpiDashboard.tsx - KPI visualization dashboard
+
+
+
+
+Sekcija 8: Providers Structure [G - KOMPLETIRANO (osim jednog opcionog)]
+
+8.1 App Routes
+/app/(protected)/providers/page.tsx [G]
+/app/(protected)/providers/new/page.tsx [G]
+/app/(protected)/providers/[id]/page.tsx [G]
+/app/(protected)/providers/[id]/edit/page.tsx [G]
+8.2 Components
+/components/providers/ProviderList.tsx [G]
+/components/providers/ProviderForm.tsx [G]
+/components/providers/ProviderDetails.tsx [G]
+/components/providers/ProviderFilters.tsx [G]
+/components/providers/ProviderCard.tsx [M]
+8.3 Actions & API Routes
+/actions/providers/create.ts [G]
+/actions/providers/update.ts [G]
+/actions/providers/delete.ts [G]
+/app/api/providers/route.ts [G]
+/app/api/providers/[id]/route.ts [G]
+8.4 Hooks & Utils
+/hooks/use-providers.ts [G]
+/lib/providers/validators.ts [G]
+8.5 Types & Schemas
+/schemas/provider.ts [G]
+/lib/types/provider-types.ts [G]
+Sekcija 9: Humanitarian Organizations Structure [G - KOMPLETIRANO]
+
+9.1 App Routes
+/app/(protected)/humanitarian-orgs/page.tsx [G]
+/app/(protected)/humanitarian-orgs/new/page.tsx [G]
+/app/(protected)/humanitarian-orgs/[id]/page.tsx [G]
+/app/(protected)/humanitarian-orgs/[id]/edit/page.tsx [G]
+9.2 Components
+/components/humanitarian-orgs/HumanitarianOrgList.tsx [G]
+/components/humanitarian-orgs/HumanitarianOrgForm.tsx [G]
+/components/humanitarian-orgs/HumanitarianOrgDetails.tsx [G]
+/components/humanitarian-orgs/HumanitarianOrgFilters.tsx [G]
+/components/humanitarian-orgs/HumanitarianOrgContracts.tsx [G]
+9.3 Actions & API Routes
+/actions/humanitarian-orgs/create.ts [G]
+/actions/humanitarian-orgs/update.ts [G]
+/actions/humanitarian-orgs/delete.ts [G]
+/app/api/humanitarian-orgs/route.ts [G]
+/app/api/humanitarian-orgs/[id]/route.ts [G]
+/app/api/humanitarian-orgs/[id]/contracts/route.ts [G]
+9.4 Hooks & Utils
+/hooks/use-humanitarian-orgs.ts [G]
+/hooks/use-humanitarian-org-contracts.ts [G]
+/lib/humanitarian-orgs/validators.ts [G]
+9.5 Types & Schemas
+/schemas/humanitarian-org.ts [G]
+/lib/types/humanitarian-org-types.ts [G]
+Ovo su svi fajlovi koje smo definisali i generisali u okviru ove dve sekcije.
