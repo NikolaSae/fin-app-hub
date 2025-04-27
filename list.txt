@@ -419,6 +419,64 @@ This structure aligns with Next.js App Router conventions while providing a clea
 /components/contracts/charts/RevenueProjection.tsx - Projected revenue from contracts
 /components/contracts/reports/ContractKpiDashboard.tsx - KPI visualization dashboard
 
+
+
+Sekcija 8: Providers Structure [G - KOMPLETIRANO (osim jednog opcionog)]
+
+8.1 App Routes
+/app/(protected)/providers/page.tsx [G]
+/app/(protected)/providers/new/page.tsx [G]
+/app/(protected)/providers/[id]/page.tsx [G]
+/app/(protected)/providers/[id]/edit/page.tsx [G]
+8.2 Components
+/components/providers/ProviderList.tsx [G]
+/components/providers/ProviderForm.tsx [G]
+/components/providers/ProviderDetails.tsx [G]
+/components/providers/ProviderFilters.tsx [G]
+/components/providers/ProviderCard.tsx [M]
+8.3 Actions & API Routes
+/actions/providers/create.ts [G]
+/actions/providers/update.ts [G]
+/actions/providers/delete.ts [G]
+/app/api/providers/route.ts [G]
+/app/api/providers/[id]/route.ts [G]
+8.4 Hooks & Utils
+/hooks/use-providers.ts [G]
+/lib/providers/validators.ts [G]
+8.5 Types & Schemas
+/schemas/provider.ts [G]
+/lib/types/provider-types.ts [G]
+Sekcija 9: Humanitarian Organizations Structure [G - KOMPLETIRANO]
+
+9.1 App Routes
+/app/(protected)/humanitarian-orgs/page.tsx [G]
+/app/(protected)/humanitarian-orgs/new/page.tsx [G]
+/app/(protected)/humanitarian-orgs/[id]/page.tsx [G]
+/app/(protected)/humanitarian-orgs/[id]/edit/page.tsx [G]
+9.2 Components
+/components/humanitarian-orgs/HumanitarianOrgList.tsx [G]
+/components/humanitarian-orgs/HumanitarianOrgForm.tsx [G]
+/components/humanitarian-orgs/HumanitarianOrgDetails.tsx [G]
+/components/humanitarian-orgs/HumanitarianOrgFilters.tsx [G]
+/components/humanitarian-orgs/HumanitarianOrgContracts.tsx [G]
+9.3 Actions & API Routes
+/actions/humanitarian-orgs/create.ts [G]
+/actions/humanitarian-orgs/update.ts [G]
+/actions/humanitarian-orgs/delete.ts [G]
+/app/api/humanitarian-orgs/route.ts [G]
+/app/api/humanitarian-orgs/[id]/route.ts [G]
+/app/api/humanitarian-orgs/[id]/contracts/route.ts [G]
+9.4 Hooks & Utils
+/hooks/use-humanitarian-orgs.ts [G]
+/hooks/use-humanitarian-org-contracts.ts [G]
+/lib/humanitarian-orgs/validators.ts [G]
+9.5 Types & Schemas
+/schemas/humanitarian-org.ts [G]
+/lib/types/humanitarian-org-types.ts [G]
+Ovo su svi fajlovi koje smo definisali i generisali u okviru ove dve sekcije.
+
+
+
 ovo treba da se provuce kroz claudie
 
 
