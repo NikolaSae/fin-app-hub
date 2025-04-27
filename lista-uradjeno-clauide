@@ -115,6 +115,7 @@ spisak napravljenih fajlova
 /app/(protected)/contracts/humanitarian/page.tsx - Humanitarian org contracts view
 /app/(protected)/contracts/parking/page.tsx - Parking service contracts view
 /app/(protected)/admin/contracts/page.tsx - Admin contracts management dashboard
+
 7.2. Components
 7.2.1. /components/contracts/ContractForm.tsx - Form for creating/editing contracts
 /components/contracts/ContractList.tsx - Tabular list of all contracts
@@ -128,10 +129,13 @@ spisak napravljenih fajlova
 /components/contracts/RevenueBreakdown.tsx - Revenue split display
 /components/contracts/ReminderForm.tsx - Setting reminders for contracts
 /components/contracts/category/ProviderContractCard.tsx - Provider contract display
+/components/contracts/category/HumanitarianContractCard.tsx - Humanitarian contract display
+/components/contracts/category/ParkingContractCard.tsx - Parking contract display
 
 7.4. Hooks & Utils
 7.4.1. /hooks/use-contracts.ts - Custom hook for contract data
-
+/hooks/use-expiring-contracts.ts - Hook for soon-expiring contracts
+/lib/contracts/validators.ts - Contract validation utilities
 
 7.6. Charts & Statistics
 7.6.1. /components/contracts/charts/ExpiryTimelineChart.tsx - Contract expiration timeline
