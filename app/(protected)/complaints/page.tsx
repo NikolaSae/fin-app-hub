@@ -1,130 +1,209 @@
-// app/(protected)/complaints/page.tsx - Objedinjena stranica za reklamacije
-import { redirect } from "next/navigation";
-import { auth } from "@/auth"
-import { getAllComplaints, getComplaintsByUserId } from "@/data/complaint";
-import ComplaintsList from "@/components/complaints/complaints-list";
-import { NewComplaintButton } from "@/components/complaints/new-complaint-button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EmailProcessorWrapper } from "@/components/email-processor/email-processor-wrapper";
-import { toast } from "sonner";
+// app/(protected)/complaints/page.tsx
+"use client";
 
-export default async function ComplaintsPage() {
-  const session = await auth();
-  
-  if (!session?.user) {
-    redirect("/auth/login?error=unauthorized");
-  }
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ComplaintList } from "@/components/complaints/ComplaintList";
+import { ComplaintFilters, ComplaintFiltersState } from "@/components/complaints/ComplaintFilters";
+import { NotificationBanner } from "@/components/complaints/NotificationBanner";
+import { Button } from "@/components/ui/button";
+import { Loader2, PlusCircle } from "lucide-react";
+import { useComplaints } from "@/hooks/use-complaints";
+import { ComplaintStatus } from "@/lib/types/enums";
 
-  const isAdmin = session.user.role === "ADMIN";
-  let complaints = [];
-  
-  try {
-    if (isAdmin) {
-      complaints = await getAllComplaints();
-    } else {
-      complaints = await getComplaintsByUserId(session.user.id);
-    }
-  } catch (error) {
-    console.error("Greška pri učitavanju reklamacija:", error);
-    toast.error("Došlo je do greške pri učitavanju reklamacija");
-    return (
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-semibold text-destructive">
-          Greška pri učitavanju podataka
-        </h1>
-      </div>
-    );
-  }
+export default function ComplaintsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // Za administratorski prikaz, filtriraj reklamacije po statusu
-  const pendingComplaints = complaints.filter(c => c.status === "PENDING");
-  const inProgressComplaints = complaints.filter(c => c.status === "IN_PROGRESS");
-  const resolvedComplaints = complaints.filter(c => c.status === "RESOLVED" || c.status === "REJECTED");
+  // --- Helper funkcija za bezbedno kreiranje Date objekata ---
+  const safeDate = useCallback((dateString: string | null | undefined): Date | undefined => {
+    if (!dateString) return undefined;
+    const date = new Date(dateString);
+    // Proverava da li je datum validan
+    return isNaN(date.getTime()) ? undefined : date;
+  }, []); // Callback se kreira samo jednom
 
-  return (
-    <div className="container mx-auto py-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-foreground text-2xl font-semibold">
-          {isAdmin ? "Upravljanje reklamacijama" : "Moje reklamacije"}
-        </h1>
-        <NewComplaintButton />
-      </div>
-      
-      <Tabs defaultValue="complaints" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="complaints">Reklamacije</TabsTrigger>
-          {isAdmin && <TabsTrigger value="email-processor">Email Processor</TabsTrigger>}
-        </TabsList>
-        
-        <TabsContent value="complaints">
-          {isAdmin ? (
-            // Admin prikaz reklamacija sa statusima
-            <div className="space-y-6">
-              <Tabs defaultValue="pending" className="w-full">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="pending">
-                    Na čekanju ({pendingComplaints.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="inProgress">
-                    U obradi ({inProgressComplaints.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="resolved">
-                    Rešene ({resolvedComplaints.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="all">
-                    Sve ({complaints.length})
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="pending">
-                  <ComplaintsList 
-                    complaints={pendingComplaints} 
-                    showUserInfo={true}
-                    emptyMessage="Nema reklamacija koje čekaju na obradu"
-                  />
-                </TabsContent>
-                
-                <TabsContent value="inProgress">
-                  <ComplaintsList 
-                    complaints={inProgressComplaints} 
-                    showUserInfo={true}
-                    emptyMessage="Nema reklamacija koje su u obradi"
-                  />
-                </TabsContent>
-                
-                <TabsContent value="resolved">
-                  <ComplaintsList 
-                    complaints={resolvedComplaints} 
-                    showUserInfo={true}
-                    emptyMessage="Nema rešenih reklamacija"
-                  />
-                </TabsContent>
-                
-                <TabsContent value="all">
-                  <ComplaintsList 
-                    complaints={complaints} 
-                    showUserInfo={true}
-                    emptyMessage="Nema reklamacija u sistemu"
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
-          ) : (
-            // Korisnički prikaz reklamacija
-            <ComplaintsList 
-              complaints={complaints} 
-              showUserInfo={false}
-              emptyMessage="Niste podneli nijednu reklamaciju"
-            />
-          )}
-        </TabsContent>
-        
-        {isAdmin && (
-          <TabsContent value="email-processor">
-            <EmailProcessorWrapper />
-          </TabsContent>
-        )}
-      </Tabs>
-    </div>
-  );
+  // --- Get query parameters from URL ---
+  const status = searchParams.get("status") as ComplaintStatus | null;
+  const serviceId = searchParams.get("serviceId");
+  const providerId = searchParams.get("providerId");
+  const productId = searchParams.get("productId");
+  const startDateString = searchParams.get("startDate"); // Get date as STRING
+  const endDateString = searchParams.get("endDate");   // Get date as STRING
+  const search = searchParams.get("search");
+
+  // --- Pagination ---
+  const pageParam = searchParams.get("page");
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1; // Current page from URL
+  const pageSize = 10; // Define your desired page size
+
+  // --- Memoize query parameters for the hook ---
+  const queryParams = useMemo(() => {
+    return {
+      status: status || undefined,
+      serviceId: serviceId || undefined,
+      providerId: providerId || undefined,
+      productId: productId || undefined,
+      // Koristimo safeDate helper
+      startDate: safeDate(startDateString), 
+      endDate: safeDate(endDateString),   
+      search: search || undefined,
+      limit: pageSize, 
+      page: currentPage, 
+    };
+  }, [
+    status,
+    serviceId,
+    providerId,
+    productId,
+    startDateString, 
+    endDateString,   
+    search,
+    currentPage, 
+    pageSize,
+    safeDate // Zavisimo od safeDate callbacka
+  ]);
+
+
+  // --- Fetch data using the hook with memoized params ---
+  const { complaints, isLoading, error, totalCount, totalPages } = useComplaints(queryParams);
+
+
+  // --- Notification Logic (Keep existing) ---
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+
+  useEffect(() => {
+    const message = searchParams.get("message");
+    const type = searchParams.get("type") as "success" | "error" | "info" | null;
+
+    if (message && type) {
+      setNotification({ message, type });
+
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+
+  // --- Pagination Change Handler ---
+  const handlePageChange = useCallback((page: number) => {
+    const currentParams = new URLSearchParams(searchParams.toString());
+    currentParams.set("page", page.toString());
+    router.push(`${router.pathname}?${currentParams.toString()}`);
+  }, [router, searchParams]);
+
+
+  // --- Filter Change Handler ---
+  const handleFilterChange = useCallback((filters: ComplaintFiltersState) => {
+    const newParams = new URLSearchParams();
+
+    if (filters.statuses && filters.statuses.length > 0) {
+      filters.statuses.forEach(status => newParams.append("status", status));
+    }
+    if (filters.serviceId) newParams.append("serviceId", filters.serviceId);
+    if (filters.providerId) newParams.append("providerId", filters.providerId);
+    // Ako ComplaintFiltersState uključuje i ove filtere, dodajte ih ovde
+    // if (filters.productId) newParams.append("productId", filters.productId);
+
+    // KLJUČNA IZMENA: Proveravamo validnost Date objekata pre konverzije u string za URL
+    if (filters.dateRange?.from && !isNaN(filters.dateRange.from.getTime())) {
+      newParams.append("startDate", filters.dateRange.from.toISOString());
+    } 
+    if (filters.dateRange?.to && !isNaN(filters.dateRange.to.getTime())) {
+      newParams.append("endDate", filters.dateRange.to.toISOString());
+    }
+    // if (filters.search) newParams.append("search", filters.search);
+
+
+    newParams.set("page", "1"); // Reset page to 1 when filters change
+
+
+    router.push(`${router.pathname}?${newParams.toString()}`);
+  }, [router]);
+
+
+  // --- Helper to check if any non-pagination filter is active ---
+  const hasActiveFilters = useMemo(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page"); // Ignorišemo parametar stranice
+    // params.delete("limit");
+    return params.toString().length > 0;
+  }, [searchParams]);
+
+
+  return (
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Complaints Management</h1>
+        <Button
+          onClick={() => router.push("/complaints/new")}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          New Complaint
+        </Button>
+      </div>
+
+      {notification && (
+        <NotificationBanner
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
+
+      {/* Pass current filters from URL and the change handler */}
+      <ComplaintFilters
+         filters={{
+           statuses: status ? [status] : [],
+           serviceId: serviceId || undefined,
+           providerId: providerId || undefined,
+            dateRange: {
+               // KLJUČNA IZMENA: Koristimo safeDate helper pre prosleđivanja propa
+                from: safeDate(startDateString),
+                to: safeDate(endDateString),
+            }
+         }}
+         onFiltersChange={handleFilterChange}
+      />
+
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : error ? (
+        <div className="bg-destructive/10 text-destructive p-4 rounded-md">
+          Error loading complaints: {error.message}
+        </div>
+      ) : (
+        complaints.length === 0 && currentPage === 1 && !hasActiveFilters
+      ) ? (
+         <div className="text-center py-8 text-muted-foreground">
+             No complaints found.
+         </div>
+      ) : ( complaints.length === 0 && (currentPage > 1 || hasActiveFilters) ) ? (
+        // Poruka kada nema rezultata za primenjene filtere/stranicu
+         <div className="text-center py-8 text-muted-foreground">
+             No complaints found matching the criteria.
+         </div>
+      ) : (
+        <>
+          <ComplaintList
+            complaints={complaints}
+            totalComplaints={totalCount}
+            page={currentPage}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            userRole="ADMIN" // <-- Replace with dynamic user role
+          />
+        </>
+      )}
+    </div>
+  );
 }

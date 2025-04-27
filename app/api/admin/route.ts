@@ -1,3 +1,6 @@
+//app/api/admin/route.ts
+
+
 import { NextResponse } from "next/server";
 import { currentRole } from "@/lib/auth";
 import { UserRole } from "@prisma/client";

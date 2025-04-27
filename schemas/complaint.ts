@@ -1,37 +1,77 @@
-// schemas/complaint.ts
+// /schemas/complaint.ts
+
+
+
 import { z } from "zod";
-import { ComplaintStatus, Priority, ComplaintType } from "@prisma/client";
 
-export const ComplaintFormSchema = z.object({
-  title: z.string().min(5, "Naslov mora imati najmanje 5 karaktera").max(100, "Naslov može imati najviše 100 karaktera"),
-  description: z.string().min(10, "Opis mora imati najmanje 10 karaktera").max(2000, "Opis može imati najviše 2000 karaktera"),
-  type: z.nativeEnum(ComplaintType, {
-    errorMap: () => ({ message: "Izaberite tip reklamacije" }),
-  }),
-  priority: z.nativeEnum(Priority, {
-    errorMap: () => ({ message: "Izaberite prioritet reklamacije" }),
-  }),
-  productId: z.string().optional(),
+import { ComplaintStatus } from "@prisma/client";
+
+export const complaintSchema = z.object({
+
+title: z.string().min(5, "Title must be at least 5 characters"),
+
+description: z.string().min(10, "Description must be at least 10 characters"),
+
+status: z.nativeEnum(ComplaintStatus).default("NEW"),
+
+priority: z.number().int().min(1).max(5).default(3),
+
+financialImpact: z.number().optional(),
+
+serviceId: z.string().optional(),
+
+productId: z.string().optional(),
+
+providerId: z.string().optional(),
+
+assignedAgentId: z.string().optional(),
+
 });
 
-export const CommentFormSchema = z.object({
-  content: z.string().min(1, "Komentar ne može biti prazan").max(1000, "Komentar može imati najviše 1000 karaktera"),
+export const complaintUpdateSchema = complaintSchema.partial().extend({
+
+id: z.string(),
+
 });
 
-export const AssignComplaintFormSchema = z.object({
-  assignedToId: z.string().min(1, "Izaberite agenta"),
+export const complaintFilterSchema = z.object({
+
+status: z.nativeEnum(ComplaintStatus).optional(),
+
+priority: z.number().int().min(1).max(5).optional(),
+
+serviceId: z.string().optional(),
+
+productId: z.string().optional(),
+
+providerId: z.string().optional(),
+
+assignedAgentId: z.string().optional(),
+
+submittedById: z.string().optional(),
+
+dateFrom: z.date().optional(),
+
+dateTo: z.date().optional(),
+
 });
 
-export const ResolveComplaintFormSchema = z.object({
-  resolution: z.string().min(10, "Rešenje mora imati najmanje 10 karaktera").max(2000, "Rešenje može imati najviše 2000 karaktera"),
-  status: z.enum([ComplaintStatus.RESOLVED, ComplaintStatus.REJECTED], {
-    errorMap: () => ({ message: "Izaberite konačni status reklamacije" }),
-  }),
+export const complaintCommentSchema = z.object({
+
+text: z.string().min(1, "Comment cannot be empty"),
+
+complaintId: z.string(),
+
+isInternal: z.boolean().default(false),
+
 });
 
-export const AttachmentFormSchema = z.object({
-  fileName: z.string().min(1, "Naziv fajla je obavezan"),
-  fileType: z.string().min(1, "Tip fajla je obavezan"),
-  fileSize: z.number().min(1, "Veličina fajla mora biti veća od 0"),
-  fileUrl: z.string().min(1, "URL fajla je obavezan"),
+export const statusUpdateSchema = z.object({
+
+complaintId: z.string(),
+
+status: z.nativeEnum(ComplaintStatus),
+
+notes: z.string().optional(),
+
 });

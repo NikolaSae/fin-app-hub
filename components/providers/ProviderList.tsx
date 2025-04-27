@@ -1,69 +1,127 @@
-// components/providers/ProviderList.tsx
-import { useState } from 'react';
-import ProviderCard from './ProviderCard';
+// /components/providers/ProviderList.tsx
+"use client";
 
-export interface Provider {
-  id: string;
-  name: string;
-  description?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+// Pretpostavljamo uvoz UI komponenti ako su Shadcn UI:
+import { Button } from "@/components/ui/button"; // Odkomentarisati ako se koriste Shadcn buttoni
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Odkomentarisati ako se koriste Shadcn table
 
-interface ProviderListProps {
-  providers: Provider[];
-  onViewDetails: (id: string) => void;
-}
 
-export default function ProviderList({ providers, onViewDetails }: ProviderListProps) {
-  const [filter, setFilter] = useState('all'); // all, active, inactive
+import { useProviders } from "@/hooks/use-providers";
 
-  const filteredProviders = providers.filter(provider => {
-    if (filter === 'all') return true;
-    if (filter === 'active') return provider.isActive;
-    if (filter === 'inactive') return !provider.isActive;
-    return true;
-  });
+import { ProviderFilters } from "@/components/providers/ProviderFilters";
 
-  return (
-    <div>
-      <div className="mb-6 flex gap-4">
-        <button 
-          className={`px-4 py-2 rounded ${filter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setFilter('all')}
-        >
-          Svi ({providers.length})
-        </button>
-        <button 
-          className={`px-4 py-2 rounded ${filter === 'active' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setFilter('active')}
-        >
-          Aktivni ({providers.filter(p => p.isActive).length})
-        </button>
-        <button 
-          className={`px-4 py-2 rounded ${filter === 'inactive' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setFilter('inactive')}
-        >
-          Neaktivni ({providers.filter(p => !p.isActive).length})
-        </button>
-      </div>
+import { ProviderWithCounts, ProviderFilterOptions } from "@/lib/types/provider-types";
 
-      {filteredProviders.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">Nema pronađenih provajdera</p>
+
+
+
+// Komponenta za prikaz liste provajdera (više ne prima prop listu)
+export function ProviderList() { // Uklonjeni propovi
+    const router = useRouter();
+
+    // Stanje za filter opcije koje ProviderFilters menja
+    const [filters, setFilters] = useState<ProviderFilterOptions>({});
+    // Stanje za paginaciju (ako implementirate)
+    // const [pagination, setPagination] = useState({ page: 1, limit: 10 });
+
+    // Dohvaćanje podataka koristeći useProviders hook
+    const { providers, totalCount, loading, error } = useProviders(
+        filters, // Prosleđujemo trenutne filtere hooku
+        { page: 1, limit: 100 } // Prosledite paginaciju ako je koristite
+         // Možete proslediti i praznu paginaciju { } ako ne želite limit/offset
+    );
+
+    // Funkcija koja se prosleđuje ProviderFilters komponenti
+    const handleFilterChange = (filterOptions: ProviderFilterOptions) => {
+        // Ažurirajte stanje filtera u ovoj komponenti
+        setFilters(filterOptions);
+        // Ako koristite paginaciju, resetujte na prvu stranicu pri promeni filtera
+        // setPagination(prev => ({ ...prev, page: 1 }));
+    };
+
+    // Memoizacija za izvedene podatke ako je potrebno (npr. formatiranje)
+    // const formattedProviders = useMemo(() => { ... }, [providers]);
+
+
+    // Prikazivanje stanja učitavanja ili greške
+    if (loading) {
+        // Renderujte skeleton ili poruku za učitavanje
+         return <div className="text-center py-4 text-muted-foreground">Loading providers...</div>;
+    }
+
+    if (error) {
+        // Renderujte poruku o grešci
+         return <div className="text-center py-4 text-red-500">Error loading providers: {error.message}</div>;
+    }
+
+
+    return (
+        <div className="space-y-4">
+            <ProviderFilters onFilterChange={handleFilterChange} />
+
+
+            <div className="rounded-md border">
+                
+                <table> {/* Koristiti Shadcn Table ako je importovan */}
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Active</th>
+                            <th>Contracts Count</th>
+                            <th>Complaints Count</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                       
+                        {providers.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className="text-center py-4 text-muted-foreground">
+                                    No providers found.
+                                </td>
+                            </tr>
+                        ) : (
+                            providers.map((provider) => {
+                                return (
+                                    <tr key={provider.id}>
+                                        <td> 
+                                             <Link
+                                                 href={`/providers/${provider.id}`}
+                                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                                            >
+                                                {provider.name}
+                                            </Link>
+                                        </td>
+                                        <td>{provider.contactName || 'N/A'}</td> 
+                                        <td>{provider.email || 'N/A'}</td> 
+                                        <td>{provider.phone || 'N/A'}</td> 
+                                         <td>{provider.isActive ? 'Yes' : 'No'}</td> 
+                                          {/* Prikaz brojača iz _count */}
+                                         <td>{provider._count?.contracts ?? 0}</td> 
+                                          <td>{provider._count?.complaints ?? 0}</td> 
+                                        <td className="text-right"> {/* Koristiti Shadcn TableCell */}
+                                            <button
+                                                onClick={() => router.push(`/providers/${provider.id}`)}
+                                                className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input hover:bg-accent px-3 py-1.5" // Osnovni stil dugmeta
+                                            >
+                                                View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProviders.map((provider) => (
-            <ProviderCard 
-              key={provider.id} 
-              provider={provider} 
-              onClick={() => onViewDetails(provider.id)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    );
 }
