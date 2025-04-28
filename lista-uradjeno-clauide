@@ -1,4 +1,36 @@
 spisak napravljenih fajlova
+ 5. Servisi & Proizvodi
+5.1. App Routes
+
+5.1.1. /app/(protected)/services/page.tsx - Main services listing page
+/app/(protected)/services/[serviceType]/page.tsx - Service type specific view (VAS, Bulk, etc.)
+/app/(protected)/services/[serviceType]/[id]/page.tsx - Individual service details
+/app/(protected)/services/[serviceType]/[id]/edit/page.tsx - Edit service page
+/app/(protected)/products/page.tsx - Products listing page
+/app/(protected)/products/[id]/page.tsx - Individual product details page
+
+5.2. Components
+
+5.2.1. /components/services/ServiceForm.tsx - Reusable form for creating/editing services
+/components/services/ServiceList.tsx - Tabular list of services
+/components/services/ServiceDetails.tsx
+/components/services/ServiceFilters.tsx - Filter controls for services
+/components/services/ServiceCard.tsx - Card component for service display
+/components/services/category/VasServiceCard.tsx - VAS-specific service card
+/components/services/category/BulkServiceCard.tsx - Bulk-specific service card
+/components/services/category/HumanServiceCard.tsx - Humanitarian service card
+/components/services/category/ParkingServiceCard.tsx - Parking service card
+/components/products/ProductForm.tsx - Form for product creation/editing
+/components/products/ProductList.tsx - List of products
+/components/products/ProductCard.tsx - Product display card
+
+5.3. Actions & API Routes
+
+5.3.1. /actions/services/create.ts - Create new service
+/actions/services/update.ts - Update existing service
+/actions/services/delete.ts - Delete service
+
+
 
  6. complaints
 
