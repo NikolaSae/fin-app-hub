@@ -1,59 +1,66 @@
-// /actions/providers/delete.ts
+// /actions/products/delete.ts
 'use server';
 
-import { db } from '@/lib/db'; // Pretpostavljena putanja do vašeg Prisma klijenta
-import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth'; // Pretpostavljena putanja do vašeg auth helpera
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'; // Za rukovanje specifičnim Prisma greškama
+import { db } from '@/lib/db';
+// Uvozimo auth funkcije za proveru autentifikacije/autorizacije
+import { auth } from '@/auth';
+import { currentRole } from "@/lib/auth";
+import { UserRole } from "@prisma/client"; // Koristimo UserRole enum iz Prisma klijenta
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'; // Uvozimo specifičan tip Prisma greške
+
 
 /**
- * Server akcija za brisanje provajdera.
- * @param id - ID provajdera za brisanje.
- * @returns Objekat sa success/error porukom.
+ * Server akcija za brisanje proizvoda.
+ * Usklađena sa Product modelom u schema.prisma i njegovim relacijama.
+ * @param id - ID proizvoda koji se briše.
+ * @returns Objekat sa statusom uspeha/neuspeha ili greškom.
  */
-export const deleteProvider = async (id: string) => {
-    // 1. Provera autorizacije (opciono, npr. samo ADMIN može brisati provajdere)
-    // const session = await auth();
-    // if (!session?.user || session.user.role !== 'ADMIN') {
-    //   return { error: "Unauthorized" };
-    // }
+export async function deleteProduct(id: string): Promise<{ success?: string; error?: string }> {
+    // Provera autorizacije - samo ADMIN može brisati proizvode (ili viša uloga)
+     const role = await currentRole();
+     // Možda samo ADMIN može brisati, a MANAGER samo ažurirati? Prilagodite uloge.
+     if (role !== UserRole.ADMIN) {
+       return { error: "Forbidden" };
+     }
 
     try {
-         // 2. Provera da li provajder sa datim ID-em postoji
-         const existingProvider = await db.provider.findUnique({
-             where: { id },
-         });
+        // 1. Provera da li proizvod postoji pre brisanja (opciono, ali dobra praksa)
+        // Prisma delete će baciti P2025 grešku ako record ne postoji, što se može uhvatiti dole
+        // const existingProduct = await db.product.findUnique({
+        //     where: { id },
+        // });
+        // if (!existingProduct) {
+        //     return { error: "Product not found." };
+        // }
 
-         if (!existingProvider) {
-             return { error: "Provider not found." };
-         }
 
-        // 3. Brisanje provajdera u bazi
-        // Zavisno od onDelete podešavanja u vašoj Prisma šemi za relacije (ugovori, servisi, reklamacije),
-        // brisanje može automatski obrisati povezane zapise (Cascade), postaviti ih na null (SetNull),
-        // ili pući sa greškom (Restrict). Rukujemo potencijalnom 'Restrict' greškom.
-        await db.provider.delete({
+        // 2. Brisanje proizvoda iz baze
+        await db.product.delete({
             where: { id },
         });
 
-        // 4. Revalidacija cache-a za relevantne stranice
-        revalidatePath('/app/(protected)/providers'); // Lista provajdera
-        // Revalidirajte i druge stranice koje bi mogle prikazati ovog provajdera (npr. detalje ugovora)
-        // revalidatePath('/app/(protected)/contracts');
-
-
-        return { success: "Provider deleted successfully!" };
+        // 3. Vraćanje uspešnog odgovora
+        return { success: "Product deleted successfully!" };
 
     } catch (error) {
-        console.error(`Error deleting provider ${id}:`, error);
-        // Rukovanje specifičnim greškama (npr. foreign key constraint - ako je onDelete: Restrict)
+        console.error(`Error deleting product with ID ${id}:`, error);
+        // Rukovanje specifičnim Prisma greškama
         if (error instanceof PrismaClientKnownRequestError) {
-             if (error.code === 'P2003') { // Foreign key constraint violation
-                return { error: "Cannot delete provider because it is associated with existing contracts, services, or complaints." };
-             }
-             // Rukovanje drugim poznatim Prisma greškama ako je potrebno
-            // return { error: `Database error: ${error.message}` };
+            // P2025: An operation failed because it depends on one or more records that were required but not found. (Record to delete does not exist)
+            if (error.code === 'P2025') {
+                 // const target = (error.meta as any)?.target; // Može dati više info
+                 return { error: `Product with ID ${id} not found.` };
+            }
+            // P2003: Foreign key constraint failed on the database. (Cannot delete because it's referenced elsewhere)
+            if (error.code === 'P2003') {
+                 // const field_name = (error.meta as any)?.field_name; // Može dati ime polja koje krši constraint
+                 return { error: `Cannot delete product because it is associated with other records (e.g., complaints). Please remove associated records first.` };
+            }
+            // Rukovanje drugim poznatim Prisma greškama ako je potrebno
         }
-        return { error: "Failed to delete provider." }; // Generalna greška servera
+
+
+        // Vraćanje generičke greške za nepoznate greške
+        return { error: "Failed to delete product." };
     }
-};
+}

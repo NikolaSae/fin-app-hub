@@ -1,5 +1,5 @@
 // /utils/date-filters.ts
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subDays, subWeeks, subMonths, subQuarters, subYears } from 'date-fns';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subDays, subWeeks, subMonths, subQuarters, subYears, format } from 'date-fns';
 
 export type DateRange = {
   startDate: Date;
@@ -21,6 +21,12 @@ export type DateFilterOption =
   | 'last30Days'
   | 'last90Days'
   | 'allTime';
+
+// Add the missing formatDate function
+export function formatDate(date: Date | null | undefined): string {
+  if (!date) return '';
+  return format(date, 'yyyy-MM-dd HH:mm:ss');
+}
 
 export function getDateRange(option: DateFilterOption): DateRange {
   const now = new Date();

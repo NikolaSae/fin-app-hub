@@ -1,10 +1,8 @@
 // /components/complaints/DateRangeFilter.tsx
 "use client";
-
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,23 +13,23 @@ import {
 } from "@/components/ui/popover";
 
 interface DateRangeFilterProps {
-  fromDate?: Date;
-  toDate?: Date;
+  startDate?: Date;
+  endDate?: Date;
   onChange: (from?: Date, to?: Date) => void;
 }
 
-export default function DateRangeFilter({
-  fromDate,
-  toDate,
+// Use named export instead of default export
+export function DateRangeFilter({
+  startDate,
+  endDate,
   onChange,
 }: DateRangeFilterProps) {
-  const dateRange: DateRange | undefined = fromDate || toDate 
+  const dateRange: DateRange | undefined = startDate || endDate 
     ? { 
-        from: fromDate || undefined, 
-        to: toDate || undefined 
+        from: startDate || undefined, 
+        to: endDate || undefined 
       }
     : undefined;
-
   return (
     <div className="grid gap-2">
       <Popover>
@@ -63,7 +61,7 @@ export default function DateRangeFilter({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={fromDate || new Date()}
+            defaultMonth={startDate || new Date()}
             selected={dateRange}
             onSelect={(range) => {
               onChange(range?.from, range?.to);
@@ -84,3 +82,6 @@ export default function DateRangeFilter({
     </div>
   );
 }
+
+// Add a default export as well for backward compatibility
+export default DateRangeFilter;

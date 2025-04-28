@@ -1,269 +1,320 @@
 // /components/providers/ProviderForm.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Import useEffect for potential form reset
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form"; // Import Controller
 import { zodResolver } from "@hookform/resolvers/zod";
 
 // Uvozimo stvarne server akcije za provajdere
-import { createProvider } from "@/actions/providers/create";
-import { updateProvider } from "@/actions/providers/update";
+import { createProvider } from "@/actions/providers/create"; // Should be exported now
+import { updateProvider } from "@/actions/providers/update"; // Should be exported now
 
 // Uvozimo stvarnu Zod šemu i TypeScript tipove za provajdere
-import { providerSchema, ProviderFormData } from "@/schemas/provider"; // providerSchema je sada ProviderFormData šema
+import { providerSchema, ProviderFormData } from "@/schemas/provider";
 
 
-// Uklanjamo placeholder šemu i tip
-// const providerSchema: any = {}; // Uklonjeno
-// interface ProviderFormData { ... } // Uklonjeno
-
-// Uvozimo UI komponente ako su Shadcn UI
-// import { Input } from "@/components/ui/input"; // Odkomentarisati
-// import { Button } from "@/components/ui/button"; // Odkomentarisati
-// import { Checkbox } from "@/components/ui/checkbox"; // Odkomentarisati ako se koristi Shadcn Checkbox
-// import { Label } from "@/components/ui/label"; // Odkomentarisati
-// import { Textarea } from "@/components/ui/textarea"; // Odkomentarisati
+// Uvozimo UI komponente iz Shadcn UI
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form"; // Import Form components
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"; // Use Card structure
+import { useToast } from "@/components/ui/use-toast"; // For notifications
 
 
 interface ProviderFormProps {
     // Opcioni prop za editovanje (postojeći podaci provajdera)
-    // Tip Provider FormData odgovara strukturi forme, ali provider sa servera ima i ID, createdAt, updatedAt
-    // Koristimo Provider tip sa servera i mapiramo na ProviderFormData za default values
-    provider?: { // Ovo je tip koji dolazi sa servera fetch-om
-         id: string;
-         name: string;
-         contactName: string | null;
-         email: string | null;
-         phone: string | null;
-         address: string | null;
-         isActive: boolean;
-         createdAt: Date; // Dodajemo ako se fetchuje
-         updatedAt: Date; // Dodajemo ako se fetchuje
-         // ... ostala polja sa servera koja nisu u formi
+    // Koristimo tip sa servera koji uključuje ID i datume
+    provider?: {
+        id: string;
+        name: string;
+        contactName: string | null;
+        email: string | null;
+        phone: string | null;
+        address: string | null;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        // Dodajte _count ako je uključen pri fetchovanju za edit
+        // _count?: { contracts: number; vasServices: number; bulkServices: number; complaints: number; };
     };
-    isEditing?: boolean;
+    // isEditing prop je redundant ako prosleđujemo provider objekat
+    // Možemo utvrditi da li je editing na osnovu toga da li provider postoji
+    // isEditing?: boolean; // Uklanjamo ili zadržavamo po želji, ali je nepotreban
 }
 
 // Komponenta forme za kreiranje ili editovanje provajdera
-export function ProviderForm({ provider, isEditing = false }: ProviderFormProps) {
+export function ProviderForm({ provider }: ProviderFormProps) {
     const router = useRouter();
+    const { toast } = useToast(); // Initialize useToast
     const [isLoading, setIsLoading] = useState(false);
-    // Stanje za poruku o grešci servera (ako je potrebno)
-    const [serverError, setServerError] = useState<string | null>(null);
+    // Server greška će se rukovati kroz useToast ili prikazati unutar forme
+    // const [serverError, setServerError] = useState<string | null>(null); // Uklanjamo ovo u korist useToast
 
 
-    const {
-        register,
-        handleSubmit,
-        formState: { errors },
-        // setValue, // Ostavljeno ako je potrebno dinamički menjati vrednosti
-        // watch, // Ostavljeno ako je potrebno pratiti vrednosti polja
-    } = useForm<ProviderFormData>({
+    // Određujemo da li se forma koristi za editovanje na osnovu postojanja provider objekta
+    const isEditing = !!provider;
+
+
+    // Definisanje forme sa zodResolver-om i stvarnom šemom
+    const form = useForm<ProviderFormData>({
         resolver: zodResolver(providerSchema), // Koristimo stvarnu Zod šemu
         defaultValues: isEditing && provider
             ? {
                 name: provider.name,
-                contactName: provider.contactName ?? '', // Rukovanje null/undefined mapiranjem na prazan string za input
+                contactName: provider.contactName ?? '', // Mapiranje null/undefined na prazan string za formu
                 email: provider.email ?? '',
                 phone: provider.phone ?? '',
                 address: provider.address ?? '',
                 isActive: provider.isActive,
             }
             : {
-                 isActive: true, // Podrazumevano aktivan pri kreiranju
-                 // Opciono: default vrednosti za ostala polja ako nisu obavezna
+                isActive: true, // Podrazumevano aktivan pri kreiranju
+                name: '',
+                contactName: '',
+                email: '',
+                phone: '',
+                address: '',
+            },
+         mode: 'onSubmit', // Validacija pri slanju (opciono, možete koristiti 'onBlur' ili 'onChange')
+         // reValidateMode: 'onBlur', // Opciono: re-validiraj pri gubitku fokusa
+    });
+
+     // Resetovanje forme kada se provider objekat promeni (npr. pri navigaciji između edit stranica)
+     useEffect(() => {
+         if (provider) {
+              form.reset({
+                   name: provider.name || '',
+                   contactName: provider.contactName ?? '',
+                   email: provider.email ?? '',
+                   phone: provider.phone ?? '',
+                   address: provider.address ?? '',
+                   isActive: provider.isActive ?? true,
+              });
+         } else {
+             // Reset na prazne vrednosti i default ako nema providera (za new formu)
+             form.reset({
                  name: '',
                  contactName: '',
                  email: '',
                  phone: '',
                  address: '',
-            },
-        mode: 'onBlur', // Validacija pri gubitku fokusa (opciono)
-    });
+                 isActive: true,
+             });
+         }
+     }, [provider, form]); // Dodajemo 'form' kao zavisnost
 
-    // Pratite vrednost isActive ako forma koristi select ili radio dugmad
-    // const isActive = watch('isActive');
 
     const onSubmit = async (data: ProviderFormData) => {
-        setServerError(null); // Resetuj server grešku
-        try {
-            setIsLoading(true);
+        // setServerError(null); // Resetuj server grešku (višak sa useToast)
+        setIsLoading(true);
 
-            let result;
-            if (isEditing && provider) {
-                 // Pozivanje STVARNE server akcije za ažuriranje
-                 result = await updateProvider(provider.id, data);
+        let result;
+        if (isEditing && provider) {
+            // Pozivanje STVARNE server akcije za ažuriranje
+            result = await updateProvider(provider.id, data); // provider.id je sigurno definisan kada je isEditing true
+        } else {
+            // Pozivanje STVARNE server akcije za kreiranje
+            result = await createProvider(data);
+        }
+
+        setIsLoading(false);
+
+        // Rukovanje rezultatom server akcije i prikaz Toast notifikacija
+        if (result?.success) {
+            toast({
+                title: 'Success!',
+                description: result.success,
+            });
+            // Preusmeri na stranicu detalja ili listu nakon uspeha
+            // Akcija createProvider vraća ID u result.id
+            const newItemId = isEditing ? provider?.id : result.id;
+            if (newItemId) {
+                router.push(`/providers/${newItemId}`); // Preusmeri na detalje
             } else {
-                 // Pozivanje STVARNE server akcije za kreiranje
-                 result = await createProvider(data);
+                router.push('/providers'); // Fallback na listu
             }
+             router.refresh(); // Osveži cache rute
 
-            if (result && result.success) {
-                console.log(result.success);
-                 // Preusmeri na stranicu detalja ili listu nakon uspeha
-                // Pretpostavljamo da akcija vraća ID u slučaju uspeha kreiranja
-                const newItemId = isEditing ? provider?.id : result.id;
-                if (newItemId) {
-                     router.push(`/providers/${newItemId}`); // Preusmeri na detalje
-                } else {
-                     router.push('/providers'); // Fallback na listu ako nema ID-a
-                }
-
-            } else {
-                 // Rukovanje greškom servera
-                 console.error("Failed to save provider:", result?.error);
-                 setServerError(result?.error || 'An unknown error occurred.');
-                 // Ako imate detalje greške validacije iz Zoda (result.details), možete ih mapirati na hook-form greške
-                 // if (result?.details) { ... map errors ... }
-            }
-
-        } catch (error) {
-            console.error("Error saving provider:", error);
-            setServerError(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`);
-        } finally {
-            setIsLoading(false);
+        } else {
+            // Rukovanje greškom servera ili validacije iz akcije
+            console.error("Failed to save provider:", result?.error);
+            // Prikaz greške servera kao Toast notifikacija
+             toast({
+                  title: 'Error',
+                  description: result?.error || 'An unknown error occurred.',
+                  variant: 'destructive',
+             });
+             // Ako akcija vraća detalje greške validacije iz Zoda (result.details),
+             // možete ih ručno setovati na hook-form greške:
+             // if (result?.details) {
+             //    Object.keys(result.details).forEach(key => {
+             //         if (form.get ailmentTypeof key) {
+             //              form.setError(key as keyof ProviderFormData, {
+             //                  type: 'server',
+             //                  message: result.details[key]._errors.join(', ') // Zod format error structure
+             //              });
+             //         }
+             //    });
+             // }
         }
     };
 
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Prikazivanje greške sa servera ako postoji */}
-             {serverError && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                    <strong className="font-bold">Error:</strong>
-                    <span className="block sm:inline"> {serverError}</span>
-                </div>
-             )}
+        <Card className="w-full max-w-2xl mx-auto"> {/* Koristimo Shadcn Card */}
+            <CardHeader>
+                <CardTitle>{isEditing ? "Edit Provider" : "Create New Provider"}</CardTitle>
+                 <p className="text-sm text-muted-foreground">
+                    {isEditing ? `Edit details for provider: ${provider?.name}` : 'Fill in the details for a new provider.'}
+                 </p>
+            </CardHeader>
+            <CardContent>
+                {/* Omotajte formu Shadcn Form kontextom za bolju integraciju validacije i UI */}
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Polje za Ime provajdera */}
-                <div className="space-y-2">
-                    {/* Koristiti Shadcn Label i Input komponente ako su importovane */}
-                    <label htmlFor="name" className="block text-sm font-medium">
-                        Provider Name
-                    </label>
-                    <input
-                        id="name"
-                        type="text"
-                        className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                        placeholder="Enter provider name"
-                        {...register("name")}
-                    />
-                    {/* Prikazivanje greške validacije forme */}
-                    {errors.name && (
-                        <p className="text-red-500 text-sm">{errors.name.message}</p>
-                    )}
-                </div>
+                        {/* Polje: Name */}
+                        <FormField
+                            control={form.control}
+                            name="name" // Ime polja u ProviderFormData
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Provider Name</FormLabel> {/* Koristimo Shadcn FormLabel */}
+                                    <FormControl>
+                                        {/* Koristimo Shadcn Input */}
+                                        <Input placeholder="Enter provider name" {...field} disabled={isLoading} />
+                                    </FormControl>
+                                    <FormMessage /> {/* Prikazuje Shadcn FormMessage (validacione greške iz hook-form/zod) */}
+                                </FormItem>
+                            )}
+                        />
 
-                {/* Polje za Kontakt ime */}
-                 <div className="space-y-2">
-                    <label htmlFor="contactName" className="block text-sm font-medium">
-                        Contact Name (Optional)
-                    </label>
-                    <input
-                        id="contactName"
-                        type="text"
-                        className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                        placeholder="Enter contact name"
-                        {...register("contactName")}
-                    />
-                     {errors.contactName && (
-                        <p className="text-red-500 text-sm">{errors.contactName.message}</p>
-                    )}
-                </div>
+                         {/* Polje: Contact Name */}
+                         <FormField
+                             control={form.control}
+                             name="contactName"
+                             render={({ field }) => (
+                                 <FormItem>
+                                     <FormLabel>Contact Name (Optional)</FormLabel>
+                                     <FormControl>
+                                         <Input placeholder="Enter contact name" {...field} disabled={isLoading} />
+                                     </FormControl>
+                                     <FormMessage />
+                                 </FormItem>
+                             )}
+                         />
 
-                {/* Polje za Email */}
-                 <div className="space-y-2">
-                    <label htmlFor="email" className="block text-sm font-medium">
-                        Email (Optional)
-                    </label>
-                    <input
-                        id="email"
-                        type="email"
-                        className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                        placeholder="Enter email"
-                        {...register("email")}
-                    />
-                     {errors.email && (
-                        <p className="text-red-500 text-sm">{errors.email.message}</p>
-                    )}
-                </div>
+                         {/* Polje: Email */}
+                         <FormField
+                             control={form.control}
+                             name="email"
+                             render={({ field }) => (
+                                 <FormItem>
+                                     <FormLabel>Email (Optional)</FormLabel>
+                                     <FormControl>
+                                         <Input type="email" placeholder="Enter email" {...field} disabled={isLoading} />
+                                     </FormControl>
+                                     <FormMessage />
+                                 </FormItem>
+                             )}
+                         />
 
-                {/* Polje za Telefon */}
-                 <div className="space-y-2">
-                    <label htmlFor="phone" className="block text-sm font-medium">
-                        Phone (Optional)
-                    </label>
-                    <input
-                        id="phone"
-                        type="tel"
-                        className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                        placeholder="Enter phone number"
-                        {...register("phone")}
-                    />
-                     {errors.phone && (
-                        <p className="text-red-500 text-sm">{errors.phone.message}</p>
-                    )}
-                </div>
+                         {/* Polje: Phone */}
+                         <FormField
+                             control={form.control}
+                             name="phone"
+                             render={({ field }) => (
+                                 <FormItem>
+                                     <FormLabel>Phone (Optional)</FormLabel>
+                                     <FormControl>
+                                         <Input type="tel" placeholder="Enter phone number" {...field} disabled={isLoading} />
+                                     </FormControl>
+                                     <FormMessage />
+                                 </FormItem>
+                             )}
+                         />
 
-                 {/* Polje za Adresu */}
-                 <div className="space-y-2 col-span-full">
-                    <label htmlFor="address" className="block text-sm font-medium">
-                        Address (Optional)
-                    </label>
-                    <textarea
-                        id="address"
-                        rows={2}
-                        className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                        placeholder="Enter address"
-                        {...register("address")}
-                    ></textarea>
-                     {errors.address && (
-                        <p className="text-red-500 text-sm">{errors.address.message}</p>
-                    )}
-                </div>
+                         {/* Polje: Address */}
+                         <FormField
+                             control={form.control}
+                             name="address"
+                             render={({ field }) => (
+                                 <FormItem>
+                                     <FormLabel>Address (Optional)</FormLabel>
+                                     <FormControl>
+                                         {/* Koristimo Shadcn Textarea */}
+                                         <Textarea placeholder="Enter address" {...field} disabled={isLoading} rows={3} />
+                                     </FormControl>
+                                     <FormMessage />
+                                 </FormItem>
+                             )}
+                         />
 
-                {/* Polje za Aktivno (Checkbox) */}
-                <div className="space-y-2 flex items-center">
-                     {/* Koristiti Shadcn Checkbox ako je importovan */}
-                     <input
-                        id="isActive"
-                        type="checkbox"
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                         {...register("isActive")}
-                    />
-                     {/* Koristiti Shadcn Label ako je importovan */}
-                     <label htmlFor="isActive" className="ml-2 block text-sm font-medium">
-                        Is Active
-                    </label>
-                     {/* Validacija greške ako se koristi striktna validacija za boolean */}
-                     {errors.isActive && (
-                        <p className="text-red-500 text-sm">{errors.isActive.message}</p>
-                    )}
-                </div>
-            </div>
+                        {/* Polje: isActive (Checkbox) */}
+                         <FormField
+                            control={form.control}
+                            name="isActive"
+                            render={({ field }) => (
+                                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                     <FormControl>
+                                         {/* Koristimo Shadcn Checkbox */}
+                                         <Checkbox
+                                             checked={field.value}
+                                             onCheckedChange={field.onChange}
+                                             disabled={isLoading}
+                                         />
+                                     </FormControl>
+                                      <div className="space-y-1 leading-none">
+                                          <FormLabel>
+                                              Is Active
+                                          </FormLabel>
+                                      </div>
+                                     <FormMessage />
+                                 </FormItem>
+                            )}
+                        />
 
-            {/* Dugmad za akciju */}
-            <div className="flex justify-end space-x-4">
-                {/* Koristiti Shadcn Button ako je importovan */}
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-10 py-2 px-4"
-                >
-                    Cancel
-                </button>
-                {/* Koristiti Shadcn Button ako je importovan */}
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4"
-                >
-                    {isLoading ? "Saving..." : isEditing ? "Update Provider" : "Create Provider"}
-                </button>
-            </div>
-        </form>
+
+                        {/* Dugmad za akciju */}
+                        <div className="flex justify-end space-x-4">
+                             {/* Koristimo Shadcn Button */}
+                             {/* Opciono: Dugme za povratak/Cancel */}
+                             <Button
+                                 type="button"
+                                 variant="outline"
+                                 onClick={() => router.back()}
+                                 disabled={isLoading}
+                             >
+                                 Cancel
+                             </Button>
+                             {/* Koristimo Shadcn Button */}
+                             <Button
+                                 type="submit"
+                                 disabled={isLoading}
+                             >
+                                 {isLoading ? "Saving..." : isEditing ? "Update Provider" : "Create Provider"}
+                             </Button>
+                        </div>
+                    </form>
+                </Form>
+             </CardContent>
+             {/* Opciono: CardFooter za dodatne informacije */}
+              {isEditing && provider && (
+                  <CardFooter className="text-xs text-muted-foreground">
+                      Created: {new Date(provider.createdAt).toLocaleString()} | Last Updated: {new Date(provider.updatedAt).toLocaleString()}
+                 </CardFooter>
+              )}
+        </Card>
     );
 }

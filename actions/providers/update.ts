@@ -1,101 +1,83 @@
 // /actions/providers/update.ts
 'use server';
 
-// Uklanjamo placeholder Zod šemu i tip
-// import { z } from 'zod'; // Uklonjeno ako se ne koristi direktno
-// const providerSchema: any = z.object({ ... }); // Uklonjeno
-// interface ProviderFormData { ... } // Uklonjeno
-
-// Uvozimo stvarnu Zod šemu i TypeScript tipove za provajdere
-import { providerSchema, ProviderFormData } from '@/schemas/provider';
-
-import { db } from '@/lib/db';
+import { db } from '@/lib/db'; // Assuming this is the path to your Prisma client
+import { providerSchema, ProviderFormData } from '@/schemas/provider'; // Assuming this is the path to your schema and types
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-
 
 /**
- * Server akcija za ažuriranje postojećeg provajdera.
- * @param id - ID provajdera za ažuriranje.
- * @param values - Podaci forme za ažuriranje provajdera.
- * @returns Objekat sa success/error porukom i, u slučaju uspeha, ID ažuriranog provajdera.
+ * Server Action to update an existing provider.
+ * Validates input data using Zod schema.
+ * @param id - The ID of the provider to update.
+ * @param data - Updated provider data from the form.
+ * @returns A result object indicating success or error.
  */
-export const updateProvider = async (id: string, values: ProviderFormData) => { // Koristimo uvezeni tip
-    // 1. Validacija ulaznih podataka pomoću STVARNE šeme
-    const validatedFields = providerSchema.safeParse(values);
+export async function updateProvider(id: string, data: ProviderFormData): Promise<{ success?: string; id?: string; error?: string; details?: any }> {
+    // Validate input data using the Zod schema
+    const validationResult = providerSchema.safeParse(data);
 
-    if (!validatedFields.success) {
-        console.error("Validation failed:", validatedFields.error.errors);
-        // Vraćamo formatirane greške validacije
-        return { error: "Invalid fields!", details: validatedFields.error.format() };
+    if (!validationResult.success) {
+        // If validation fails, return a detailed error
+        return {
+            error: 'Validation failed.',
+            details: validationResult.error.format(), // Return formatted Zod errors
+        };
     }
 
-     const {
-        name,
-        contactName,
-        email,
-        phone,
-        address,
-        isActive,
-    } = validatedFields.data;
-
-     // 2. Provera autorizacije (opciono)
-     // const session = await auth();
-     // if (!session?.user || session.user.role !== 'ADMIN') {
-     //   return { error: "Unauthorized" };
-     // }
+    const validatedData = validationResult.data;
 
     try {
-         // 3. Provera da li provajder sa datim ID-em postoji
-         const existingProvider = await db.provider.findUnique({
-             where: { id },
+        // Check if the provider exists
+        const existingProvider = await db.provider.findUnique({
+            where: { id },
+        });
+
+        if (!existingProvider) {
+            return { error: 'Provider not found.' };
+        }
+
+         // Check if a provider with the same name already exists (case-insensitive),
+         // but exclude the current provider being updated.
+         const duplicateProvider = await db.provider.findFirst({
+             where: {
+                 name: {
+                     equals: validatedData.name,
+                     mode: 'insensitive',
+                 },
+                 NOT: { id }, // Exclude the current provider
+             },
          });
 
-         if (!existingProvider) {
-             return { error: "Provider not found." };
+         if (duplicateProvider) {
+             return { error: `Provider with name "${validatedData.name}" already exists.` };
          }
 
-         // 4. Opciono: Provera jedinstvenosti ako se menja polje koje treba biti jedinstveno
-         // const providerWithSameName = await db.provider.findFirst({
-         //      where: {
-         //          name: name,
-         //          id: { not: id },
-         //      },
-         // });
-         // if (providerWithSameName) {
-         //      return { error: "Another provider with this name already exists." };
-         // }
 
-
-        // 5. Ažuriranje provajdera u bazi
-        const updatedProvider = await db.provider.update({
+        // Update the provider in the database
+        const provider = await db.provider.update({
             where: { id },
             data: {
-                name,
-                contactName,
-                email,
-                phone,
-                address,
-                isActive,
+                name: validatedData.name,
+                contactName: validatedData.contactName || null, // Store empty string as null in DB
+                email: validatedData.email || null,
+                phone: validatedData.phone || null,
+                address: validatedData.address || null,
+                isActive: validatedData.isActive,
             },
         });
 
-        // 6. Revalidacija cache-a
-        revalidatePath('/app/(protected)/providers');
-        revalidatePath(`/app/(protected)/providers/${id}`);
-        revalidatePath(`/app/(protected)/providers/${id}/edit`);
+        // Revalidate cache for the providers list page
+        revalidatePath('/providers');
+         // Revalidate cache for this provider's detail page
+         revalidatePath(`/providers/${provider.id}`);
 
-        return { success: "Provider updated successfully!", id: updatedProvider.id };
+
+        return { success: 'Provider updated successfully.', id: provider.id };
 
     } catch (error) {
-        console.error(`Error updating provider ${id}:`, error);
-         // Rukovanje specifičnim greškama baze
-         if (error instanceof PrismaClientKnownRequestError) {
-              if (error.code === 'P2002') {
-                  return { error: "Another provider with this name already exists." };
-              }
-         }
-        return { error: "Failed to update provider." };
+        console.error(`Error updating provider with ID ${id}:`, error);
+        // Check for unique constraint errors if needed (e.g., on name if unique)
+        // if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') { ... }
+        return { error: 'Failed to update provider.' };
     }
-};
+}

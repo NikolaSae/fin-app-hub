@@ -1,81 +1,110 @@
 // /components/providers/ProviderDetails.tsx
-"use client";
+'use client';
 
-import React from 'react';
-// Uvozimo custom tip ProviderWithDetails
 import { ProviderWithDetails } from '@/lib/types/provider-types';
-// Uvozimo UI komponente ako su Shadcn UI
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Odkomentarisati ako se koriste Shadcn Card
-// import Link from 'next/link'; // Odkomentarisati ako se dodaju linkovi ka povezanim entitetima
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+
 
 interface ProviderDetailsProps {
-    provider: ProviderWithDetails; // Očekuje objekat provajdera sa (opcionim) detaljima
+    provider: ProviderWithDetails;
 }
 
-// Komponenta za prikaz detalja provajdera
 export function ProviderDetails({ provider }: ProviderDetailsProps) {
-    if (!provider) {
-        return <div className="text-muted-foreground text-center">No provider data available.</div>;
-    }
+    // Pretpostavljamo da provider prop nikada neće biti null/undefined
+    // Parent page (npr. [id]/page.tsx) treba da rukuje 404 stanjem ako provajder nije pronađen.
 
-    // Koristimo nativne HTML elemente kao u placeholderu
     return (
         <div className="space-y-6">
-            {/* Koristiti Shadcn Card ako je importovan */}
-            <div className="bg-white rounded-lg shadow p-6 space-y-4"> {/* Zamena za Card */}
-                {/* Koristiti Shadcn CardHeader i CardTitle */}
-                 <h2 className="text-xl font-semibold">Basic Information</h2> {/* Zamena za CardHeader/Title */}
-                {/* Koristiti Shadcn CardContent */}
-                <div className="space-y-4"> {/* Zamena za CardContent */}
-                    <p><strong>Name:</strong> {provider.name}</p>
-                    <p><strong>Contact Name:</strong> {provider.contactName || 'N/A'}</p>
-                    <p><strong>Email:</strong> {provider.email || 'N/A'}</p>
-                    <p><strong>Phone:</strong> {provider.phone || 'N/A'}</p>
-                    <p><strong>Address:</strong> {provider.address || 'N/A'}</p>
-                    <p><strong>Active:</strong> {provider.isActive ? 'Yes' : 'No'}</p>
-                     <p><strong>Created:</strong> {provider.createdAt.toLocaleString()}</p>
-                    <p><strong>Updated:</strong> {provider.updatedAt.toLocaleString()}</p>
-                </div> {/* Kraj zamene za CardContent */}
-            </div> {/* Kraj zamene za Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Basic Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div>
+                             <p className="text-sm font-medium text-muted-foreground">Name</p>
+                             <p>{provider.name}</p>
+                         </div>
+                         <div>
+                              <p className="text-sm font-medium text-muted-foreground">Contact Name</p>
+                              <p>{provider.contactName || 'N/A'}</p>
+                         </div>
+                         <div>
+                             <p className="text-sm font-medium text-muted-foreground">Email</p>
+                             <p>{provider.email || 'N/A'}</p>
+                         </div>
+                         <div>
+                             <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                             <p>{provider.phone || 'N/A'}</p>
+                         </div>
+                         <div className="md:col-span-2">
+                             <p className="text-sm font-medium text-muted-foreground">Address</p>
+                             <p>{provider.address || 'N/A'}</p>
+                         </div>
+                         <div>
+                             <p className="text-sm font-medium text-muted-foreground">Active</p>
+                             <p>{provider.isActive ? 'Yes' : 'No'}</p>
+                         </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                         <div>
+                             <p className="font-medium">Created</p>
+                             <p>{provider.createdAt.toLocaleString()}</p>
+                         </div>
+                         <div>
+                             <p className="font-medium">Last Updated</p>
+                             <p>{provider.updatedAt.toLocaleString()}</p>
+                         </div>
+                    </div>
+
+                </CardContent>
+            </Card>
 
 
-            {/* Prikazivanje brojača povezanih entiteta ako su dostupni */}
             {provider._count && (
-                 // Koristiti Shadcn Card ako je importovan
-                 <div className="bg-white rounded-lg shadow p-6 space-y-4"> {/* Zamena za Card */}
-                    {/* Koristiti Shadcn CardHeader i CardTitle */}
-                    <h2 className="text-xl font-semibold">Related Entities</h2> {/* Zamena za CardHeader/Title */}
-                    {/* Koristiti Shadcn CardContent */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Zamena za CardContent */}
-                         <p><strong>Contracts:</strong> {provider._count.contracts}</p>
-                         <p><strong>VAS Services:</strong> {provider._count.vasServices}</p>
-                         <p><strong>Bulk Services:</strong> {provider._count.bulkServices}</p>
-                         <p><strong>Complaints:</strong> {provider._count.complaints}</p>
-                         {/* Možete dodati linkove ka listama filtriranim po ovom provajderu */}
-                     </div> {/* Kraj zamene za CardContent */}
-                 </div> {/* Kraj zamene za Card */}
+                <Card>
+                     <CardHeader>
+                         <CardTitle>Related Entities</CardTitle>
+                     </CardHeader>
+                     <CardContent>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                  <p className="text-sm font-medium text-muted-foreground">Contracts</p>
+                                   <p>{provider._count.contracts}</p>
+                              </div>
+                              <div>
+                                   <p className="text-sm font-medium text-muted-foreground">VAS Services</p>
+                                   <p>{provider._count.vasServices}</p>
+                              </div>
+                              <div>
+                                   <p className="text-sm font-medium text-muted-foreground">Bulk Services</p>
+                                   <p>{provider._count.bulkServices}</p>
+                              </div>
+                              <div>
+                                   <p className="text-sm font-medium text-muted-foreground">Complaints</p>
+                                   <p>{provider._count.complaints}</p>
+                              </div>
+                         </div>
+                     </CardContent>
+                </Card>
             )}
 
-            {/* Prikazivanje lista povezanih entiteta ako su fetchovane i prosleđene */}
-            {/* Primer za ugovore ako su uključeni sa 'include: { contracts: true }' */}
+            {/* Opciono: Sekcije za prikaz povezanih lista (ugovori, reklamacije, itd.) ako su fetchovane i prosleđene */}
+            {/* Primer strukture za ugovore ako su uključeni u fetch sa 'include: { contracts: true }' */}
             {/* {provider.contracts && provider.contracts.length > 0 && (
-                // Koristiti Shadcn Card ako je importovan
-                <div className="bg-white rounded-lg shadow p-6 space-y-4">
-                     <h2 className="text-xl font-semibold">Contracts ({provider.contracts.length})</h2>
-                    <div>
-                        <ul>
-                            {provider.contracts.map(contract => (
-                                <li key={contract.id}>
-                                    <Link href={`/contracts/${contract.id}`} className="text-blue-600 hover:underline">
-                                        {contract.contractNumber || contract.name}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )} */}
-            {/* Dodajte slične sekcije za VAS Services, Bulk Services, Complaints */}
+                 <Card>
+                     <CardHeader>
+                         <CardTitle>Contracts ({provider.contracts.length})</CardTitle>
+                     </CardHeader>
+                     <CardContent>
+                          // Renderujte listu ugovora ovde, možda sa linkovima ka detaljima ugovora
+                     </CardContent>
+                 </Card>
+             )} */}
 
 
         </div>

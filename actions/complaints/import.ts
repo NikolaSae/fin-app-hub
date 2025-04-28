@@ -5,37 +5,57 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { ComplaintImportSchema } from "@/schemas/complaint";
-import { ActivityLog, LogSeverity, Complaint, ComplaintStatus } from "@prisma/client";
+import { LogSeverity, ComplaintStatus } from "@prisma/client";
 
 export type ImportResult = {
   success: boolean;
-  imported: number;
-  failed: number;
-  errors: string[];
+  importedCount?: number;
+  failedCount?: number;
+  errors?: string[];
+  message?: string;
 };
 
-export async function importComplaints(csvData: string): Promise<ImportResult> {
+export async function importComplaints(formData: FormData): Promise<ImportResult> {
   const session = await auth();
   if (!session?.user || !["ADMIN", "MANAGER"].includes(session.user.role)) {
-    throw new Error("Unauthorized access");
+    return {
+      success: false,
+      message: "Unauthorized access"
+    };
   }
 
-  const result: ImportResult = {
-    success: false,
-    imported: 0,
-    failed: 0,
-    errors: [],
-  };
-
   try {
-    // Parse CSV data (simple implementation - consider using a proper CSV parser library)
-    const rows = csvData.trim().split("\n");
-    const headers = rows[0].split(",").map((h) => h.trim());
+    // Get the file from FormData
+    const file = formData.get("file") as File;
+    if (!file) {
+      return {
+        success: false,
+        message: "No file provided"
+      };
+    }
+
+    // Read the file content
+    const csvText = await file.text();
+    
+    // Parse CSV data
+    const rows = csvText.trim().split("\n");
+    if (rows.length < 2) {
+      return {
+        success: false,
+        message: "CSV file is empty or missing data rows"
+      };
+    }
+
+    const headers = rows[0].split(",").map(h => h.trim());
     const dataRows = rows.slice(1);
+    
+    let importedCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
 
     for (const row of dataRows) {
       try {
-        const values = row.split(",").map((v) => v.trim());
+        const values = row.split(",").map(v => v.trim());
         const rowData: Record<string, any> = {};
         
         headers.forEach((header, index) => {
@@ -81,19 +101,30 @@ export async function importComplaints(csvData: string): Promise<ImportResult> {
           },
         });
 
-        result.imported++;
+        importedCount++;
       } catch (error) {
-        result.failed++;
-        result.errors.push(`Row ${result.imported + result.failed}: ${error.message || "Unknown error"}`);
+        failedCount++;
+        errors.push(`Row ${importedCount + failedCount}: ${error.message || "Unknown error"}`);
       }
     }
 
-    result.success = result.imported > 0;
     revalidatePath("/complaints");
-    return result;
+    revalidatePath("/admin/complaints");
+
+    return {
+      success: importedCount > 0,
+      importedCount,
+      failedCount,
+      errors: errors.length > 0 ? errors : undefined,
+      message: importedCount > 0 
+        ? `Successfully imported ${importedCount} complaints${failedCount > 0 ? ` (${failedCount} failed)` : ''}`
+        : "No complaints were imported"
+    };
   } catch (error) {
-    result.success = false;
-    result.errors.push(`Import process failed: ${error.message || "Unknown error"}`);
-    return result;
+    console.error("Import process failed:", error);
+    return {
+      success: false,
+      message: `Import process failed: ${error.message || "Unknown error"}`
+    };
   }
 }

@@ -1,82 +1,69 @@
 // /actions/providers/create.ts
 'use server';
 
-// Uklanjamo placeholder Zod šemu i tip
-// import { z } from 'zod'; // Uklonjeno ako se ne koristi direktno
-// const providerSchema: any = z.object({ ... }); // Uklonjeno
-// interface ProviderFormData { ... } // Uklonjeno
-
-// Uvozimo stvarnu Zod šemu i TypeScript tipove za provajdere
-import { providerSchema, ProviderFormData } from '@/schemas/provider';
-
-import { db } from '@/lib/db';
+import { db } from '@/lib/db'; // Assuming this is the path to your Prisma client
+import { providerSchema, ProviderFormData } from '@/schemas/provider'; // Assuming this is the path to your schema and types
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
-
 
 /**
- * Server akcija za kreiranje novog provajdera.
- * @param values - Podaci forme za kreiranje provajdera.
- * @returns Objekat sa success/error porukom i, u slučaju uspeha, ID novog provajdera.
+ * Server Action to create a new provider.
+ * Validates input data using Zod schema.
+ * @param data - Provider data from the form.
+ * @returns A result object indicating success or error.
  */
-export const createProvider = async (values: ProviderFormData) => { // Koristimo uvezeni tip
-    // 1. Validacija ulaznih podataka pomoću STVARNE šeme
-    const validatedFields = providerSchema.safeParse(values);
+export async function createProvider(data: ProviderFormData): Promise<{ success?: string; id?: string; error?: string; details?: any }> {
+    // Validate input data using the Zod schema
+    const validationResult = providerSchema.safeParse(data);
 
-    if (!validatedFields.success) {
-        console.error("Validation failed:", validatedFields.error.errors);
-        // Vraćamo formatirane greške validacije
-        return { error: "Invalid fields!", details: validatedFields.error.format() };
+    if (!validationResult.success) {
+        // If validation fails, return a detailed error
+        return {
+            error: 'Validation failed.',
+            details: validationResult.error.format(), // Return formatted Zod errors
+        };
     }
 
-    const {
-        name,
-        contactName,
-        email,
-        phone,
-        address,
-        isActive,
-    } = validatedFields.data;
-
-     // 2. Provera autorizacije (opciono)
-     // const session = await auth();
-     // if (!session?.user || session.user.role !== 'ADMIN') {
-     //   return { error: "Unauthorized" };
-     // }
+    const validatedData = validationResult.data;
 
     try {
-        // 3. Opciono: Provera jedinstvenosti (ako je potrebno)
-        // const existingProvider = await db.provider.findUnique({
-        //     where: { name: name }, // Primer provere po imenu
-        // });
-        // if (existingProvider) {
-        //     return { error: "Provider with this name already exists." };
-        // }
-
-
-        // 4. Kreiranje provajdera u bazi
-        const newProvider = await db.provider.create({
-            data: {
-                name,
-                contactName,
-                email,
-                phone,
-                address,
-                isActive,
+        // Check if a provider with the same name already exists (case-insensitive)
+        const existingProvider = await db.provider.findFirst({
+            where: {
+                name: {
+                    equals: validatedData.name,
+                    mode: 'insensitive', // Case-insensitive check
+                },
             },
         });
 
-        // 5. Revalidacija cache-a
-        revalidatePath('/app/(protected)/providers');
+        if (existingProvider) {
+            return { error: `Provider with name "${validatedData.name}" already exists.` };
+        }
 
-        return { success: "Provider created successfully!", id: newProvider.id };
+        // Create the provider in the database
+        const provider = await db.provider.create({
+            data: {
+                name: validatedData.name,
+                contactName: validatedData.contactName || null, // Store empty string as null in DB
+                email: validatedData.email || null,
+                phone: validatedData.phone || null,
+                address: validatedData.address || null,
+                isActive: validatedData.isActive,
+            },
+        });
+
+        // Revalidate cache for the providers list page
+        revalidatePath('/providers');
+         // Revalidate cache for the new provider's detail page
+         revalidatePath(`/providers/${provider.id}`);
+
+
+        return { success: 'Provider created successfully.', id: provider.id };
 
     } catch (error) {
         console.error("Error creating provider:", error);
-        // Rukovanje specifičnim greškama baze
-        // if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-        //     return { error: "A provider with this name already exists." };
-        // }
-        return { error: "Failed to create provider." };
+        // Check for unique constraint errors if needed
+        // if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') { ... }
+        return { error: 'Failed to create provider.' };
     }
-};
+}
