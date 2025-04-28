@@ -1,5 +1,6 @@
 // /components/complaints/ComplaintForm.tsx
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Complaint, ComplaintStatus } from '@prisma/client';
@@ -24,6 +25,7 @@ interface ComplaintFormProps {
 }
 
 export function ComplaintForm({ complaint, onSubmitSuccess, onCancel }: ComplaintFormProps) {
+  const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(complaint?.serviceId || null);
@@ -85,10 +87,26 @@ export function ComplaintForm({ complaint, onSubmitSuccess, onCancel }: Complain
         
         if (onSubmitSuccess) {
           onSubmitSuccess(result.complaint);
+        } else if (result.complaint?.id) {
+          // Instead of letting the server handle redirection,
+          // navigate programmatically on the client side
+          router.push(`/complaints/${result.complaint.id}`);
         }
       }
     } catch (error) {
       console.error('Error submitting complaint:', error);
+      
+      // Check if it's a redirection error
+      if (error.message === 'NEXT_REDIRECT' && error.digest) {
+        const redirectParts = error.digest.split(';');
+        if (redirectParts.length >= 3) {
+          const redirectUrl = redirectParts[2];
+          // Handle the redirection on the client side
+          router.push(redirectUrl);
+          return;
+        }
+      }
+      
       toast({
         title: 'Error',
         description: 'An unexpected error occurred. Please try again.',

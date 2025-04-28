@@ -2,24 +2,34 @@
 
 import { ContractForm } from "@/components/contracts/ContractForm";
 import { Metadata } from "next";
+import { getHumanitarianOrgs } from "@/actions/organizations/get-humanitarian";
+import { getProviders } from "@/actions/providers/get-providers";
+import { getParkingServices } from "@/actions/services/get-parking-services";
 
 export const metadata: Metadata = {
   title: "Create New Contract | Management Dashboard",
   description: "Create a new contract in the system",
 };
 
-export default function NewContractPage() {
+export default async function NewContractPage() {
+  // Fetch all the required data
+  const humanitarianOrgs = await getHumanitarianOrgs();
+  const providers = await getProviders();
+  const parkingServices = await getParkingServices();
+
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Create New Contract</h1>
-        <p className="text-gray-500">
-          Create a new contract in the system
-        </p>
+    <div className="container mx-auto py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-2">Create New Contract</h1>
+        <p className="text-muted-foreground">Create a new contract in the system</p>
       </div>
       
-      <div className="bg-white rounded-lg shadow p-6">
-        <ContractForm />
+      <div className="bg-white p-6 rounded-lg shadow">
+        <ContractForm 
+          humanitarianOrgs={humanitarianOrgs}
+          providers={providers}
+          parkingServices={parkingServices}
+        />
       </div>
     </div>
   );

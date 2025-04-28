@@ -6,8 +6,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createContract } from "@/actions/contracts/create"; // Ispravan import za createContract
-import { updateContract } from "@/actions/contracts/update"; // Ispravan import za updateContract
+import { createContract } from "@/actions/contracts/create";
+import { updateContract } from "@/actions/contracts/update";
 import { ServiceSelector } from "@/components/contracts/ServiceSelector";
 import { ContractType } from "@prisma/client";
 import { contractSchema } from "@/schemas/contract";
@@ -16,9 +16,19 @@ import { ContractFormData } from "@/lib/types/contract-types";
 interface ContractFormProps {
   contract?: any;
   isEditing?: boolean;
+  // Add props for real data
+  humanitarianOrgs?: Array<{ id: string; name: string }>;
+  providers?: Array<{ id: string; name: string }>;
+  parkingServices?: Array<{ id: string; name: string }>;
 }
 
-export function ContractForm({ contract, isEditing = false }: ContractFormProps) {
+export function ContractForm({ 
+  contract, 
+  isEditing = false,
+  humanitarianOrgs = [],
+  providers = [],
+  parkingServices = []
+}: ContractFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedType, setSelectedType] = useState<ContractType>(
@@ -34,6 +44,7 @@ export function ContractForm({ contract, isEditing = false }: ContractFormProps)
     formState: { errors },
     setValue,
     watch,
+    clearErrors,
   } = useForm<ContractFormData>({
     resolver: zodResolver(contractSchema),
     defaultValues: isEditing && contract
@@ -53,6 +64,7 @@ export function ContractForm({ contract, isEditing = false }: ContractFormProps)
       : {
           status: "ACTIVE",
           revenuePercentage: 10,
+          type: "PROVIDER" as ContractType,
         },
   });
 
@@ -67,12 +79,15 @@ export function ContractForm({ contract, isEditing = false }: ContractFormProps)
     if (newType === "PROVIDER") {
       setValue("humanitarianOrgId", undefined);
       setValue("parkingServiceId", undefined);
+      clearErrors(["humanitarianOrgId", "parkingServiceId"]);
     } else if (newType === "HUMANITARIAN") {
       setValue("providerId", undefined);
       setValue("parkingServiceId", undefined);
+      clearErrors(["providerId", "parkingServiceId"]);
     } else if (newType === "PARKING") {
       setValue("providerId", undefined);
       setValue("humanitarianOrgId", undefined);
+      clearErrors(["providerId", "humanitarianOrgId"]);
     }
   };
 
@@ -147,6 +162,7 @@ export function ContractForm({ contract, isEditing = false }: ContractFormProps)
             id="type"
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
             disabled={isEditing}
+            value={selectedType}
             {...register("type")}
             onChange={handleTypeChange}
           >
@@ -239,10 +255,11 @@ export function ContractForm({ contract, isEditing = false }: ContractFormProps)
               {...register("providerId")}
             >
               <option value="">Select Provider</option>
-              {/* Provider options will be populated from the database */}
-              {/* This is a placeholder that would need real data */}
-              <option value="provider-1">Example Provider 1</option>
-              <option value="provider-2">Example Provider 2</option>
+              {providers.map(provider => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.name}
+                </option>
+              ))}
             </select>
             {errors.providerId && (
               <p className="text-red-500 text-sm">{errors.providerId.message}</p>
@@ -261,9 +278,11 @@ export function ContractForm({ contract, isEditing = false }: ContractFormProps)
               {...register("humanitarianOrgId")}
             >
               <option value="">Select Organization</option>
-              {/* Organization options will be populated from the database */}
-              <option value="org-1">Example Humanitarian Org 1</option>
-              <option value="org-2">Example Humanitarian Org 2</option>
+              {humanitarianOrgs.map(org => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
             </select>
             {errors.humanitarianOrgId && (
               <p className="text-red-500 text-sm">{errors.humanitarianOrgId.message}</p>
@@ -282,9 +301,11 @@ export function ContractForm({ contract, isEditing = false }: ContractFormProps)
               {...register("parkingServiceId")}
             >
               <option value="">Select Parking Service</option>
-              {/* Parking service options will be populated from the database */}
-              <option value="parking-1">Example Parking Service 1</option>
-              <option value="parking-2">Example Parking Service 2</option>
+              {parkingServices.map(service => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                </option>
+              ))}
             </select>
             {errors.parkingServiceId && (
               <p className="text-red-500 text-sm">{errors.parkingServiceId.message}</p>
