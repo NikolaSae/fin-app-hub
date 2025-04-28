@@ -200,6 +200,7 @@ This structure aligns with Next.js App Router conventions while providing a clea
 
 5.2.1. /components/services/ServiceForm.tsx - Reusable form for creating/editing services
 /components/services/ServiceList.tsx - Tabular list of services
+/components/services/ServiceDetails.tsx
 /components/services/ServiceFilters.tsx - Filter controls for services
 /components/services/ServiceStats.tsx - Service statistics display
 /components/services/ServiceCard.tsx - Card component for service display
