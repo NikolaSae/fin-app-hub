@@ -14,8 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ContractType, ContractStatus } from "@prisma/client";
 
-// Assume the Contract type is defined elsewhere and imported
-// import { Contract } from '@/lib/types/contract-types'; // Or similar
 
 interface Contract {
   id: string;
@@ -23,8 +21,10 @@ interface Contract {
   contractNumber: string;
   type: ContractType;
   status: ContractStatus;
+
   startDate: Date; // Assuming Date objects or strings parseable by new Date()
   endDate: Date;   // Assuming Date objects or strings parseable by new Date()
+
   revenuePercentage: number;
   provider?: { id: string; name: string } | null;
   humanitarianOrg?: { id: string; name: string } | null;
@@ -36,17 +36,24 @@ interface Contract {
 interface ContractFiltersProps {
   contracts: Contract[] | undefined | null;
   onFilterChange: (filtered: Contract[]) => void;
+
   serverTime: string; // Prop received from the server-rendered parent
 }
 
 export function ContractFilters({ contracts, onFilterChange, serverTime }: ContractFiltersProps) {
+
+}
+
+export function ContractFilters({ contracts, onFilterChange }: ContractFiltersProps) {
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [expiringSoon, setExpiringSoon] = useState<boolean>(false);
 
-  // Parse serverTime once when the component mounts or serverTime changes
+
    const serverDate = new Date(serverTime);
+
 
 
   useEffect(() => {
@@ -62,29 +69,45 @@ export function ContractFilters({ contracts, onFilterChange, serverTime }: Contr
       );
     }
 
+
     if (selectedType && selectedType !== "all") { // Handle "all" value
       filtered = filtered.filter(contract => contract.type === selectedType);
     }
 
     if (selectedStatus && selectedStatus !== "all") { // Handle "all" value
+
+    if (selectedType) {
+      filtered = filtered.filter(contract => contract.type === selectedType);
+    }
+
+    if (selectedStatus) {
+
       filtered = filtered.filter(contract => contract.status === selectedStatus);
     }
 
     if (expiringSoon) {
-      // Use the parsed serverDate for consistent comparison
+
       const today = serverDate; // Use server date as 'today'
       const thirtyDaysFromNow = new Date(serverDate); // Clone server date
+
+      const today = new Date();
+      const thirtyDaysFromNow = new Date();
+
       thirtyDaysFromNow.setDate(today.getDate() + 30);
 
       filtered = filtered.filter(contract => {
         const endDate = new Date(contract.endDate);
-        // Ensure endDate is a valid date before comparison
+
         return !isNaN(endDate.getTime()) && endDate > today && endDate <= thirtyDaysFromNow;
       });
     }
 
     onFilterChange(filtered);
-  }, [searchTerm, selectedType, selectedStatus, expiringSoon, contracts, onFilterChange, serverDate]); // Add serverDate to dependencies
+
+  }, [searchTerm, selectedType, selectedStatus, expiringSoon, contracts, onFilterChange, serverDate]);
+
+
+  }, [searchTerm, selectedType, selectedStatus, expiringSoon, contracts, onFilterChange]);
 
 
   const resetFilters = () => {
@@ -92,8 +115,7 @@ export function ContractFilters({ contracts, onFilterChange, serverTime }: Contr
     setSelectedType("");
     setSelectedStatus("");
     setExpiringSoon(false);
-    // Note: The useEffect will run automatically when state changes,
-    // reapplying filters with the reset values.
+
   };
 
   return (
@@ -118,7 +140,11 @@ export function ContractFilters({ contracts, onFilterChange, serverTime }: Contr
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
+
                 <SelectItem value="all">All Types</SelectItem>
+
+                <SelectItem value="all">All Types</SelectItem>
+
                 {Object.values(ContractType).map(type => (
                   <SelectItem key={type} value={type}>{type.replace(/_/g, ' ')}</SelectItem>
                 ))}
@@ -135,7 +161,10 @@ export function ContractFilters({ contracts, onFilterChange, serverTime }: Contr
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
+
                 <SelectItem value="all">All Statuses</SelectItem>
+}
+
                 {Object.values(ContractStatus).map(status => (
                   <SelectItem key={status} value={status}>{status.replace(/_/g, ' ')}</SelectItem>
                 ))}
@@ -144,7 +173,7 @@ export function ContractFilters({ contracts, onFilterChange, serverTime }: Contr
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Using a standard checkbox for simplicity */}
+
             <input
               type="checkbox"
               id="expiringSoon"
