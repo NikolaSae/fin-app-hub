@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+
 
 const createComplaintSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(100, "Title cannot exceed 100 characters"),
@@ -25,6 +25,7 @@ export async function createComplaint(data: CreateComplaintFormData) {
     if (!session?.user) {
       return {
         error: "Unauthorized. Please sign in to create a complaint.",
+        success: false
       };
     }
 
@@ -89,7 +90,13 @@ export async function createComplaint(data: CreateComplaintFormData) {
     await Promise.all(notificationPromises);
 
     revalidatePath("/complaints");
-    redirect(`/complaints/${complaint.id}`);
+    
+    // Return the complaint object instead of redirecting
+    return {
+      success: true,
+      complaint: complaint, // Return the full complaint object
+      message: "Complaint created successfully!"
+    };
   } catch (error) {
     if (error instanceof z.ZodError) {
       const formattedErrors = error.format();
@@ -97,6 +104,7 @@ export async function createComplaint(data: CreateComplaintFormData) {
       return {
         error: "Validation failed",
         formErrors: formattedErrors,
+        success: false
       };
     }
     
@@ -104,6 +112,7 @@ export async function createComplaint(data: CreateComplaintFormData) {
     
     return {
       error: "Failed to create complaint. Please try again.",
+      success: false
     };
   }
 }
