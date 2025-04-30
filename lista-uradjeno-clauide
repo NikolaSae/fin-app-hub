@@ -12,7 +12,15 @@ spisak napravljenih fajlova
 
 1.2.1 /components/analytics/FinancialOverview.tsx - Financial summary component
 /components/analytics/KpiDashboard.tsx - KPI metrics display
-
+/components/analytics/ComplaintAnalytics.tsx - Complaint trend analysis
+// components/analytics/ServicePerformance.tsx
+// components/analytics/SalesOverview.tsx
+// components/analytics/RevenueBreakdown.tsx
+// components/analytics/ContractAnalytics.tsx
+// components/analytics/ComplaintAnalytics.tsx
+// hooks/use-service-performance.ts
+// hooks/use-sales-data.ts
+// hooks/use-revenue-breakdown.ts
 
 5. Servisi & Proizvodi
 5.1. App Routes
