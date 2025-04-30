@@ -110,9 +110,11 @@ Maintain detailed commit messages for better tracking.
 /actions/analytics/get-complaint-stats.ts - Complaint statistics
 /actions/reports/generate-excel.ts - Generate Excel reports
 /actions/reports/schedule-report.ts - Schedule report generation
+/actions/reports/get-recent-reports'
 /app/api/analytics/financials/route.ts - Financial data API
 /app/api/analytics/sales/route.ts - Sales data API
 /app/api/reports/generate/route.ts - Report generation API
+/hooks/use-complaint-analytics'
 
 1.4 Utils & Services
 
