@@ -20,6 +20,10 @@ spisak napravljenih fajlova
 /components/analytics/KpiDashboard.tsx - KPI metrics display
 /components/analytics/AnomalyDetection.tsx - Anomaly highlight component
 /components/analytics/DataFilters.tsx - Analytics filtering controls
+/components/reports/ExportOptions.tsx - Export format selection
+/components/reports/ScheduleForm.tsx - Report scheduling interface
+/components/reports/ExcelGenerator.tsx - Excel report generator
+/components/reports/ReportPreview.tsx
 // components/analytics/ServicePerformance.tsx
 // components/analytics/SalesOverview.tsx
 // components/analytics/RevenueBreakdown.tsx
@@ -28,6 +32,10 @@ spisak napravljenih fajlova
 // hooks/use-sales-data.ts
 // hooks/use-revenue-breakdown.ts
 
+1.3.1. /actions/analytics/get-financial-data.ts - Financial data retriever
+/actions/analytics/get-sales-metrics.ts - Sales metrics calculator
+/actions/analytics/get-complaint-stats.ts - Complaint statistics
+/actions/reports/generate-excel.ts - Generate Excel reports
 
 5. Servisi & Proizvodi
 5.1. App Routes
