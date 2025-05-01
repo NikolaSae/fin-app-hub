@@ -24,18 +24,26 @@ spisak napravljenih fajlova
 /components/reports/ScheduleForm.tsx - Report scheduling interface
 /components/reports/ExcelGenerator.tsx - Excel report generator
 /components/reports/ReportPreview.tsx
-// components/analytics/ServicePerformance.tsx
-// components/analytics/SalesOverview.tsx
-// components/analytics/RevenueBreakdown.tsx
-// components/analytics/ContractAnalytics.tsx
-// hooks/use-service-performance.ts
-// hooks/use-sales-data.ts
-// hooks/use-revenue-breakdown.ts
+/components/analytics/ServicePerformance.tsx
+/components/analytics/SalesOverview.tsx
+/components/analytics/RevenueBreakdown.tsx
+/components/analytics/ContractAnalytics.tsx
+
+
+1.3 Actions & API Routes
 
 1.3.1. /actions/analytics/get-financial-data.ts - Financial data retriever
 /actions/analytics/get-sales-metrics.ts - Sales metrics calculator
 /actions/analytics/get-complaint-stats.ts - Complaint statistics
 /actions/reports/generate-excel.ts - Generate Excel reports
+/actions/reports/schedule-report.ts - Schedule report generation
+
+
+1.4 Utils & Services
+/actions/reports/get-recent-reports'
+/hooks/use-service-performance.ts
+/hooks/use-sales-data.ts
+/hooks/use-revenue-breakdown.ts
 
 5. Servisi & Proizvodi
 5.1. App Routes
