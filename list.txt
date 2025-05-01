@@ -95,14 +95,11 @@ Maintain detailed commit messages for better tracking.
 /components/reports/ScheduleForm.tsx - Report scheduling interface
 /components/reports/ReportPreview.tsx - Preview generated reports
 /components/reports/ExcelGenerator.tsx - Excel report generator
-// hooks/use-service-performance.ts
-// hooks/use-sales-data.ts
-// hooks/use-revenue-breakdown.ts
-// components/analytics/ServicePerformance.tsx
-// components/analytics/ServicePerformance.tsx
-// components/analytics/SalesOverview.tsx
-// components/analytics/RevenueBreakdown.tsx
-// components/analytics/ContractAnalytics.tsx
+/components/analytics/ServicePerformance.tsx
+/components/analytics/SalesOverview.tsx
+/components/analytics/RevenueBreakdown.tsx
+/components/analytics/ContractAnalytics.tsx
+
 1.3 Actions & API Routes
 
 1.3.1. /actions/analytics/get-financial-data.ts - Financial data retriever
@@ -114,7 +111,7 @@ Maintain detailed commit messages for better tracking.
 /app/api/analytics/financials/route.ts - Financial data API
 /app/api/analytics/sales/route.ts - Sales data API
 /app/api/reports/generate/route.ts - Report generation API
-/hooks/use-complaint-analytics'
+
 
 1.4 Utils & Services
 
@@ -122,6 +119,10 @@ Maintain detailed commit messages for better tracking.
 /lib/analytics/anomaly-detection.ts - Detect unusual patterns
 /lib/reports/excel-generator.ts - Excel file creation
 /lib/reports/scheduled-jobs.ts - Scheduled report functionality
+/hooks/use-complaint-analytics'
+/hooks/use-service-performance.ts
+/hooks/use-sales-data.ts
+/hooks/use-revenue-breakdown.ts
 
 2. Notifications Structure
 2.1 App Routes
