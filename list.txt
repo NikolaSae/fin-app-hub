@@ -159,6 +159,11 @@ Utils & Services
 3.1 Middleware
 
 3.1.1. /middleware.ts - Role-based access control and rate limiting
+/app/(protected)/admin/security/page.tsx - Main security dashboard
+/app/(protected)/admin/security/activity-logs/page.tsx - Activity logs viewer
+/app/(protected)/admin/security/user-roles/page.tsx - User role management
+/app/(protected)/admin/security/performance/page.tsx - Performance monitoring
+/actions/security/get-performance-metrics.ts
 
 3.2. Components
 
