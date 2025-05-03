@@ -454,6 +454,8 @@ Sekcija 8: Providers Structure [G - KOMPLETIRANO (osim jednog opcionog)]
 8.4 Hooks & Utils
 /hooks/use-providers.ts [G]
 /lib/providers/validators.ts [G]
+\lib\providers\providers.ts
+
 8.5 Types & Schemas
 /schemas/provider.ts [G]
 /lib/types/provider-types.ts [G]
