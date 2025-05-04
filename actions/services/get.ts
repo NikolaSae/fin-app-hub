@@ -68,7 +68,7 @@ export async function getServicesByType(types: ServiceType[]): Promise<{ data?: 
 
 
     } catch (error) {
-        console.error(`Error fetching services by types ${types.join(', ')}:`, error);
+        // console.error(`Error fetching services by types ${types.join(', ')}:`, error);
         return { error: 'Failed to fetch services by type.' };
     }
 }

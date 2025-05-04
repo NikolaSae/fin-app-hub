@@ -1,30 +1,22 @@
-// /actions/humanitarian-orgs/create.ts
+// Path: /actions/humanitarian-orgs/create.ts
 'use server';
 
-// Uvozimo potrebne module
-import { db } from '@/lib/db'; // Pretpostavljena putanja do vašeg Prisma klijenta
+import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth'; // Pretpostavljena putanja do vašeg auth helpera
-// Uvozimo Zod šemu i tip forme
+import { auth } from '@/auth';
+import { LogSeverity } from '@prisma/client';
 import { humanitarianOrgSchema, HumanitarianOrgFormData } from '@/schemas/humanitarian-org';
+import { z } from 'zod';
 
 
-/**
- * Server akcija za kreiranje nove humanitarne organizacije.
- * @param values - Podaci forme za kreiranje organizacije.
- * @returns Objekat sa success/error porukom i, u slučaju uspeha, ID nove organizacije.
- */
 export const createHumanitarianOrg = async (values: HumanitarianOrgFormData) => {
-    // 1. Validacija ulaznih podataka pomoću Zod šeme
     const validatedFields = humanitarianOrgSchema.safeParse(values);
 
     if (!validatedFields.success) {
         console.error("Validation failed:", validatedFields.error.errors);
-        // Vraćamo formatirane greške validacije
-        return { error: "Invalid fields!", details: validatedFields.error.format() };
+        return { error: "Invalid fields!", details: validatedFields.error.format(), success: false };
     }
 
-    // Izdvajamo validirane podatke
     const {
         name,
         contactName,
@@ -36,22 +28,20 @@ export const createHumanitarianOrg = async (values: HumanitarianOrgFormData) => 
         isActive,
     } = validatedFields.data;
 
-     // 2. Provera autorizacije (opciono, npr. samo ADMIN ili MANAGER može kreirati organizacije)
-        const session = await auth();
-       if (!session?.user || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-         return { error: "Unauthorized" };
-       }
+    const session = await auth();
+    if (!session?.user || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
+        return { error: "Unauthorized", success: false };
+    }
 
     try {
-        // 3. Opciono: Provera jedinstvenosti (npr. po imenu ili emailu ako treba)
         const existingOrgByName = await db.humanitarianOrg.findUnique({
             where: { name: name },
         });
         if (existingOrgByName) {
-            return { error: `Organization with name "${name}" already exists.` };
+            return { error: `Organization with name "${name}" already exists.`, success: false };
         }
-         // Ako email mora biti jedinstven
-         if (email) {
+
+        if (email) {
             const existingOrgByEmail = await db.humanitarianOrg.findFirst({
                 where: { email: email },
             });
@@ -60,8 +50,6 @@ export const createHumanitarianOrg = async (values: HumanitarianOrgFormData) => 
             }
         }
 
-
-        // 4. Kreiranje humanitarne organizacije u bazi
         const newOrganization = await db.humanitarianOrg.create({
             data: {
                 name,
@@ -72,24 +60,58 @@ export const createHumanitarianOrg = async (values: HumanitarianOrgFormData) => 
                 website,
                 mission,
                 isActive,
-                // createdAt i updatedAt se postavljaju automatski
-                // createdById: session?.user?.id, // Popunite ID korisnika ako koristite audit polja
             },
         });
 
-        // 5. Revalidacija cache-a za stranice sa organizacijama
-        revalidatePath('/app/(protected)/humanitarian-orgs'); // Lista organizacija
-        // Možda revalidirati i druge stranice koje prikazuju hum. org. (npr. forme za ugovore/reklamacije)
+        await db.activityLog.create({
+          data: {
+            action: "HUMANITARIAN_ORG_CREATED",
+            entityType: "humanitarian_org",
+            entityId: newOrganization.id,
+            details: `Humanitarian Organization created: ${newOrganization.name}`,
+            userId: session.user.id,
+            severity: "INFO",
+          },
+        });
 
-        return { success: "Humanitarian organization created successfully!", id: newOrganization.id };
+        revalidatePath('/humanitarian-orgs');
+
+        return { success: true, message: "Humanitarian organization created successfully!", id: newOrganization.id };
 
     } catch (error) {
-        console.error("Error creating humanitarian organization:", error);
-        // Rukovanje specifičnim greškama baze (npr. Unique constraint violation)
-        // if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-        //     // Detaljnije rukovanje greškom Unique constraint-a ako postoji više takvih polja
-        //     return { error: "An organization with similar details already exists." };
-        // }
-        return { error: "Failed to create humanitarian organization." }; // Generalna greška servera
+        console.error("[HUMANITARIAN_ORG_CREATE_ERROR]", error);
+
+        if (error instanceof z.ZodError) {
+           const formattedErrors = error.format();
+           return {
+             error: "Invalid input data",
+             formErrors: formattedErrors,
+             success: false
+           };
+        }
+
+        if (error instanceof Error) {
+           const prismaError = error as any;
+
+           if (prismaError.code === 'P2002') {
+             return {
+                error: "Data conflict",
+                message: "An organization with similar details already exists.",
+                details: prismaError.meta?.target,
+                success: false
+             };
+           }
+
+           if (prismaError.code && prismaError.clientVersion) {
+                return {
+                    error: "Database operation failed",
+                    message: `Prisma error: ${prismaError.code}`,
+                    details: prismaError.message,
+                    success: false
+                };
+           }
+        }
+
+        return { error: "An unexpected error occurred", message: "Failed to create humanitarian organization.", details: error instanceof Error ? error.message : "Unknown error", success: false };
     }
 };

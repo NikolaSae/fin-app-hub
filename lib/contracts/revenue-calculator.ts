@@ -1,38 +1,40 @@
 // /lib/contracts/revenue-calculator.ts
-
-import { db } from '@/lib/db'; // Pretpostavljena putanja do vašeg Prisma klijenta
-import { Contract, ServiceContract, VASService, BulkService, ServiceType } from '@prisma/client'; // Prisma modeli i enumi
-import { startOfMonth, endOfMonth, max, min } from 'date-fns'; // Utility za datume
+import { db } from '@/lib/db';
+import { Contract, ServiceContract, VASService as PrismaVASService, BulkService as PrismaBulkService, ServiceType, Service } from '@prisma/client'; // Use aliases to avoid conflict with local types if any
+import { startOfMonth, endOfMonth, max, min } from 'date-fns';
 
 // Tipovi za uključene relacije
-type ContractWithServices = Contract & {
-    services: (ServiceContract & { service: { id: string, type: ServiceType } })[];
+type ContractWithServicesAndProvider = Contract & {
+    services: (ServiceContract & { service: { id: string, type: ServiceType, name: string } })[];
+    provider: { id: string } | null; // Ensure provider is included for filtering VAS data
 };
 
-// Pretpostavljene stope prihoda za Bulk servise (NISU U BAZI, ovo je primer!)
-// U realnoj aplikaciji, ovo bi se verovatno dohvatalo iz baze ili konfiguracije.
-const BULK_REVENUE_RATES = {
-    // Primer: prihod po zahtevu ili po delu poruke za različite tipove servisa
-    // 'SMS_MT': { per_request: 0.01, per_message_part: 0.01 },
-    // 'SMS_MO': { per_request: 0.005 },
-    // ... druge stope za druge Bulk service_name ili step_name
-};
-
+// Define the structure that calculateContractRevenue will return
+interface CalculatedRevenueData {
+    totalGrossRevenue: number; // Revenue before percentage split
+    platformRevenue: number; // Revenue share for the platform
+    partnerRevenue: number; // Revenue share for the partner
+    serviceBreakdown: {
+        id: string; // Service ID
+        name: string; // Service Name
+        revenueAmount: number; // Gross revenue from THIS service for THIS contract in the period
+        percentage: number; // Percentage of THIS service's gross revenue vs total gross revenue
+    }[];
+}
 
 /**
- * Kalkuliše prihod za specifičan ugovor u datom vremenskom periodu.
- * Prihod se zasniva na podacima iz povezanih VASService i BulkService modela
- * i revenuePercentage-u ugovora.
+ * Kalkuliše podatke o prihodu za specifičan ugovor u datom vremenskom periodu,
+ * vraćajući strukturu sa ukupnim iznosima i razradom po servisima.
  * @param contractId - ID ugovora za koji se kalkuliše prihod.
  * @param calculationStartDate - Početni datum perioda za kalkulaciju (podrazumevano početak ugovora).
  * @param calculationEndDate - Krajnji datum perioda za kalkulaciju (podrazumevano kraj ugovora).
- * @returns Ukupan prihod za ugovor u definisanom periodu.
+ * @returns Objekat tipa CalculatedRevenueData ili null ako ugovor ne postoji.
  */
 export const calculateContractRevenue = async (
     contractId: string,
     calculationStartDate?: Date,
     calculationEndDate?: Date
-): Promise<number> => {
+): Promise<CalculatedRevenueData | null> => {
     try {
         // 1. Dohvatanje ugovora sa potrebnim relacijama
         const contract = await db.contract.findUnique({
@@ -41,32 +43,48 @@ export const calculateContractRevenue = async (
                 services: {
                     include: {
                         service: {
-                             select: { id: true, type: true, name: true } // Potrebni tip i ime servisa
+                            select: { id: true, type: true, name: true }
                         }
                     },
                 },
-                 provider: { select: { id: true } }, // Potreban ID provajdera za filtriranje VAS/Bulk podataka
-                 humanitarianOrg: { select: { id: true } }, // Potrebni ID-jevi zavisno od tipa ugovora
-                 parkingService: { select: { id: true } },
+                provider: { select: { id: true } },
+                humanitarianOrg: { select: { id: true } },
+                parkingService: { select: { id: true } },
             },
-        });
+        }) as ContractWithServicesAndProvider | null; // Cast to the specific included type
 
         if (!contract) {
             console.warn(`Contract with ID ${contractId} not found for revenue calculation.`);
-            return 0; // Vrati 0 ako ugovor ne postoji
+            return null; // Vrati null ako ugovor ne postoji
         }
 
         // 2. Definisanje perioda kalkulacije
-        // Period kalkulacije je presek perioda ugovora i traženog perioda
         const periodStart = calculationStartDate ? max([contract.startDate, calculationStartDate]) : contract.startDate;
         const periodEnd = calculationEndDate ? min([contract.endDate, calculationEndDate]) : contract.endDate;
 
+        // Adjust periodEnd to the end of the day if it matches contractEndDate exactly
+        // This ensures date comparisons work correctly if endDate is stored as start of day
+        if (contract.endDate && periodEnd.getTime() === contract.endDate.getTime()) {
+             periodEnd.setHours(23, 59, 59, 999);
+        }
+         // Adjust periodStart to the start of the day if it matches contractStartDate exactly
+         if (contract.startDate && periodStart.getTime() === contract.startDate.getTime()) {
+              periodStart.setHours(0, 0, 0, 0);
+         }
+
+
         if (periodStart > periodEnd) {
-             return 0; // Periodi se ne preklapaju
+             // Vrati strukturu sa 0 vrednostima ako se periodi ne preklapaju
+            return {
+                totalGrossRevenue: 0,
+                platformRevenue: 0,
+                partnerRevenue: 0,
+                serviceBreakdown: [],
+            };
         }
 
-
-        let totalGrossRevenue = 0; // Ukupan bruto prihod pre primene revenuePercentage
+        let totalGrossRevenue = 0;
+        const serviceRevenueMap: { [serviceId: string]: { name: string; amount: number } } = {};
 
         // 3. Iteracija kroz povezane servise i dohvatanje relevantnih podataka
         for (const serviceLink of contract.services) {
@@ -74,174 +92,82 @@ export const calculateContractRevenue = async (
             const serviceType = serviceLink.service.type;
             const serviceName = serviceLink.service.name;
 
-            if (serviceType === ServiceType.VAS) {
-                // Dohvatanje VASService podataka za ovaj servis, provajdera i period
-                 // Napomena: Filtriranje po mesecu_pruzanja_usluge zahteva da periodStart/End budu početak/kraj meseca
-                 // Ovo je pojednostavljenje, realna logika može biti složenija.
-                 // Pretpostavljamo da mesec_pruzanja_usluge označava prvi dan meseca.
-                 const vasData = await db.vASService.findMany({
-                     where: {
-                         serviceId: serviceId,
-                         provajderId: contract.providerId, // VAS je vezan za provajdera
+            let serviceGrossRevenue = 0;
+
+            if (serviceType === ServiceType.VAS && contract.providerId) {
+                // FIX: Corrected db.vASService to db.vasService
+                const vasData = await db.vasService.findMany({
+                    where: {
+                        serviceId: serviceId,
+                        provajderId: contract.providerId,
                          mesec_pruzanja_usluge: {
+                            // Filtering by month start/end might need adjustment
+                            // depending on how mesec_pruzanja_usluge is stored (e.g., always 1st of month)
+                            // and if you need revenue for parts of months.
+                            // Current filter gte/lte start/end of period months is a reasonable approximation
                             gte: startOfMonth(periodStart),
                             lte: endOfMonth(periodEnd),
                          },
-                     },
-                     select: {
-                         naplacen_iznos: true, // Pretpostavljamo da je ovo relevantan iznos za kalkulaciju
-                         fakturisan_korigovan_iznos: true, // Možda i ovo zavisno od logike
-                     },
-                 });
+                    },
+                    select: {
+                        naplacen_iznos: true,
+                    },
+                });
 
-                 // Sumiranje relevantnog iznosa iz VAS podataka
-                 const vasRevenue = vasData.reduce((sum, data) => sum + (data.naplacen_iznos || 0), 0);
-                 totalGrossRevenue += vasRevenue;
+                serviceGrossRevenue = vasData.reduce((sum, data) => sum + (data.naplacen_iznos || 0), 0);
 
             } else if (serviceType === ServiceType.BULK) {
-                 // Dohvatanje BulkService podataka za ovaj servis, provajdera i period (BulkService nema polje za mesec, ovo je problem)
-                 // BulkService model je baziran na CSV-u bez datuma transakcije, samo "mesec_pruzanja_usluge" u VASu.
-                 // Ovo je problem sa dizajnom baze ako želite preciznu vremensku kalkulaciju prihoda za Bulk.
-                 // Za ovu generaciju, preskočićemo preciznu Bulk kalkulaciju prihoda na osnovu vremenskog perioda.
-                 // U realnosti, morali biste da:
-                 // a) Imate datum na BulkService modelu
-                 // b) Imate definisane stope prihoda po zahtevu/poruci (BulkService nema iznos polja)
-                 console.warn(`Bulk service "${serviceName}" attached to contract ${contract.contractNumber}. Revenue calculation for Bulk services over a period is not supported with the current schema.`);
-                 // Primer kako bi izgledalo sa stopama i datumom:
-                 /*
-                 const bulkData = await db.bulkService.findMany({
-                     where: {
-                          serviceId: serviceId,
-                          providerId: contract.providerId, // Bulk je vezan za provajdera
-                          // OVDJE BI TREBALO BITI POLJE DATUM: date: { gte: periodStart, lte: periodEnd }
-                     },
-                     select: {
-                         requests: true,
-                         message_parts: true,
-                         // step_name: true // Možda stopa zavisi od step_name
-                     },
-                 });
-
-                 const rate = BULK_REVENUE_RATES[serviceName]?.per_request || 0; // Pronađi stopu
-
-                 const bulkRevenue = bulkData.reduce((sum, data) => sum + (data.requests * rate), 0);
-                 totalGrossRevenue += bulkRevenue;
-                 */
-
+                 // Placeholder logic for Bulk - needs implementation
+                console.warn(`Bulk service "${serviceName}" attached to contract ${contract.contractNumber}. Revenue calculation for Bulk services over a period is not fully implemented.`);
+                serviceGrossRevenue = 0; // Assume 0 for now until implemented with rates/dates
             }
             // Dodajte logiku za druge ServiceType ako postoje
+
+            if (serviceGrossRevenue > 0) {
+                 // Aggregate revenue per service ID
+                if (!serviceRevenueMap[serviceId]) {
+                    serviceRevenueMap[serviceId] = { name: serviceName, amount: 0 };
+                }
+                serviceRevenueMap[serviceId].amount += serviceGrossRevenue;
+                totalGrossRevenue += serviceGrossRevenue;
+            }
         }
 
-        // 4. Primena revenuePercentage ugovora
-        const contractRevenue = totalGrossRevenue * (contract.revenuePercentage / 100);
+        // 4. Formatiranje Service Breakdown i računanje procenata
+        const serviceBreakdown = Object.keys(serviceRevenueMap).map(serviceId => {
+             const service = serviceRevenueMap[serviceId];
+             const percentage = totalGrossRevenue > 0 ? (service.amount / totalGrossRevenue) * 100 : 0;
+             return {
+                 id: serviceId,
+                 name: service.name,
+                 revenueAmount: service.amount,
+                 percentage: percentage,
+             };
+        });
 
-        return contractRevenue;
+
+        // 5. Primena revenuePercentage ugovora za Platformu i Partnera
+        const platformRevenue = totalGrossRevenue * (contract.revenuePercentage / 100);
+        const partnerRevenue = totalGrossRevenue - platformRevenue; // Partner dobija ostatak
+
+        // 6. Vraćanje kompletne strukture
+        return {
+            totalGrossRevenue: totalGrossRevenue, // Ukupno pre podele
+            platformRevenue: platformRevenue,
+            partnerRevenue: partnerRevenue,
+            serviceBreakdown: serviceBreakdown,
+        };
 
     } catch (error) {
         console.error(`Error calculating revenue for contract ${contractId}:`, error);
-        // Vraćanje 0 u slučaju greške
-        return 0;
+        // Vraćanje strukture sa 0 vrednostima u slučaju greške
+        return {
+             totalGrossRevenue: 0,
+            platformRevenue: 0,
+            partnerRevenue: 0,
+            serviceBreakdown: [],
+        };
     }
 };
 
-/**
- * Kalkuliše ukupan prihod za platformu u datom vremenskom periodu
- * na osnovu svih relevantnih ugovora.
- * @param calculationStartDate - Početni datum perioda za kalkulaciju.
- * @param calculationEndDate - Krajnji datum perioda za kalkulaciju.
- * @returns Ukupan prihod platforme u definisanom periodu.
- */
-export const calculateTotalPlatformRevenue = async (
-     calculationStartDate?: Date,
-    calculationEndDate?: Date
-): Promise<number> => {
-    try {
-        // 1. Dohvatanje svih ugovora koji su relevantni za kalkulaciju prihoda
-        // Ovo može uključivati ACTIVE ugovore, ili EXPIRED ugovore
-        // koji su još uvek imali aktivnost prihoda u traženom periodu.
-        const relevantContracts = await db.contract.findMany({
-             where: {
-                 OR: [
-                     { status: 'ACTIVE' },
-                     // Ugovori koji su istekli, ali njihov period pokriva deo traženog perioda
-                     {
-                         status: 'EXPIRED',
-                          endDate: { gte: calculationStartDate } // Kraj ugovora je unutar ili nakon početka perioda
-                          // Možda dodati i startDate check: startDate: { lte: calculationEndDate }
-                     },
-                 ],
-                 // Možda isključiti PENDING ugovore?
-             },
-              include: {
-                services: {
-                    include: {
-                        service: {
-                             select: { id: true, type: true, name: true }
-                        }
-                    },
-                },
-                 provider: { select: { id: true } },
-                 humanitarianOrg: { select: { id: true } },
-                 parkingService: { select: { id: true } },
-             }
-        });
-
-        let totalPlatformRevenue = 0;
-
-        // 2. Iteracija kroz ugovore i sumiranje prihoda koristeći (delimično) logiku iz calculateContractRevenue
-        // Optimizovanije bi bilo izvršiti agregirane upite na VASService umesto iteriranja kroz ugovore,
-        // ali za sada ćemo reći da poziva logiku po ugovoru.
-        for (const contract of relevantContracts) {
-            // Replikacija logike iz calculateContractRevenue za ovaj ugovor i period
-             const contractGrossRevenue = await (async () => {
-                let gross = 0;
-                 const periodStart = calculationStartDate ? max([contract.startDate, calculationStartDate]) : contract.startDate;
-                 const periodEnd = calculationEndDate ? min([contract.endDate, calculationEndDate]) : contract.endDate;
-
-                  if (periodStart > periodEnd) {
-                       return 0;
-                  }
-
-                 for (const serviceLink of contract.services) {
-                     const serviceId = serviceLink.serviceId;
-                     const serviceType = serviceLink.service.type;
-
-                     if (serviceType === ServiceType.VAS && contract.providerId) {
-                          const vasData = await db.vASService.findMany({
-                             where: {
-                                 serviceId: serviceId,
-                                 provajderId: contract.providerId,
-                                  mesec_pruzanja_usluge: {
-                                    gte: startOfMonth(periodStart),
-                                    lte: endOfMonth(periodEnd),
-                                 },
-                              },
-                             select: { naplacen_iznos: true },
-                          });
-                          gross += vasData.reduce((sum, data) => sum + (data.naplacen_iznos || 0), 0);
-                     }
-                      // Napomena: BulkService kalkulacija prihoda preko perioda sa trenutnom šemom je netrivijalna
-                     // i zahtevala bi definisanje stopa i rešavanje vremenskog obuhvata.
-                 }
-                 return gross;
-             })();
-
-
-            totalPlatformRevenue += grossRevenue * (contract.revenuePercentage / 100);
-        }
-
-
-        return totalPlatformRevenue;
-
-    } catch (error) {
-        console.error("Error calculating total platform revenue:", error);
-        return 0; // Vraćanje 0 u slučaju greške
-    }
-};
-
-// Napomena: Kalkulacija prihoda, posebno za BulkService, može biti vrlo složena
-// i zavisi od tačne definicije "prihoda" u vašem poslovnom kontekstu,
-// kao i od toga kako se tačno mapiraju podaci iz CSV-a u bazu.
-// Trenutna implementacija za BulkService je placeholder.
-// Agregirani upiti u Prisma (ili direktni SQL) bili bi znatno efikasniji
-// za calculateTotalPlatformRevenue funkciju umesto iteriranja kroz ugovore.
+// calculateTotalPlatformRevenue is not used for this specific fix

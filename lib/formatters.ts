@@ -10,7 +10,7 @@
 export function formatCurrency(
     amount: number,
     locale: string = 'en-US',
-    currency: string = 'USD'
+    currency: string = 'RSD'
   ): string {
     // Use the built-in Intl.NumberFormat for reliable localization
     const formatter = new Intl.NumberFormat(locale, {

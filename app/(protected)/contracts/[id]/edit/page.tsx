@@ -3,7 +3,7 @@
 import { ContractForm } from "@/components/contracts/ContractForm";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const contract = await prisma.contract.findUnique({
@@ -30,7 +30,7 @@ interface EditContractPageProps {
 }
 
 async function getContract(id: string) {
-  const contract = await prisma.contract.findUnique({
+  const contract = await db.contract.findUnique({
     where: { id },
     include: {
       provider: true,

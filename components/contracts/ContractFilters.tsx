@@ -1,7 +1,7 @@
 // /components/contracts/ContractFilters.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Select,
   SelectContent,
@@ -14,17 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ContractType, ContractStatus } from "@prisma/client";
 
-
 interface Contract {
   id: string;
   name: string;
   contractNumber: string;
   type: ContractType;
   status: ContractStatus;
-
-  startDate: Date; // Assuming Date objects or strings parseable by new Date()
-  endDate: Date;   // Assuming Date objects or strings parseable by new Date()
-
+  startDate: Date;
+  endDate: Date;
   revenuePercentage: number;
   provider?: { id: string; name: string } | null;
   humanitarianOrg?: { id: string; name: string } | null;
@@ -32,31 +29,29 @@ interface Contract {
   createdAt: Date;
 }
 
-
 interface ContractFiltersProps {
   contracts: Contract[] | undefined | null;
   onFilterChange: (filtered: Contract[]) => void;
-
-  serverTime: string; // Prop received from the server-rendered parent
+  serverTime?: string; 
 }
 
 export function ContractFilters({ contracts, onFilterChange, serverTime }: ContractFiltersProps) {
-
-}
-
-export function ContractFilters({ contracts, onFilterChange }: ContractFiltersProps) {
-
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedType, setSelectedType] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedType, setSelectedType] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [expiringSoon, setExpiringSoon] = useState<boolean>(false);
+  const [mounted, setMounted] = useState(false);
 
-
-   const serverDate = new Date(serverTime);
-
-
-
+  // Fix for hydration mismatch - only render the component when mounted
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Parse the server time only once when component mounts
+  const serverDate = serverTime ? new Date(serverTime) : new Date();
+
+  // Define the filtering function with useCallback to prevent recreations
+  const applyFilters = useCallback(() => {
     const contractsToFilter = Array.isArray(contracts) ? contracts : [];
     let filtered = [...contractsToFilter];
 
@@ -69,54 +64,60 @@ export function ContractFilters({ contracts, onFilterChange }: ContractFiltersPr
       );
     }
 
-
-    if (selectedType && selectedType !== "all") { // Handle "all" value
+    if (selectedType && selectedType !== "all") {
       filtered = filtered.filter(contract => contract.type === selectedType);
     }
 
-    if (selectedStatus && selectedStatus !== "all") { // Handle "all" value
-
-    if (selectedType) {
-      filtered = filtered.filter(contract => contract.type === selectedType);
-    }
-
-    if (selectedStatus) {
-
+    if (selectedStatus && selectedStatus !== "all") {
       filtered = filtered.filter(contract => contract.status === selectedStatus);
     }
 
     if (expiringSoon) {
-
-      const today = serverDate; // Use server date as 'today'
-      const thirtyDaysFromNow = new Date(serverDate); // Clone server date
-
-      const today = new Date();
-      const thirtyDaysFromNow = new Date();
-
+      const today = new Date(serverDate);
+      const thirtyDaysFromNow = new Date(serverDate);
       thirtyDaysFromNow.setDate(today.getDate() + 30);
 
       filtered = filtered.filter(contract => {
         const endDate = new Date(contract.endDate);
-
         return !isNaN(endDate.getTime()) && endDate > today && endDate <= thirtyDaysFromNow;
       });
     }
 
-    onFilterChange(filtered);
+    return filtered;
+  }, [searchTerm, selectedType, selectedStatus, expiringSoon, contracts, serverDate]);
 
-  }, [searchTerm, selectedType, selectedStatus, expiringSoon, contracts, onFilterChange, serverDate]);
-
-
-  }, [searchTerm, selectedType, selectedStatus, expiringSoon, contracts, onFilterChange]);
-
+  // Apply filters when filter criteria or contracts change
+  useEffect(() => {
+    if (!mounted) return;
+    
+    // Use requestAnimationFrame to ensure filtering happens after rendering
+    const timeoutId = setTimeout(() => {
+      const filteredResults = applyFilters();
+      onFilterChange(filteredResults);
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+  }, [applyFilters, onFilterChange, mounted]);
 
   const resetFilters = () => {
     setSearchTerm("");
-    setSelectedType("");
-    setSelectedStatus("");
+    setSelectedType("all");
+    setSelectedStatus("all");
     setExpiringSoon(false);
-
   };
+
+  // Don't render until client-side
+  if (!mounted) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>Loading filters...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -140,11 +141,7 @@ export function ContractFilters({ contracts, onFilterChange }: ContractFiltersPr
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
-
                 <SelectItem value="all">All Types</SelectItem>
-
-                <SelectItem value="all">All Types</SelectItem>
-
                 {Object.values(ContractType).map(type => (
                   <SelectItem key={type} value={type}>{type.replace(/_/g, ' ')}</SelectItem>
                 ))}
@@ -161,10 +158,7 @@ export function ContractFilters({ contracts, onFilterChange }: ContractFiltersPr
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-
                 <SelectItem value="all">All Statuses</SelectItem>
-}
-
                 {Object.values(ContractStatus).map(status => (
                   <SelectItem key={status} value={status}>{status.replace(/_/g, ' ')}</SelectItem>
                 ))}
@@ -173,7 +167,6 @@ export function ContractFilters({ contracts, onFilterChange }: ContractFiltersPr
           </div>
 
           <div className="flex items-center space-x-2">
-
             <input
               type="checkbox"
               id="expiringSoon"

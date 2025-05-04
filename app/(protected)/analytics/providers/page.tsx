@@ -4,8 +4,8 @@
 import { Metadata } from "next";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DataFilters from "@/components/analytics/DataFilters";
-import AnomalyDetection from "@/components/analytics/AnomalyDetection";
+import { DataFilters } from "@/components/analytics/DataFilters";
+import { AnomalyDetection } from "@/components/analytics/AnomalyDetection";
 import ServicePerformance from "@/components/analytics/ServicePerformance";
 
 export const metadata: Metadata = {

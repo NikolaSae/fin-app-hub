@@ -1,8 +1,7 @@
 // components/contracts/ContractsSection.tsx
-
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ContractFilters } from "@/components/contracts/ContractFilters";
 import { ContractList } from "@/components/contracts/ContractList";
 import { Contract } from "@/lib/types/contract-types";
@@ -14,17 +13,18 @@ interface ContractsSectionProps {
 
 export function ContractsSection({ initialContracts, serverTime }: ContractsSectionProps) {
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>(initialContracts);
-
-  // Handler for filter changes
-  const handleFilterChange = (filtered: Contract[]) => {
+  
+  // Use useCallback to prevent recreation of this function on every render
+  const handleFilterChange = useCallback((filtered: Contract[]) => {
     setFilteredContracts(filtered);
-  };
-
+  }, []);
+  
   return (
     <>
       <ContractFilters 
         contracts={initialContracts} 
-        onFilterChange={handleFilterChange} 
+        onFilterChange={handleFilterChange}
+        serverTime={serverTime}
       />
       
       <ContractList 

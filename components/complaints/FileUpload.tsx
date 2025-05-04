@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Attachment } from "@prisma/client";
 import { Upload, X, FileIcon, FileText } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 interface FileUploadProps {
   complaintId?: string;
@@ -20,7 +20,7 @@ export function FileUpload({
   existingAttachments = []
 }: FileUploadProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  // const { toast } = useToast();
 
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);

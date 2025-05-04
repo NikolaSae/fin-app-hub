@@ -114,6 +114,7 @@ model User {
   comments               Comment[]
   activities             ActivityLog[]
   notifications          Notification[]
+  notificationPreferences NotificationPreference?
   createdHumanitarianRenewals HumanitarianContractRenewal[] @relation("RenewalCreator")
   modifiedHumanitarianRenewals HumanitarianContractRenewal[] @relation("RenewalModifier")
 }
@@ -122,7 +123,7 @@ model User {
 // Provider model
 model Provider {
   id          String        @id @default(cuid())
-  name        String
+  name        String        @unique
   contactName String?
   email       String?
   phone       String?
@@ -137,7 +138,7 @@ model Provider {
   bulkServices BulkService[]
   complaints  Complaint[]
   
-  @@index([name])
+  // @@index([name])
 }
 
 // Humanitarian Organization model
@@ -639,4 +640,20 @@ model GeneratedReport {
   @@index([reportType])
   @@index([generatedAt])
   @@index([scheduledReportId])
+}
+
+model NotificationPreference {
+  id          String    @id @default(cuid())
+  userId      String    @unique // Svaki korisnik ima samo jedan set podešavanja
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Koristimo JSON polje za čuvanje ugnježdenih preferenci
+  // Struktura unutar ovog JSON polja treba da odgovara NotificationPreferences interfejsu (bez userId)
+  // npr. { contractExpiring: { inApp: true, email: false }, ... }
+  preferences Json
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId]) // Indexiranje po userId za brže pretrage
 }

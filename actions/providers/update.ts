@@ -1,64 +1,70 @@
 // /actions/providers/update.ts
 'use server';
 
-import { db } from '@/lib/db'; // Assuming this is the path to your Prisma client
-import { providerSchema, ProviderFormData } from '@/schemas/provider'; // Assuming this is the path to your schema and types
+import { db } from '@/lib/db';
+import { providerSchema, ProviderFormData } from '@/schemas/provider';
 import { revalidatePath } from 'next/cache';
+import { auth } from '@/auth';
+import { LogSeverity } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { z } from 'zod';
 
-/**
- * Server Action to update an existing provider.
- * Validates input data using Zod schema.
- * @param id - The ID of the provider to update.
- * @param data - Updated provider data from the form.
- * @returns A result object indicating success or error.
- */
-export async function updateProvider(id: string, data: ProviderFormData): Promise<{ success?: string; id?: string; error?: string; details?: any }> {
-    // Validate input data using the Zod schema
+
+export async function updateProvider(id: string, data: ProviderFormData): Promise<{ success?: boolean; id?: string; error?: string; details?: any, message?: string }> {
     const validationResult = providerSchema.safeParse(data);
 
     if (!validationResult.success) {
-        // If validation fails, return a detailed error
+        console.error("Validation failed:", validationResult.error.format());
         return {
             error: 'Validation failed.',
-            details: validationResult.error.format(), // Return formatted Zod errors
+            details: validationResult.error.format(),
+            success: false
         };
     }
 
     const validatedData = validationResult.data;
 
+    const session = await auth();
+    const userId = session?.user?.id;
+
+     if (!userId) {
+       return { error: "Unauthorized", success: false };
+     }
+
+
     try {
-        // Check if the provider exists
-        const existingProvider = await db.provider.findUnique({
-            where: { id },
-        });
+         const existingProvider = await db.provider.findUnique({
+             where: { id },
+             select: {
+                 id: true,
+                 name: true,
+             }
+         });
 
-        if (!existingProvider) {
-            return { error: 'Provider not found.' };
-        }
+         if (!existingProvider) {
+             return { error: "Provider not found.", success: false };
+         }
 
-         // Check if a provider with the same name already exists (case-insensitive),
-         // but exclude the current provider being updated.
          const duplicateProvider = await db.provider.findFirst({
-             where: {
-                 name: {
-                     equals: validatedData.name,
-                     mode: 'insensitive',
-                 },
-                 NOT: { id }, // Exclude the current provider
-             },
+              where: {
+                  name: {
+                      equals: validatedData.name,
+                      mode: 'insensitive',
+                   },
+                  NOT: { id },
+              },
          });
 
          if (duplicateProvider) {
-             return { error: `Provider with name "${validatedData.name}" already exists.` };
+              return { error: `Provider with name "${validatedData.name}" already exists.`, success: false };
          }
 
 
-        // Update the provider in the database
-        const provider = await db.provider.update({
+        const updatedProvider = await db.provider.update({
             where: { id },
             data: {
                 name: validatedData.name,
-                contactName: validatedData.contactName || null, // Store empty string as null in DB
+                contactName: validatedData.contactName || null,
                 email: validatedData.email || null,
                 phone: validatedData.phone || null,
                 address: validatedData.address || null,
@@ -66,18 +72,41 @@ export async function updateProvider(id: string, data: ProviderFormData): Promis
             },
         });
 
-        // Revalidate cache for the providers list page
+        await db.activityLog.create({
+          data: {
+            action: "PROVIDER_UPDATED",
+            entityType: "provider",
+            entityId: updatedProvider.id,
+            details: `Provider updated: ${updatedProvider.name}`,
+            userId: userId,
+            severity: "INFO",
+          },
+        });
+
+
         revalidatePath('/providers');
-         // Revalidate cache for this provider's detail page
-         revalidatePath(`/providers/${provider.id}`);
+        revalidatePath(`/providers/${id}`);
 
 
-        return { success: 'Provider updated successfully.', id: provider.id };
+        return { success: true, message: 'Provider updated successfully.', id: updatedProvider.id };
 
     } catch (error) {
-        console.error(`Error updating provider with ID ${id}:`, error);
-        // Check for unique constraint errors if needed (e.g., on name if unique)
-        // if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') { ... }
-        return { error: 'Failed to update provider.' };
+        console.error(`[PROVIDER_UPDATE_ERROR] Error updating provider with ID ${id}:`, error);
+
+         if (error instanceof PrismaClientKnownRequestError) {
+              if (error.code === 'P2002') {
+                  return { error: "An provider with similar details already exists.", success: false, message: "Provider name already exists." };
+              }
+               if (error.code && error.clientVersion) {
+                return {
+                    error: "Database operation failed",
+                    message: `Prisma error: ${error.code}`,
+                    details: error.message,
+                    success: false
+                };
+           }
+         }
+
+        return { error: "Failed to update provider.", success: false, message: "An unexpected error occurred." };
     }
-}
+};

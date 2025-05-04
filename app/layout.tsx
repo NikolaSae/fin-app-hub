@@ -1,10 +1,18 @@
-// app/layout.tsx
+// Path: app/layout.tsx
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import React from 'react';
 
 import "./globals.css";
 
-import { ToastWrapper } from "@/components/ui/toast-wrapper";
+// *** Import Sonner Toaster Component ***
+// Proverite da li je putanja ispravna za vaš projekat
+// Ako koristite shadcn/ui verziju sonner-a:
+import { Toaster } from "@/components/ui/sonner";
+// Ako koristite direktno sonner biblioteku:
+// import { Toaster } from "sonner";
+
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -33,9 +41,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-primary`}
       >
-        <ToastWrapper>
-          {children}
-        </ToastWrapper>
+           {children}
+        <Toaster />
       </body>
     </html>
   );

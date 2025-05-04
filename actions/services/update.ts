@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 import { serviceSchema } from '@/schemas/service';
-import { prisma } from '@/lib/db';
+import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { ServiceType } from '@prisma/client';
@@ -31,7 +31,7 @@ export async function updateService(id: string, formData: z.infer<typeof service
     }
     
     // Update the service
-    const service = await prisma.service.update({
+    const service = await db.service.update({
       where: { id },
       data: {
         name: validatedData.name,

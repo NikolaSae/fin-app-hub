@@ -1,33 +1,24 @@
-// /actions/humanitarian-orgs/update.ts
+// Path: /actions/humanitarian-orgs/update.ts
 'use server';
 
-// Uvozimo potrebne module
-import { db } from '@/lib/db'; // Pretpostavljena putanja do vašeg Prisma klijenta
+import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth'; // Pretpostavljena putanja do vašeg auth helpera
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'; // Za rukovanje specifičnim Prisma greškama
-// Uvozimo Zod šemu i tip forme
+import { auth } from '@/auth';
+import { LogSeverity } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { humanitarianOrgSchema, HumanitarianOrgFormData } from '@/schemas/humanitarian-org';
+import { z } from 'zod';
 
 
-/**
- * Server akcija za ažuriranje postojeće humanitarne organizacije.
- * @param id - ID organizacije za ažuriranje.
- * @param values - Podaci forme za ažuriranje organizacije.
- * @returns Objekat sa success/error porukom i, u slučaju uspeha, ID ažurirane organizacije.
- */
 export const updateHumanitarianOrg = async (id: string, values: HumanitarianOrgFormData) => {
-    // 1. Validacija ulaznih podataka pomoću Zod šeme
     const validatedFields = humanitarianOrgSchema.safeParse(values);
 
     if (!validatedFields.success) {
         console.error("Validation failed:", validatedFields.error.errors);
-        // Vraćamo formatirane greške validacije
-        return { error: "Invalid fields!", details: validatedFields.error.format() };
+        return { error: "Invalid fields!", details: validatedFields.error.format(), success: false };
     }
 
-    // Izdvajamo validirane podatke
-     const {
+    const {
         name,
         contactPerson,
         email,
@@ -38,44 +29,43 @@ export const updateHumanitarianOrg = async (id: string, values: HumanitarianOrgF
         isActive,
     } = validatedFields.data;
 
-     // 2. Provera autorizacije (opciono)
-     // const session = await auth();
-     // if (!session?.user || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-     //   return { error: "Unauthorized" };
-     // }
+    const session = await auth();
+    const userId = session?.user?.id;
+
+     if (!userId) {
+       return { error: "Unauthorized", success: false };
+     }
+
 
     try {
-         // 3. Provera da li organizacija sa datim ID-em postoji
          const existingOrganization = await db.humanitarianOrg.findUnique({
              where: { id },
          });
 
          if (!existingOrganization) {
-             return { error: "Humanitarian organization not found." };
+             return { error: "Humanitarian organization not found.", success: false };
          }
 
-         // 4. Opciono: Provera jedinstvenosti ako se menja polje koje treba biti jedinstveno (npr. ime ili email)
          const orgWithSameName = await db.humanitarianOrg.findFirst({
               where: {
                   name: name,
-                  id: { not: id }, // Isključi trenutnu organizaciju
+                  id: { not: id },
               },
          });
          if (orgWithSameName) {
-              return { error: `Another organization with name "${name}" already exists.` };
+              return { error: `Another organization with name "${name}" already exists.`, success: false };
          }
-         // Ako email mora biti jedinstven i menja se
+
           if (email && email !== existingOrganization.email) {
               const orgWithSameEmail = await db.humanitarianOrg.findUnique({
                  where: { email: email },
               });
               if (orgWithSameEmail) {
-                  return { error: `Another organization with email "${email}" already exists.` };
+                  return { error: `Another organization with email "${email}" already exists.`, success: false };
               }
           }
 
 
-        // 5. Ažuriranje humanitarne organizacije u bazi
         const updatedOrganization = await db.humanitarianOrg.update({
             where: { id },
             data: {
@@ -87,27 +77,44 @@ export const updateHumanitarianOrg = async (id: string, values: HumanitarianOrgF
                 website,
                 mission,
                 isActive,
-                // updatedAt se postavlja automatski
-                // lastModifiedById: session?.user?.id, // Popunite ID korisnika
             },
         });
 
-        // 6. Revalidacija cache-a
-        revalidatePath('/app/(protected)/humanitarian-orgs'); // Lista
-        revalidatePath(`/app/(protected)/humanitarian-orgs/${id}`); // Stranica detalja
-        revalidatePath(`/app/(protected)/humanitarian-orgs/${id}/edit`); // Stranica editovanja
+        await db.activityLog.create({
+          data: {
+            action: "HUMANITARIAN_ORG_UPDATED",
+            entityType: "humanitarian_org",
+            entityId: updatedOrganization.id,
+            details: `Humanitarian Organization updated: ${updatedOrganization.name}`,
+            userId: userId,
+            severity: "INFO",
+          },
+        });
 
-        return { success: "Humanitarian organization updated successfully!", id: updatedOrganization.id };
+        revalidatePath('/humanitarian-orgs');
+        revalidatePath(`/humanitarian-orgs/${id}`);
+        revalidatePath(`/humanitarian-orgs/${id}/edit`);
+
+
+        return { success: true, message: "Humanitarian organization updated successfully!", id: updatedOrganization.id };
 
     } catch (error) {
-        console.error(`Error updating humanitarian organization ${id}:`, error);
-         // Rukovanje specifičnim greškama baze
+        console.error(`[HUMANITARIAN_ORG_UPDATE_ERROR] Error updating humanitarian organization ${id}:`, error);
+
          if (error instanceof PrismaClientKnownRequestError) {
               if (error.code === 'P2002') {
-                 // Detaljnije rukovanje greškom Unique constraint-a
-                  return { error: "An organization with similar details already exists." };
+                  return { error: "An organization with similar details already exists.", success: false };
               }
+              if (error.code && error.clientVersion) {
+                return {
+                    error: "Database operation failed",
+                    message: `Prisma error: ${error.code}`,
+                    details: error.message,
+                    success: false
+                };
+           }
          }
-        return { error: "Failed to update humanitarian organization." }; // Generalna greška servera
+
+        return { error: "Failed to update humanitarian organization.", success: false };
     }
 };

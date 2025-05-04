@@ -1,83 +1,77 @@
 // components/complaints/ProductSelection.tsx
 
 
+"use client";
+
 import { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getProductsByService } from '@/actions/products/get-by-service';
+import { FormControl } from '@/components/ui/form';
+import { getProductsByServiceId } from "@/actions/complaints/products";
 import { Product } from '@prisma/client';
 
 interface ProductSelectionProps {
-  serviceId: string;
+  serviceId: string | null | undefined;
   selectedProductId: string;
   onProductSelect: (productId: string) => void;
-  disabled?: boolean;
 }
 
-export function ProductSelection({
-  serviceId,
-  selectedProductId,
-  onProductSelect,
-  disabled = false
-}: ProductSelectionProps) {
+export function ProductSelection({ serviceId, selectedProductId, onProductSelect }: ProductSelectionProps) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!serviceId) {
+      setProducts([]);
+      // onProductSelect(''); // Optional: uncomment to reset form value
+      return;
+    }
+
     const fetchProducts = async () => {
-      if (!serviceId) {
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
-
       try {
-        const result = await getProductsByService(serviceId);
-        if (result.error) {
-          setError(result.error);
-          setProducts([]);
-        } else {
-          setProducts(result.products || []);
-        }
-      } catch (err) {
-        console.error('Error fetching products:', err);
-        setError('Failed to load products. Please try again.');
+        const fetchedProducts = await getProductsByServiceId(serviceId);
+        setProducts(fetchedProducts as Product[]);
+      } catch (err: any) {
+        console.error("Error fetching products:", err);
+        setError("Failed to load products");
         setProducts([]);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchProducts();
-  }, [serviceId]);
 
-  if (loading) {
-    return <Skeleton className="h-10 w-full" />;
-  }
+  }, [serviceId, onProductSelect]);
 
-  if (error) {
-    return <div className="text-sm text-red-500">{error}</div>;
-  }
+   useEffect(() => {
+       if (selectedProductId && products.length > 0 && !products.find(p => p.id === selectedProductId)) {
+           onProductSelect('');
+       }
+   }, [products, selectedProductId, onProductSelect]);
+
 
   return (
-    <Select 
-      value={selectedProductId} 
+    <Select
+      value={selectedProductId}
       onValueChange={onProductSelect}
-      disabled={disabled || products.length === 0}
+      disabled={!serviceId || isLoading}
     >
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder={products.length === 0 ? "No products available" : "Select a product"} />
+      <SelectTrigger>
+        <SelectValue placeholder={isLoading ? "Loading products..." : (serviceId ? "Select product" : "Select a service first")} />
       </SelectTrigger>
       <SelectContent>
-        {products.map((product) => (
-          <SelectItem key={product.id} value={product.id}>
-            {product.name} {product.code && `(${product.code})`}
-          </SelectItem>
-        ))}
+         {error && <SelectItem value="" disabled>{error}</SelectItem>}
+         {!isLoading && !error && products.length === 0 && serviceId && (
+             <SelectItem value="" disabled>No products found for this service</SelectItem>
+         )}
+         {!isLoading && !error && products.map(product => (
+             <SelectItem key={product.id} value={product.id}>
+                 {product.name}
+             </SelectItem>
+         ))}
       </SelectContent>
     </Select>
   );

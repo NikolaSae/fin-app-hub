@@ -1,3 +1,5 @@
+///app/(protected)/contracts/page.tsx
+
 import { Suspense } from "react";
 import { ContractsSection } from "@/components/contracts/ContractsSection";
 import { Metadata } from "next";

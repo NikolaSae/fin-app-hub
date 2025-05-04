@@ -39,28 +39,27 @@ export function useSalesData(
     const fetchSalesData = async () => {
       try {
         setIsLoading(true);
-        
-        // Construct query params
+
         const params = new URLSearchParams();
         if (period) params.append("period", period);
         if (startDate) params.append("startDate", startDate.toISOString());
         if (endDate) params.append("endDate", endDate.toISOString());
         if (serviceType) params.append("serviceType", serviceType);
         if (providerId) params.append("providerId", providerId);
-        
-        const dataResponse = await fetch(`/api/analytics/sales-metrics?${params.toString()}`);
-        
+
+        // CORRECTED: Use the correct API route /api/analytics/sales
+        const dataResponse = await fetch(`/api/analytics/sales?${params.toString()}`);
+
         if (!dataResponse.ok) {
           throw new Error(`Error fetching sales data: ${dataResponse.statusText}`);
         }
-        
+
         const data = await dataResponse.json();
         setSalesData(data.salesData || []);
-        
-        // Calculate additional metrics
-        const totalRevenue = data.salesData.reduce((sum: number, item: SalesDataPoint) => sum + item.revenue, 0);
-        const totalTransactions = data.salesData.reduce((sum: number, item: SalesDataPoint) => sum + item.transactions, 0);
-        
+
+        const totalRevenue = (data.salesData || []).reduce((sum: number, item: SalesDataPoint) => sum + item.revenue, 0);
+        const totalTransactions = (data.salesData || []).reduce((sum: number, item: SalesDataPoint) => sum + item.transactions, 0);
+
         setMetrics({
           totalRevenue,
           totalTransactions,

@@ -1,109 +1,94 @@
-// components/complaints/ServiceSelection.tsx
+// Path: components/complaints/ServiceSelection.tsx
+
+"use client";
 
 import { useState, useEffect } from 'react';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Service, ServiceType } from '@prisma/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FormControl } from '@/components/ui/form';
+import { getServicesByProviderId } from "@/actions/complaints/services";
+import { Service } from '@prisma/client';
 
 interface ServiceSelectionProps {
+  providerId: string | null | undefined;
   selectedServiceId: string;
   onServiceSelect: (serviceId: string) => void;
-  filterByType?: ServiceType | ServiceType[];
-  includeInactive?: boolean;
-  disabled?: boolean;
 }
 
-export function ServiceSelection({
-  selectedServiceId,
-  onServiceSelect,
-  filterByType,
-  includeInactive = false,
-  disabled = false
-}: ServiceSelectionProps) {
+export function ServiceSelection({ providerId, selectedServiceId, onServiceSelect }: ServiceSelectionProps) {
   const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchServices = async () => {
-      setLoading(true);
-      setError(null);
+    setServices([]);
+    setError(null);
 
+    if (!providerId) {
+      console.log("No providerId provided to fetch services.");
+      return;
+    }
+
+    const fetchServices = async () => {
+      setIsLoading(true);
       try {
-        // Fetch services from API
-        const response = await fetch('/api/services?includeInactive=' + includeInactive);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch services');
-        }
-        
-        const data = await response.json();
-        
-        // Filter services by type if specified
-        let filteredServices = data.services;
-        if (filterByType) {
-          const types = Array.isArray(filterByType) ? filterByType : [filterByType];
-          filteredServices = filteredServices.filter((service: Service) => 
-            types.includes(service.type)
-          );
-        }
-        
-        setServices(filteredServices);
-      } catch (err) {
-        console.error('Error fetching services:', err);
-        setError('Failed to load services. Please try again.');
+        const fetchedServices = await getServicesByProviderId(providerId);
+        const validServices = fetchedServices.filter(service => service.id !== '');
+        setServices(validServices as Service[]);
+      } catch (err: any) {
+        console.error("Error fetching services:", err);
+        setError("Failed to load services");
         setServices([]);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchServices();
-  }, [includeInactive, filterByType]);
 
-  if (loading) {
-    return <Skeleton className="h-10 w-full" />;
+  }, [providerId, onServiceSelect]);
+
+   useEffect(() => {
+       if (selectedServiceId && services.length > 0 && !services.find(s => s.id === selectedServiceId)) {
+           console.log(`Selected service ${selectedServiceId} not found in new list, resetting.`);
+           onServiceSelect('');
+       }
+       if (!providerId && selectedServiceId) {
+           console.log("Provider cleared, resetting selected service.");
+            onServiceSelect('');
+       }
+   }, [services, selectedServiceId, onServiceSelect, providerId]);
+
+  let placeholderText = "Select a provider first";
+  if (providerId) {
+      placeholderText = isLoading ? "Loading services..." : "Select service";
   }
+   if (error) {
+       placeholderText = error;
+   }
+   if (!isLoading && !error && providerId && services.length === 0) {
+       placeholderText = "No services found for this provider";
+   }
 
-  if (error) {
-    return <div className="text-sm text-red-500">{error}</div>;
-  }
-
-  // Group services by type
-  const servicesByType: Record<ServiceType, Service[]> = {
-    VAS: [],
-    BULK: [],
-    HUMANITARIAN: [],
-    PARKING: []
-  };
-
-  services.forEach(service => {
-    servicesByType[service.type].push(service);
-  });
 
   return (
-    <Select 
-      value={selectedServiceId} 
+    <Select
+      value={selectedServiceId}
       onValueChange={onServiceSelect}
-      disabled={disabled || services.length === 0}
+      disabled={!providerId || isLoading || !!error}
     >
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder={services.length === 0 ? "No services available" : "Select a service"} />
+      <SelectTrigger>
+        <SelectValue placeholder={placeholderText} />
       </SelectTrigger>
       <SelectContent>
-        {Object.entries(servicesByType).map(([type, typeServices]) => (
-          typeServices.length > 0 && (
-            <SelectGroup key={type}>
-              <SelectLabel>{type}</SelectLabel>
-              {typeServices.map((service) => (
-                <SelectItem key={service.id} value={service.id}>
-                  {service.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          )
-        ))}
+         {/* Render only actual service items with non-empty IDs */}
+         {!isLoading && !error && services.length > 0 && (
+             services.map(service => (
+                 <SelectItem key={service.id} value={service.id}>
+                     {service.name}
+                 </SelectItem>
+             ))
+         )}
       </SelectContent>
     </Select>
   );
-}
+} 

@@ -1,90 +1,163 @@
-// /actions/contracts/create.ts
+// Path: /actions/contracts/create.ts
 'use server';
 
-import { z } from 'zod';
-import { db } from '@/lib/db'; // Pretpostavljena putanja do vašeg Prisma klijenta
-import { contractSchema } from '@/schemas/contract'; // Ovaj fajl ćemo kreirati kasnije
+import { db } from '@/lib/db';
+import { contractSchema } from '@/schemas/contract';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth'; // Pretpostavljena putanja do vašeg auth helpera
-import { ContractFormData } from '@/lib/types/contract-types'; // Ovaj fajl ćemo kreirati kasnije
+import { auth } from '@/auth';
+import type { ContractFormData } from '@/schemas/contract';
 
-export const createContract = async (values: ContractFormData) => {
-  // 1. Validacija ulaznih podataka pomoću Zod šeme
-  const validatedFields = contractSchema.safeParse(values);
-
-  if (!validatedFields.success) {
-    console.error("Validation failed:", validatedFields.error.errors);
-    return { error: "Invalid fields!", details: validatedFields.error.format() };
-  }
-
-  const {
-    name,
-    contractNumber,
-    type,
-    status,
-    startDate,
-    endDate,
-    revenuePercentage,
-    description,
-    providerId,
-    humanitarianOrgId,
-    parkingServiceId,
-    services, // Ovo će biti niz ID-jeva servisa
-  } = validatedFields.data;
-
+export async function createContract(data: ContractFormData) {
   try {
-    // 2. Dobijanje ID-a trenutnog korisnika
-    const session = await auth();
-    const userId = session?.user?.id;
+    // Format dates properly if they exist but are not in ISO format
+    const formattedData = {
+      ...data,
+      // Ensure dates are in proper ISO format or null if not provided
+      startDate: data.startDate ? new Date(data.startDate).toISOString() : null, // Koristite null umesto undefined za Prisma
+      endDate: data.endDate ? new Date(data.endDate).toISOString() : null, // Koristite null umesto undefined za Prisma
+      // Clean up foreign keys based on contract type
+      providerId: data.type === 'PROVIDER' ? data.providerId : null,
+      humanitarianOrgId: data.type === 'HUMANITARIAN' ? data.humanitarianOrgId : null,
+      parkingServiceId: data.type === 'PARKING' ? data.parkingServiceId : null,
+    };
 
-    if (!userId) {
-      return { error: "Unauthorized" };
+    // Validate input data
+    const validationResult = contractSchema.safeParse(formattedData);
+    if (!validationResult.success) {
+      console.error("Validation failed:", validationResult.error.flatten()); // Log validation errors server-side
+      return {
+        error: "Validation failed",
+        details: validationResult.error.flatten(),
+        success: false // Dodajte success: false za konzistentnost
+      };
     }
 
-    // 3. Provera jedinstvenosti broja ugovora
+    // Authentication check
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { error: "Unauthorized", success: false }; // Dodajte success: false
+    }
+
+    // Check for existing contract number
     const existingContract = await db.contract.findUnique({
-      where: { contractNumber: contractNumber },
+      where: { contractNumber: formattedData.contractNumber },
+    });
+    if (existingContract) {
+       console.warn(`Attempted to create duplicate contract number: ${formattedData.contractNumber}`); // Log warning server-side
+      return { error: "Contract number already exists", success: false }; // Dodajte success: false
+    }
+
+    // Create contract with relations
+    const contractData = {
+      name: formattedData.name,
+      contractNumber: formattedData.contractNumber,
+      type: formattedData.type,
+      status: formattedData.status,
+      startDate: formattedData.startDate,
+      endDate: formattedData.endDate,
+      revenuePercentage: formattedData.revenuePercentage,
+      description: formattedData.description,
+      providerId: formattedData.providerId, // Koristite validirane/formatirane vrednosti
+      humanitarianOrgId: formattedData.humanitarianOrgId, // Koristite validirane/formatirane vrednosti
+      parkingServiceId: formattedData.parkingServiceId, // Koristite validirane/formatirane vrednosti
+      services: {
+        create: formattedData.services?.map(service => ({
+          serviceId: service.serviceId,
+          specificTerms: service.specificTerms
+        })) || []
+      },
+      createdById: session.user.id, // Polje za korisnika koji je kreirao ugovor
+    };
+
+    const newContract = await db.contract.create({
+      data: contractData,
+      include: {
+        services: true,
+        provider: true,
+        humanitarianOrg: true,
+        parkingService: true,
+        createdBy: true, // Dodajte da se dohvati info o korisniku ako je potrebno na frontend
+      }
     });
 
-    if (existingContract) {
-      return { error: "Contract number already exists!" };
-    }
-
-    // 4. Kreiranje ugovora u bazi podataka
-    const newContract = await db.contract.create({
+    // --- LOG ACTIVITY ---
+    await db.activityLog.create({
       data: {
-        name,
-        contractNumber,
-        type,
-        status,
-        startDate,
-        endDate,
-        revenuePercentage,
-        description,
-        providerId,
-        humanitarianOrgId,
-        parkingServiceId,
-        createdById: userId, // Povezivanje kreatora
-
-        // Povezivanje servisa kroz ServiceContract model
-        services: {
-          create: services?.map(serviceId => ({
-            serviceId: serviceId,
-            // Ovde možete dodati podrazumevane ili prazne specificTerms ako je potrebno
-          })),
-        },
+        action: "CONTRACT_CREATED", // Opis radnje
+        entityType: "contract",    // Tip entiteta na kojem je radnja izvrsena
+        entityId: newContract.id,  // ID konkretnog entiteta (novokreiranog ugovora)
+        details: `Contract created: ${newContract.contractNumber} - ${newContract.name}`, // Kratak opis
+        userId: session.user.id,   // ID korisnika koji je izvrsio radnju
+        severity: "INFO",          // Nivo severnosti (INFO za kreiranje)
       },
     });
+    // --- KRAJ LOGOVANJA ---
 
-    // 5. Revalidacija cache-a za stranice sa ugovorima
-    revalidatePath('/app/(protected)/contracts');
-    revalidatePath('/app/(protected)/contracts/expiring'); // Opciono, ako kreiranje novog ugovora može uticati na ovu listu
 
-    return { success: "Contract created successfully!", id: newContract.id };
+    // Revalidate paths
+    revalidatePath('/contracts');
+    revalidatePath(`/contracts/${newContract.id}`);
+
+    return {
+      success: true, // Koristite boolean success
+      message: "Contract created successfully",
+      id: newContract.id, // Vratite ID novog ugovora
+      contract: newContract // Opciono, vratite ceo objekat ugovora ako treba na frontendu
+    };
 
   } catch (error) {
-    console.error("Error creating contract:", error);
-    // Generalna greška servera
-    return { error: "Failed to create contract." };
+    console.error("[CONTRACT_CREATE_ERROR]", error); // Standardizovan log format
+
+    if (error instanceof z.ZodError) {
+       const formattedErrors = error.format();
+       return {
+         error: "Invalid input data", // Opstija poruka za validaciju
+         formErrors: formattedErrors, // Detalji validacionih gresaka
+         success: false
+       };
+    }
+
+    // Handle Prisma errors
+    if (error instanceof Error) {
+       const prismaError = error as any; // Cast to any to access Prisma specific properties
+
+       // Handle specific Prisma error codes
+       if (prismaError.code === 'P2002') {
+         return {
+            error: "Data conflict", // Opstija poruka
+            message: "A record with this unique field already exists.",
+            details: prismaError.meta?.target, // Npr. target field
+            success: false
+         };
+       }
+
+       if (prismaError.code === 'P2003') {
+         // Foreign key constraint violation
+         return {
+           error: "Invalid reference",
+           message: "One of the linked items (Provider, Org, Service) does not exist.",
+           details: prismaError.meta?.field_name, // Npr. field name
+           success: false
+         };
+       }
+
+       // Generic Prisma Client Error
+       if (prismaError.code && prismaError.clientVersion) {
+            return {
+                error: "Database operation failed",
+                message: `Prisma error: ${prismaError.code}`,
+                details: prismaError.message, // Include original Prisma message
+                success: false
+            };
+       }
+    }
+
+    // Generic catch-all error
+    return {
+      error: "An unexpected error occurred",
+      message: "Failed to create contract.",
+      details: error instanceof Error ? error.message : "Unknown error",
+      success: false
+    };
   }
-};
+}

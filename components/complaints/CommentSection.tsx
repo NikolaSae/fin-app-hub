@@ -26,7 +26,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { addComment } from "@/actions/complaints/comment";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/toast/toast-context";
 
 type CommentWithUser = Comment & { user: Pick<User, "id" | "name" | "email"> };
 

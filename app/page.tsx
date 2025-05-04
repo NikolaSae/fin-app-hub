@@ -9,11 +9,9 @@ export default async function Home() {
         <h1 className="text-6xl font-bold text-white drop-shadow-[0_4px_12px_rgba(255,255,255,0.3)]">
           Fin-App-Hub
         </h1>
-        
         <p className="text-slate-100 text-lg font-light tracking-wide">
           Finansijski izveštaji, reklamacije, parking...
         </p>
-
         <div className="pt-4">
           <LoginButton mode="modal" asChild>
             <Button 

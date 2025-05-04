@@ -1,127 +1,243 @@
-// /components/providers/ProviderList.tsx
+// Path: components/providers/ProviderList.tsx
 "use client";
 
-import { useState, useMemo } from "react";
-import Link from "next/link";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-// Pretpostavljamo uvoz UI komponenti ako su Shadcn UI:
-import { Button } from "@/components/ui/button"; // Odkomentarisati ako se koriste Shadcn buttoni
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Odkomentarisati ako se koriste Shadcn table
+import { formatDistanceToNow } from "date-fns";
+import {
+  Provider,
+} from "@prisma/client";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Eye, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { deleteProvider } from "@/actions/providers/delete";
 
+type ProviderWithRelations = Provider & {
+};
 
-import { useProviders } from "@/hooks/use-providers";
+interface ProviderListProps {
+  providers: ProviderWithRelations[];
+  totalProviders: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  userRole: string;
+  onDeleteSuccess: () => void;
+}
 
-import { ProviderFilters } from "@/components/providers/ProviderFilters";
+export function ProviderList({
+  providers,
+  totalProviders,
+  page,
+  pageSize,
+  onPageChange,
+  userRole,
+  onDeleteSuccess,
+}: ProviderListProps): JSX.Element {
+  const router = useRouter();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-import { ProviderWithCounts, ProviderFilterOptions } from "@/lib/types/provider-types";
+  const totalPages = Math.ceil(totalProviders / pageSize);
+  const isAdmin = userRole === "ADMIN" || userRole === "MANAGER";
 
+  const handleView = (id: string) => {
+    router.push(`/providers/${id}`);
+  };
 
+  const handleEdit = (id: string) => {
+    router.push(`/providers/${id}/edit`);
+  };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
 
-// Komponenta za prikaz liste provajdera (više ne prima prop listu)
-export function ProviderList() { // Uklonjeni propovi
-    const router = useRouter();
+    setIsDeleting(true);
+    try {
+      const result = await deleteProvider(deleteId);
 
-    // Stanje za filter opcije koje ProviderFilters menja
-    const [filters, setFilters] = useState<ProviderFilterOptions>({});
-    // Stanje za paginaciju (ako implementirate)
-    // const [pagination, setPagination] = useState({ page: 1, limit: 10 });
-
-    // Dohvaćanje podataka koristeći useProviders hook
-    const { providers, totalCount, loading, error } = useProviders(
-        filters, // Prosleđujemo trenutne filtere hooku
-        { page: 1, limit: 100 } // Prosledite paginaciju ako je koristite
-         // Možete proslediti i praznu paginaciju { } ako ne želite limit/offset
-    );
-
-    // Funkcija koja se prosleđuje ProviderFilters komponenti
-    const handleFilterChange = (filterOptions: ProviderFilterOptions) => {
-        // Ažurirajte stanje filtera u ovoj komponenti
-        setFilters(filterOptions);
-        // Ako koristite paginaciju, resetujte na prvu stranicu pri promeni filtera
-        // setPagination(prev => ({ ...prev, page: 1 }));
-    };
-
-    // Memoizacija za izvedene podatke ako je potrebno (npr. formatiranje)
-    // const formattedProviders = useMemo(() => { ... }, [providers]);
-
-
-    // Prikazivanje stanja učitavanja ili greške
-    if (loading) {
-        // Renderujte skeleton ili poruku za učitavanje
-         return <div className="text-center py-4 text-muted-foreground">Loading providers...</div>;
+      if (result?.success) {
+        toast.success("Provider has been deleted");
+        setDeleteId(null);
+        onDeleteSuccess();
+      } else {
+        toast.error(result?.error || "Failed to delete provider");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "An unexpected error occurred during deletion");
+      console.error("Delete Provider Error:", error);
+    } finally {
+      setIsDeleting(false);
     }
+  };
 
-    if (error) {
-        // Renderujte poruku o grešci
-         return <div className="text-center py-4 text-red-500">Error loading providers: {error.message}</div>;
+  const formatSafeDate = (date: Date | string | null | undefined) => {
+    try {
+      if (!date) return "N/A";
+      const validDate = date instanceof Date ? date : new Date(date);
+      if (isNaN(validDate.getTime())) return "Invalid Date";
+      return formatDistanceToNow(validDate, { addSuffix: true });
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return "Error";
     }
+  };
 
-
-    return (
-        <div className="space-y-4">
-            <ProviderFilters onFilterChange={handleFilterChange} />
-
-
-            <div className="rounded-md border">
-                
-                <table> {/* Koristiti Shadcn Table ako je importovan */}
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Contact Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Active</th>
-                            <th>Contracts Count</th>
-                            <th>Complaints Count</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                       
-                        {providers.length === 0 ? (
-                            <tr>
-                                <td colSpan={8} className="text-center py-4 text-muted-foreground">
-                                    No providers found.
-                                </td>
-                            </tr>
-                        ) : (
-                            providers.map((provider) => {
-                                return (
-                                    <tr key={provider.id}>
-                                        <td> 
-                                             <Link
-                                                 href={`/providers/${provider.id}`}
-                                                className="text-blue-600 hover:text-blue-800 hover:underline"
-                                            >
-                                                {provider.name}
-                                            </Link>
-                                        </td>
-                                        <td>{provider.contactName || 'N/A'}</td> 
-                                        <td>{provider.email || 'N/A'}</td> 
-                                        <td>{provider.phone || 'N/A'}</td> 
-                                         <td>{provider.isActive ? 'Yes' : 'No'}</td> 
-                                          {/* Prikaz brojača iz _count */}
-                                         <td>{provider._count?.contracts ?? 0}</td> 
-                                          <td>{provider._count?.complaints ?? 0}</td> 
-                                        <td className="text-right"> {/* Koristiti Shadcn TableCell */}
-                                            <button
-                                                onClick={() => router.push(`/providers/${provider.id}`)}
-                                                className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input hover:bg-accent px-3 py-1.5" // Osnovni stil dugmeta
-                                            >
-                                                View
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-
+  return (
+    <>
+      <div className="w-full">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Contact Person</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Created At</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(!Array.isArray(providers) || providers.length === 0) ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No providers found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                providers.map((provider) => (
+                  <TableRow
+                    key={provider.id}
+                    onClick={() => handleView(provider.id)}
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  >
+                    <TableCell className="font-medium">{provider.name}</TableCell>
+                    <TableCell>{provider.contactName || "N/A"}</TableCell>
+                    <TableCell>{provider.email || "N/A"}</TableCell>
+                    <TableCell>{provider.phone || "N/A"}</TableCell>
+                    <TableCell>
+                      {formatSafeDate(provider.createdAt)}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleView(provider.id)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(provider.id)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          {isAdmin && (
+                            <DropdownMenuItem
+                              onClick={() => setDeleteId(provider.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-    );
+
+        {totalPages > 1 && (
+          <Pagination className="mt-4">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => onPageChange(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <PaginationItem key={pageNum} className={pageNum === page ? "font-bold" : ""}>
+                  <PaginationLink
+                    onClick={() => onPageChange(pageNum)}
+                    isActive={pageNum === page}
+                  >
+                    {pageNum}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+      </div>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the provider
+              and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }

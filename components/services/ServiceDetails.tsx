@@ -1,24 +1,43 @@
-///components/services/ServiceDetails.tsx
-
-
+// components/services/ServiceDetails.tsx
+'use client';
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { getServiceById } from "@/actions/services/get";
 
 interface ServiceDetailsProps {
-  service: {
-    id: string;
-    name: string;
-    type: string;
-    description?: string | null;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  };
+  serviceId: string;
 }
 
-export function ServiceDetails({ service }: ServiceDetailsProps) {
+export function ServiceDetails({ serviceId }: ServiceDetailsProps) {
+  const [service, setService] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadServiceData() {
+      try {
+        const result = await getServiceById(serviceId);
+        if (result.error) {
+          setError(result.error);
+        } else if (result.data) {
+          setService(result.data);
+        } else {
+          setError("Service not found");
+        }
+      } catch (err) {
+        setError("Failed to load service details");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadServiceData();
+  }, [serviceId]);
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case "VAS":
@@ -33,6 +52,36 @@ export function ServiceDetails({ service }: ServiceDetailsProps) {
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-6">
+            <p>Loading service details...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !service) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-6 text-red-500">
+            {error || "Service not found"}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

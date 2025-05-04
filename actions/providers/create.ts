@@ -1,50 +1,52 @@
 // /actions/providers/create.ts
 'use server';
 
-import { db } from '@/lib/db'; // Assuming this is the path to your Prisma client
-import { providerSchema, ProviderFormData } from '@/schemas/provider'; // Assuming this is the path to your schema and types
+import { db } from '@/lib/db';
+import { providerSchema, ProviderFormData } from '@/schemas/provider';
 import { revalidatePath } from 'next/cache';
+import { auth } from '@/auth';
+import { LogSeverity } from '@prisma/client';
+import { z } from 'zod';
 
-/**
- * Server Action to create a new provider.
- * Validates input data using Zod schema.
- * @param data - Provider data from the form.
- * @returns A result object indicating success or error.
- */
-export async function createProvider(data: ProviderFormData): Promise<{ success?: string; id?: string; error?: string; details?: any }> {
-    // Validate input data using the Zod schema
+export async function createProvider(data: ProviderFormData): Promise<{ success?: string; id?: string; error?: string; details?: any, success: boolean, message?: string }> {
     const validationResult = providerSchema.safeParse(data);
 
     if (!validationResult.success) {
-        // If validation fails, return a detailed error
+        console.error("Validation failed:", validationResult.error.format());
         return {
             error: 'Validation failed.',
-            details: validationResult.error.format(), // Return formatted Zod errors
+            details: validationResult.error.format(),
+            success: false
         };
     }
 
     const validatedData = validationResult.data;
 
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    if (!userId) {
+         return { error: "Unauthorized", success: false };
+    }
+
     try {
-        // Check if a provider with the same name already exists (case-insensitive)
         const existingProvider = await db.provider.findFirst({
             where: {
                 name: {
                     equals: validatedData.name,
-                    mode: 'insensitive', // Case-insensitive check
+                    mode: 'insensitive',
                 },
             },
         });
 
         if (existingProvider) {
-            return { error: `Provider with name "${validatedData.name}" already exists.` };
+            return { error: `Provider with name "${validatedData.name}" already exists.`, success: false };
         }
 
-        // Create the provider in the database
         const provider = await db.provider.create({
             data: {
                 name: validatedData.name,
-                contactName: validatedData.contactName || null, // Store empty string as null in DB
+                contactName: validatedData.contactName || null,
                 email: validatedData.email || null,
                 phone: validatedData.phone || null,
                 address: validatedData.address || null,
@@ -52,18 +54,46 @@ export async function createProvider(data: ProviderFormData): Promise<{ success?
             },
         });
 
-        // Revalidate cache for the providers list page
+        await db.activityLog.create({
+          data: {
+            action: "PROVIDER_CREATED",
+            entityType: "provider",
+            entityId: provider.id,
+            details: `Provider created: ${provider.name}`,
+            userId: userId,
+            severity: "INFO",
+          },
+        });
+
         revalidatePath('/providers');
-         // Revalidate cache for the new provider's detail page
-         revalidatePath(`/providers/${provider.id}`);
+        revalidatePath(`/providers/${provider.id}`);
 
-
-        return { success: 'Provider created successfully.', id: provider.id };
+        return { success: true, message: 'Provider created successfully.', id: provider.id };
 
     } catch (error) {
-        console.error("Error creating provider:", error);
-        // Check for unique constraint errors if needed
-        // if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') { ... }
-        return { error: 'Failed to create provider.' };
+        console.error("[PROVIDER_CREATE_ERROR] Error creating provider:", error);
+
+        if (error instanceof Error) {
+           const prismaError = error as any;
+           if (prismaError.code === 'P2002') {
+             return {
+                error: "Data conflict",
+                message: "A provider with this name already exists.",
+                details: prismaError.meta?.target,
+                success: false
+             };
+           }
+           if (prismaError.code && prismaError.clientVersion) {
+                return {
+                    error: "Database operation failed",
+                    message: `Prisma error: ${prismaError.code}`,
+                    details: prismaError.message,
+                    success: false
+                };
+           }
+        }
+
+
+        return { error: 'Failed to create provider.', success: false, message: "An unexpected error occurred." };
     }
 }

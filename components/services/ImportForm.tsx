@@ -1,4 +1,4 @@
-// /components/services/ImportForm.tsx
+// Path: components/services/ImportForm.tsx
 'use client';
 
 import { useState } from 'react';
@@ -6,21 +6,27 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-// Uvozimo AŽURIRANU Server Akciju za import servisa
-import { importServices } from '@/actions/services/import'; // Akcija je ažurirana
-// Uvozimo tip rezultata importa
-import { CsvImportResult, CsvRowValidationResult } from '@/lib/types/csv-types'; // Tipovi su ažurirani
-// Uvozimo UI komponente iz Shadcn UI
+// Uvoz Server Akcije i tipa rezultata (ImportResult tip se koristi ovde)
+import { importVasServiceData, type VasImportResult } from '@/actions/services/importVasData';
+
+// Uvozimo Button
 import { Button } from '@/components/ui/button';
+
+// Ostavljamo Input i Form komponente
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/components/ui/use-toast';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+
+// Uvozimo custom useToast hook (koristite VAŠU STVARNU putanju)
+import { useToast } from "@/components/toast/toast-context"; // <-- Proverite/Ispravite putanju!
+
+// Uvozimo Card komponente
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
+// Ostavljamo komponente za prikaz rezultata
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Za prikaz liste grešaka ako je dugačka
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
-// Zod šema za validaciju inputa fajla (jednostavno, samo da fajl postoji)
 const formSchema = z.object({
     csvFile: z.instanceof(File).refine(file => file.size > 0, "CSV file is required."),
 });
@@ -28,209 +34,216 @@ const formSchema = z.object({
 type ImportFormValues = z.infer<typeof formSchema>;
 
 
-/**
- * Component for handling service CSV import form.
- * Allows user to select a CSV file and triggers the importServices action.
- * Displays import results, including errors.
- * Usklađena sa importServices action i CsvImportResult tipom.
- */
 export function ImportForm() {
-    const { toast } = useToast();
+    // console.log("Rendering ImportForm (sa custom toast, rezultati prikazani)"); // Ažuriran log
+
+    const { showToastMessage } = useToast();
     const [isLoading, setIsLoading] = useState(false);
-    // Stanje za prikaz rezultata importa
-    const [importResult, setImportResult] = useState<CsvImportResult<any> | null>(null);
+    // importResult čuva rezultat akcije tipa VasImportResult
+    const [importResult, setImportResult] = useState<VasImportResult | null>(null);
 
 
-    // Definisanje forme sa zodResolver-om
     const form = useForm<ImportFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            csvFile: undefined, // Input tip 'file' počinje kao undefined
+            csvFile: undefined,
         },
     });
 
-    // Rukovalac slanja forme
     const onSubmit = async (values: ImportFormValues) => {
         setIsLoading(true);
-        setImportResult(null); // Resetuj prethodne rezultate
+        setImportResult(null); // Resetujemo rezultat pre novog uvoza
 
         const file = values.csvFile;
 
-        // Čitanje sadržaja fajla kao teksta
+        // Provera tipa fajla pre čitanja (opciono, ali dobra praksa)
+        if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+             showToastMessage('Please upload a valid CSV file.', true);
+             setIsLoading(false);
+             return;
+        }
+
+
         const reader = new FileReader();
 
         reader.onload = async (event) => {
             const csvContent = event.target?.result as string;
 
             if (!csvContent) {
-                 toast({
-                     title: 'Error',
-                     description: 'Could not read CSV file content.',
-                     variant: 'destructive',
-                 });
-                 setIsLoading(false);
-                 return;
+                showToastMessage('Could not read CSV file content.', true);
+                setIsLoading(false);
+                 // Nema rezultata za prikaz, setujemo null
+                setImportResult(null);
+                return;
             }
 
-            // Pozivanje AŽURIRANE Server Akcije za import
-            const result = await importServices(csvContent); // Akcija vraća CsvImportResult + error string
+            // Poziv server akcije sa sadržajem fajla
+            const result = await importVasServiceData(csvContent);
 
             setIsLoading(false);
-            setImportResult(result); // Postavi rezultat importa
+            // Postavljamo rezultat za prikaz na frontend-u
+            setImportResult(result);
 
-            if (result?.error) {
-                // Prikaz opšte greške ili grešaka na nivou fajla
-                toast({
-                    title: 'Import Failed or Completed with Errors',
-                    description: result.error || 'An error occurred during import.',
-                    variant: 'destructive',
-                });
+            // console.log("Import Result:", result); // Ostavite ovaj log za server konzolu
+
+            // Prikaz toast poruke na osnovu rezultata
+            if (result.importErrors.length > 0 || result.invalidRows.length > 0) {
+                 // Poruka za delimičan uspeh ili potpun neuspeh
+                showToastMessage(
+                    `Import završen sa problemima. Procesirano: ${result.processedCount}, Nevalidnih redova: ${result.invalidRows.length}, Grešaka fajla: ${result.importErrors.length}.`,
+                    true // true za error stil
+                );
             } else {
-                // Prikaz uspeha (čak i ako ima neuspelih redova validacije)
-                toast({
-                    title: 'Import Processed',
-                    description: `Import finished. ${result?.validRows.length ?? 0} valid rows, ${result?.invalidRows.length ?? 0} invalid rows.`,
-                    // variant: result?.invalidRows.length > 0 ? 'warning' : 'success', // Može biti warning ako ima nevalidnih redova
-                });
+                 // Poruka za potpun uspeh
+                showToastMessage(
+                    `Import uspešan! Procesirano: ${result.processedCount}, Kreirano: ${result.createdCount}, Ažurirano: ${result.updatedCount}.`,
+                    false // false za success stil
+                );
             }
         };
 
         reader.onerror = () => {
             setIsLoading(false);
-            toast({
-                 title: 'Error',
-                 description: 'Failed to read file.',
-                 variant: 'destructive',
-             });
+            showToastMessage('Failed to read file.', true);
+             setImportResult(null);
         };
 
-        reader.readAsText(file); // Čitanje fajla kao teksta (za CSV)
+        reader.readAsText(file);
     };
 
 
     return (
-        <Card className="w-full">
-            <CardHeader>
-                <CardTitle>Import Services from CSV</CardTitle>
-                <p className="text-sm text-muted-foreground">Upload a CSV file to import service data.</p>
-                 {/* Opciono: Link za preuzimanje template CSV fajla */}
-                 {/* <Button variant="link" className="p-0 mt-2 h-auto" asChild>
-                      <a href="/templates/service_import_template.csv" download>Download CSV Template</a>
-                 </Button> */}
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        {/* Polje za odabir fajla */}
-                        <FormField
-                            control={form.control}
-                            name="csvFile"
-                            render={({ field: { value, onChange, ...fieldProps } }) => (
-                                <FormItem>
-                                    <FormLabel>CSV File</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            {...fieldProps}
-                                            type="file"
-                                            accept=".csv" // Prihvati samo CSV fajlove
-                                            onChange={event => {
-                                                // Setujemo fajl u formu
-                                                onChange(event.target.files && event.target.files.length > 0 ? event.target.files[0] : undefined);
-                                            }}
-                                            disabled={isLoading}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+        <>
+            {/* console.log("Rendering Card start") */}
+            <Card className="w-full">
+                {/* console.log("Rendering CardHeader start") */}
+                <CardHeader>
+                    <CardTitle>Import VAS Service Data from CSV</CardTitle>
+                    <p className="text-sm text-muted-foreground">Upload a CSV file containing VAS service usage data.</p>
+                    <a
+                        href="/templates/vas_import_template.csv"
+                        download
+                        className="text-blue-600 hover:underline text-sm mt-2 inline-block"
+                    >
+                        Download VAS CSV Template
+                    </a>
+                {/* console.log("Rendering CardHeader end") */}
+                </CardHeader>
+                {/* console.log("Rendering CardContent start") */}
+                <CardContent className="space-y-6">
 
-                        {/* Dugme za slanje forme */}
-                        <Button type="submit" disabled={isLoading || !form.formState.isValid}>
-                            {isLoading ? 'Importing...' : 'Import CSV'}
-                        </Button>
-                    </form>
-                </Form>
+                    {/* console.log("Rendering Form wrapper start") */}
+                    <Form {...form}>
+                        {/* console.log("Rendering form tag start") */}
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            {/* console.log("Rendering FormField start") */}
+                            <FormField
+                                control={form.control}
+                                name="csvFile"
+                                render={({ field: { value, onChange, ...fieldProps } }) => (
+                                    <FormItem>
+                                        <FormLabel>VAS Data CSV File</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...fieldProps}
+                                                type="file"
+                                                accept=".csv"
+                                                onChange={event => {
+                                                    // Postavljamo samo prvi izabrani fajl
+                                                    onChange(event.target.files && event.target.files.length > 0 ? event.target.files[0] : undefined);
+                                                }}
+                                                disabled={isLoading}
+                                            />
+                                        </FormControl>
+                                        {/* <FormMessage /> prikazuje validation error iz react-hook-form/zod */}
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            {/* console.log("Rendering FormField end") */}
+                            <Button type="submit" disabled={isLoading || !form.formState.isValid || isLoading}>
+                                {isLoading ? 'Importing...' : 'Import VAS Data'}
+                            </Button>
+                        {/* console.log("Rendering form tag end") */}
+                        </form>
+                    {/* console.log("Rendering Form wrapper end") */}
+                    </Form>
 
-                {/* Prikaz rezultata importa */}
+                {/* console.log("Evaluating importResult conditional", importResult ? "true" : "false") */}
+                {/* *** OTKOMENTARISANI BLOK ZA PRIKAZ DETALJNIH REZULTATA *** */}
                 {importResult && (
                     <div className="mt-6 space-y-4">
                         <h3 className="text-lg font-semibold">Import Results</h3>
                         <p className="text-sm text-muted-foreground">
-                            Total rows processed: {importResult.totalRows}
+                            Ukupno redova podataka u fajlu (bez headera): {importResult.totalRows}
                         </p>
-                        <p className="text-sm text-green-600">
-                            Valid rows for import: {importResult.validRows.length}
-                        </p>
-                         {importResult.createdCount !== undefined && ( // Prikaz broja kreiranih ako je akcija vratila createdCount
-                              <p className="text-sm text-blue-600">
-                                   Actually created: {importResult.createdCount}
-                               </p>
+
+                         {/* Prikazivanje osnovnih brojača */}
+                         <p className="text-sm">
+                             Procesirano za pokušaj uvoza: <span className="font-medium">{importResult.processedCount}</span>
+                         </p>
+                          <p className="text-sm text-green-600">
+                             Uspešno kreirano: <span className="font-medium">{importResult.createdCount}</span>
+                         </p>
+                          <p className="text-sm text-orange-600">
+                             Uspešno ažurirano: <span className="font-medium">{importResult.updatedCount}</span>
+                         </p>
+                         <p className="text-sm text-red-600">
+                             Nevalidnih redova (sa greškama): <span className="font-medium">{importResult.invalidRows.length}</span>
+                         </p>
+                          {importResult.importErrors.length > 0 && (
+                              <p className="text-sm text-red-700">
+                                  Grešaka pri parsiranju fajla: <span className="font-medium">{importResult.importErrors.length}</span>
+                             </p>
                          )}
-                        <p className="text-sm text-red-600">
-                            Invalid rows: {importResult.invalidRows.length}
-                        </p>
+
+
+                        {/* Prikaz detaljnih grešaka pri parsiranju fajla ako ih ima */}
                         {importResult.importErrors.length > 0 && (
-                            <p className="text-sm text-red-600">
-                                File processing errors: {importResult.importErrors.length}
-                            </p>
-                        )}
-
-                        {/* Prikaz detalja neuspelih redova validacije */}
-                        {importResult.invalidRows.length > 0 && (
-                             <div className="space-y-2">
-                                 <h4 className="font-medium">Invalid Row Details ({importResult.invalidRows.length})</h4>
-                                  {/* Koristimo ScrollArea ako je lista dugačka */}
-                                 <ScrollArea className="h-48 border rounded-md">
-                                     <Table>
-                                         <TableHeader>
-                                             <TableRow>
-                                                 <TableHead className="w-[50px]">Row #</TableHead>
-                                                 <TableHead>Original Data</TableHead>
-                                                 <TableHead>Errors</TableHead>
-                                             </TableRow>
-                                         </TableHeader>
-                                         <TableBody>
-                                             {importResult.invalidRows.map((rowDetail, index) => (
-                                                 <TableRow key={index}>
-                                                     <TableCell>{rowDetail.rowIndex + 1}</TableCell>
-                                                     <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
-                                                         {/* Prikaz originalnih podataka - konvertujte objekat u string */}
-                                                         {JSON.stringify(rowDetail.originalRow)}
-                                                     </TableCell>
-                                                     <TableCell className="text-xs text-red-600 max-w-xs">
-                                                         {/* Prikaz grešaka */}
-                                                         {rowDetail.errors.join('; ')}
-                                                     </TableCell>
-                                                 </TableRow>
-                                             ))}
-                                         </TableBody>
-                                     </Table>
-                                 </ScrollArea>
-                             </div>
-                        )}
-
-                         {/* Prikaz detalja grešaka na nivou fajla */}
-                         {importResult.importErrors.length > 0 && (
-                             <div className="space-y-2">
-                                  <h4 className="font-medium">File Processing Errors ({importResult.importErrors.length})</h4>
-                                   <ScrollArea className="h-24 border rounded-md p-2 text-sm text-red-600">
-                                       <ul>
+                            <div className="space-y-2">
+                                <h4 className="font-medium text-red-600">Greške pri parsiranju fajla ({importResult.importErrors.length})</h4>
+                                <ScrollArea className="h-24 border rounded-md p-2 text-sm text-red-600">
+                                    <div className="relative w-full overflow-auto">
+                                        <ul>
                                             {importResult.importErrors.map((err, index) => (
-                                                 <li key={index}>{err}</li>
+                                                <li key={index}>{err}</li>
                                             ))}
                                         </ul>
-                                   </ScrollArea>
-                             </div>
-                         )}
-                    </div>
-                )}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        )}
 
-            </CardContent>
-             {/* Opciono: CardFooter */}
-             {/* <CardFooter>
-                  <p className="text-xs text-muted-foreground">Make sure your CSV header matches the template.</p>
-             </CardFooter> */}
-        </Card>
+                        {/* Prikaz detaljnih grešaka za nevalidne redove ako ih ima */}
+                        {importResult.invalidRows.length > 0 && (
+                            <div className="space-y-2">
+                                 <h4 className="font-medium text-red-600">Detaljne greške za nevalidne redove ({importResult.invalidRows.length})</h4>
+                                <ScrollArea className="h-48 border rounded-md p-2 text-sm text-red-600">
+                                    <div className="relative w-full overflow-auto">
+                                        <ul>
+                                            {/* Ograničavamo broj prikazanih grešaka radi performansi i UI */}
+                                            {importResult.invalidRows.slice(0, 50).map((rowError, index) => (
+                                                 // Prikazujemo samo broj reda i listu grešaka
+                                                 <li key={index}>
+                                                     Red {rowError.rowIndex + 1}: {rowError.errors.join('; ')}
+                                                 </li>
+                                            ))}
+                                            {importResult.invalidRows.length > 50 && (
+                                                 <li>... i još {importResult.invalidRows.length - 50} grešaka.</li>
+                                            )}
+                                        </ul>
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        )}
+
+                    </div>
+                )} {/* *** KRAJ OTKOMENTARISANOG BLOKA *** */}
+
+                {/* console.log("Rendering CardContent end") */}
+                </CardContent>
+            </Card>
+            {/* console.log("Rendering Card end") */}
+        </>
     );
 }

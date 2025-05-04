@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { cn, formatDate } from "@/lib/utils";
 import { createReminder } from "@/actions/contracts/create-reminder";
 import { acknowledgeReminder } from "@/actions/contracts/acknowledge-reminder";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/toast/toast-context";
 
 interface Reminder {
   id: string;
