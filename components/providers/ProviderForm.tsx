@@ -29,7 +29,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"; // Import Form components
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"; // Use Card structure
-import { useToast } from "@/components/toast/toast-context"; // For notifications
+import { toast } from "sonner"; // For notifications
 
 
 interface ProviderFormProps {
@@ -56,7 +56,7 @@ interface ProviderFormProps {
 // Komponenta forme za kreiranje ili editovanje provajdera
 export function ProviderForm({ provider }: ProviderFormProps) {
     const router = useRouter();
-    const { toast } = useToast(); // Initialize useToast
+    // const { toast } = useToast(); // Initialize useToast
     const [isLoading, setIsLoading] = useState(false);
     // Server greška će se rukovati kroz useToast ili prikazati unutar forme
     // const [serverError, setServerError] = useState<string | null>(null); // Uklanjamo ovo u korist useToast
