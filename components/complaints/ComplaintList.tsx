@@ -1,3 +1,4 @@
+// Fixed ComplaintList Component
 "use client";
 
 import { useState } from "react";
@@ -196,25 +197,41 @@ export function ComplaintList({
         <Pagination className="mt-4">
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious
-                onClick={() => onPageChange(Math.max(1, page - 1))}
-                disabled={page === 1}
+              <PaginationPrevious 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  onPageChange(Math.max(1, page - 1));
+                }} 
+                aria-disabled={page === 1}
+                className={page === 1 ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
+            
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-              <PaginationItem key={pageNum} className={pageNum === page ? "font-bold" : ""}>
+              <PaginationItem key={pageNum}>
                 <PaginationLink
-                  onClick={() => onPageChange(pageNum)}
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onPageChange(pageNum);
+                  }}
                   isActive={pageNum === page}
                 >
                   {pageNum}
                 </PaginationLink>
               </PaginationItem>
             ))}
+            
             <PaginationItem>
-              <PaginationNext
-                onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                disabled={page === totalPages}
+              <PaginationNext 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  onPageChange(Math.min(totalPages, page + 1));
+                }} 
+                aria-disabled={page === totalPages}
+                className={page === totalPages ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
           </PaginationContent>
