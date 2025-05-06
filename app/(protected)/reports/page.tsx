@@ -56,33 +56,7 @@ export default async function ReportsPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {recentReports && recentReports.length > 0 ? (
               recentReports.map((report) => (
-                // CORRECTED: Render ReportPreview directly for each report
-                // ReportPreview component handles its own Card structure
-                 <ReportPreview key={report.id} report={report} />
-
-                   Removed the manual Card structure and inner ReportPreview usage
-                   <Card key={report.id}>
-                     <CardHeader className="pb-2">
-                       <div className="flex justify-between items-start">
-                         <CardTitle>{report.name}</CardTitle>
-                         <div className="text-sm text-muted-foreground flex items-center">
-                           
-                           <CalendarIcon className="mr-1 h-3 w-3" />
-                            {format(new Date(report.createdAt), "PPP")}
-                         </div>
-                       </div>
- 
-                     </CardHeader>
-                     <CardContent>
- 
-                       <div className="mt-4 flex justify-end">
-                         
-                          <Button variant="outline" size="sm" asChild>
-                           <Link href={report.fileUrl}>Download</Link>
-                         </Button>
-                       </div>
-                     </CardContent>
-                    </Card>
+                <ReportPreview key={report.id} report={report} />
               ))
             ) : (
               <Card className="col-span-full p-6">
@@ -100,8 +74,6 @@ export default async function ReportsPage() {
             )}
           </div>
         </TabsContent>
-
-    
 
         <TabsContent value="financial" className="space-y-4">
           <Card className="p-6">
@@ -134,5 +106,5 @@ export default async function ReportsPage() {
         </TabsContent>
       </Tabs>
     </div>
- 
+  );
 }
