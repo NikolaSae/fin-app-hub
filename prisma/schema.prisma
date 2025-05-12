@@ -206,11 +206,15 @@ model Contract {
   endDate           DateTime
   revenuePercentage Float               // Percentage of revenue for the platform
   description       String?             @db.Text
-  
+
+  operatorRevenue   Float?    // Percentage for the operator
+  isRevenueSharing  Boolean   @default(true)
+  operatorId        String?
+
   // Relations
   providerId        String?
   provider          Provider?           @relation(fields: [providerId], references: [id])
-  
+  operator          Operator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
   humanitarianOrgId String?
   humanitarianOrg   HumanitarianOrg?    @relation(fields: [humanitarianOrgId], references: [id])
   
@@ -242,6 +246,7 @@ model Contract {
   @@index([parkingServiceId])
   @@index([status])
   @@index([endDate]) // For efficient expiration checks
+  @@index([operatorId])
 }
 
 // Humanitarian Contract Renewal Sub-statuses
@@ -288,6 +293,23 @@ model HumanitarianContractRenewal {
   @@index([humanitarianOrgId])
   @@index([subStatus])
   @@index([proposedStartDate])
+}
+
+model Operator {
+  id            String    @id @default(cuid())
+  name          String
+  code          String    @unique
+  description   String?   @db.Text
+  logoUrl       String?
+  website       String?
+  contactEmail  String?
+  contactPhone  String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  contracts     Contract[]
 }
 
 model ServiceContract {

@@ -6,48 +6,45 @@ import { contractSchema } from '@/schemas/contract';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import type { ContractFormData } from '@/schemas/contract';
+import { z } from 'zod';
 
 export async function createContract(data: ContractFormData) {
   try {
-    // Format dates properly if they exist but are not in ISO format
     const formattedData = {
       ...data,
-      // Ensure dates are in proper ISO format or null if not provided
-      startDate: data.startDate ? new Date(data.startDate).toISOString() : null, // Koristite null umesto undefined za Prisma
-      endDate: data.endDate ? new Date(data.endDate).toISOString() : null, // Koristite null umesto undefined za Prisma
-      // Clean up foreign keys based on contract type
+      startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
+      endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
       providerId: data.type === 'PROVIDER' ? data.providerId : null,
       humanitarianOrgId: data.type === 'HUMANITARIAN' ? data.humanitarianOrgId : null,
       parkingServiceId: data.type === 'PARKING' ? data.parkingServiceId : null,
+      operatorId: data.operatorId || null,
+      isRevenueSharing: data.isRevenueSharing !== undefined ? data.isRevenueSharing : true,
+      operatorRevenue: data.operatorRevenue || null,
     };
 
-    // Validate input data
     const validationResult = contractSchema.safeParse(formattedData);
     if (!validationResult.success) {
-      console.error("Validation failed:", validationResult.error.flatten()); // Log validation errors server-side
+      console.error("Validation failed:", validationResult.error.flatten());
       return {
         error: "Validation failed",
         details: validationResult.error.flatten(),
-        success: false // Dodajte success: false za konzistentnost
+        success: false
       };
     }
 
-    // Authentication check
     const session = await auth();
     if (!session?.user?.id) {
-      return { error: "Unauthorized", success: false }; // Dodajte success: false
+      return { error: "Unauthorized", success: false };
     }
 
-    // Check for existing contract number
     const existingContract = await db.contract.findUnique({
       where: { contractNumber: formattedData.contractNumber },
     });
     if (existingContract) {
-       console.warn(`Attempted to create duplicate contract number: ${formattedData.contractNumber}`); // Log warning server-side
-      return { error: "Contract number already exists", success: false }; // Dodajte success: false
+      console.warn(`Attempted to create duplicate contract number: ${formattedData.contractNumber}`);
+      return { error: "Contract number already exists", success: false };
     }
 
-    // Create contract with relations
     const contractData = {
       name: formattedData.name,
       contractNumber: formattedData.contractNumber,
@@ -57,16 +54,19 @@ export async function createContract(data: ContractFormData) {
       endDate: formattedData.endDate,
       revenuePercentage: formattedData.revenuePercentage,
       description: formattedData.description,
-      providerId: formattedData.providerId, // Koristite validirane/formatirane vrednosti
-      humanitarianOrgId: formattedData.humanitarianOrgId, // Koristite validirane/formatirane vrednosti
-      parkingServiceId: formattedData.parkingServiceId, // Koristite validirane/formatirane vrednosti
+      providerId: formattedData.providerId,
+      humanitarianOrgId: formattedData.humanitarianOrgId,
+      parkingServiceId: formattedData.parkingServiceId,
+      operatorId: formattedData.operatorId,
+      isRevenueSharing: formattedData.isRevenueSharing,
+      operatorRevenue: formattedData.operatorRevenue,
       services: {
         create: formattedData.services?.map(service => ({
           serviceId: service.serviceId,
           specificTerms: service.specificTerms
         })) || []
       },
-      createdById: session.user.id, // Polje za korisnika koji je kreirao ugovor
+      createdById: session.user.id,
     };
 
     const newContract = await db.contract.create({
@@ -76,83 +76,75 @@ export async function createContract(data: ContractFormData) {
         provider: true,
         humanitarianOrg: true,
         parkingService: true,
-        createdBy: true, // Dodajte da se dohvati info o korisniku ako je potrebno na frontend
+        operator: true,
+        createdBy: true,
       }
     });
 
-    // --- LOG ACTIVITY ---
     await db.activityLog.create({
       data: {
-        action: "CONTRACT_CREATED", // Opis radnje
-        entityType: "contract",    // Tip entiteta na kojem je radnja izvrsena
-        entityId: newContract.id,  // ID konkretnog entiteta (novokreiranog ugovora)
-        details: `Contract created: ${newContract.contractNumber} - ${newContract.name}`, // Kratak opis
-        userId: session.user.id,   // ID korisnika koji je izvrsio radnju
-        severity: "INFO",          // Nivo severnosti (INFO za kreiranje)
+        action: "CONTRACT_CREATED",
+        entityType: "contract",
+        entityId: newContract.id,
+        details: `Contract created: ${newContract.contractNumber} - ${newContract.name}`,
+        userId: session.user.id,
+        severity: "INFO",
       },
     });
-    // --- KRAJ LOGOVANJA ---
 
-
-    // Revalidate paths
     revalidatePath('/contracts');
     revalidatePath(`/contracts/${newContract.id}`);
 
     return {
-      success: true, // Koristite boolean success
+      success: true,
       message: "Contract created successfully",
-      id: newContract.id, // Vratite ID novog ugovora
-      contract: newContract // Opciono, vratite ceo objekat ugovora ako treba na frontendu
+      id: newContract.id,
+      contract: newContract
     };
 
   } catch (error) {
-    console.error("[CONTRACT_CREATE_ERROR]", error); // Standardizovan log format
+    console.error("[CONTRACT_CREATE_ERROR]", error);
 
     if (error instanceof z.ZodError) {
        const formattedErrors = error.format();
        return {
-         error: "Invalid input data", // Opstija poruka za validaciju
-         formErrors: formattedErrors, // Detalji validacionih gresaka
+         error: "Invalid input data",
+         formErrors: formattedErrors,
          success: false
        };
     }
 
-    // Handle Prisma errors
     if (error instanceof Error) {
-       const prismaError = error as any; // Cast to any to access Prisma specific properties
+       const prismaError = error as any;
 
-       // Handle specific Prisma error codes
        if (prismaError.code === 'P2002') {
          return {
-            error: "Data conflict", // Opstija poruka
+            error: "Data conflict",
             message: "A record with this unique field already exists.",
-            details: prismaError.meta?.target, // Npr. target field
+            details: prismaError.meta?.target,
             success: false
          };
        }
 
        if (prismaError.code === 'P2003') {
-         // Foreign key constraint violation
          return {
            error: "Invalid reference",
-           message: "One of the linked items (Provider, Org, Service) does not exist.",
-           details: prismaError.meta?.field_name, // Npr. field name
+           message: "One of the linked items (Provider, Org, Operator, Service) does not exist.",
+           details: prismaError.meta?.field_name,
            success: false
          };
        }
 
-       // Generic Prisma Client Error
        if (prismaError.code && prismaError.clientVersion) {
             return {
                 error: "Database operation failed",
                 message: `Prisma error: ${prismaError.code}`,
-                details: prismaError.message, // Include original Prisma message
+                details: prismaError.message,
                 success: false
             };
        }
     }
 
-    // Generic catch-all error
     return {
       error: "An unexpected error occurred",
       message: "Failed to create contract.",

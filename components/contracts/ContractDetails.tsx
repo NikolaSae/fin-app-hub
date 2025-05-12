@@ -20,6 +20,7 @@ interface ContractWithRelations extends Contract {
   provider?: { name: string; id: string } | null;
   humanitarianOrg?: { name: string; id: string } | null;
   parkingService?: { name: string; id: string } | null;
+  operator?: { name: string; id: string } | null; // Added operator relation
   services?: { service: Service }[];
   attachments?: ContractAttachment[];
   reminders?: ContractReminder[];
@@ -145,10 +146,39 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
                 </p>
               </div>
               
+              {/* Added Operator fields */}
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Revenue Percentage</p>
+                <p className="text-sm font-medium text-muted-foreground">Operator</p>
+                <p>
+                  {contract.operator?.id ? (
+                    <Link 
+                      href={`/operators/${contract.operator.id}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {contract.operator.name}
+                    </Link>
+                  ) : (
+                    "No operator assigned"
+                  )}
+                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Revenue Model</p>
+                <p>{contract.isRevenueSharing ? "Revenue Sharing" : "Standard"}</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Platform Revenue</p>
                 <p>{contract.revenuePercentage}%</p>
               </div>
+              
+              {contract.isRevenueSharing && contract.operatorRevenue !== null && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Operator Revenue</p>
+                  <p>{contract.operatorRevenue}%</p>
+                </div>
+              )}
               
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Start Date</p>

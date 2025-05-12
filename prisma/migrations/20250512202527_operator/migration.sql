@@ -96,6 +96,7 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT,
     "email" TEXT NOT NULL,
+    "email_verified" TIMESTAMP(3),
     "password" TEXT,
     "role" "UserRole" NOT NULL DEFAULT 'USER',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
@@ -128,6 +129,8 @@ CREATE TABLE "HumanitarianOrg" (
     "email" TEXT,
     "phone" TEXT,
     "address" TEXT,
+    "website" TEXT,
+    "mission" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -162,6 +165,9 @@ CREATE TABLE "Contract" (
     "endDate" TIMESTAMP(3) NOT NULL,
     "revenuePercentage" DOUBLE PRECISION NOT NULL,
     "description" TEXT,
+    "operatorRevenue" DOUBLE PRECISION,
+    "isRevenueSharing" BOOLEAN NOT NULL DEFAULT true,
+    "operatorId" TEXT,
     "providerId" TEXT,
     "humanitarianOrgId" TEXT,
     "parkingServiceId" TEXT,
@@ -194,6 +200,23 @@ CREATE TABLE "HumanitarianContractRenewal" (
     "lastModifiedById" TEXT,
 
     CONSTRAINT "HumanitarianContractRenewal_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Operator" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "description" TEXT,
+    "logoUrl" TEXT,
+    "website" TEXT,
+    "contactEmail" TEXT,
+    "contactPhone" TEXT,
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Operator_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -321,6 +344,7 @@ CREATE TABLE "Complaint" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "resolvedAt" TIMESTAMP(3),
     "closedAt" TIMESTAMP(3),
+    "humanitarianOrgId" TEXT,
 
     CONSTRAINT "Complaint_pkey" PRIMARY KEY ("id")
 );
@@ -421,6 +445,17 @@ CREATE TABLE "GeneratedReport" (
     CONSTRAINT "GeneratedReport_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "NotificationPreference" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "preferences" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "NotificationPreference_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "accounts_provider_provider_account_id_key" ON "accounts"("provider", "provider_account_id");
 
@@ -452,7 +487,10 @@ CREATE UNIQUE INDEX "TwoFactorConfirmation_userId_key" ON "TwoFactorConfirmation
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE INDEX "Provider_name_idx" ON "Provider"("name");
+CREATE UNIQUE INDEX "Provider_name_key" ON "Provider"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "HumanitarianOrg_name_key" ON "HumanitarianOrg"("name");
 
 -- CreateIndex
 CREATE INDEX "HumanitarianOrg_name_idx" ON "HumanitarianOrg"("name");
@@ -479,6 +517,9 @@ CREATE INDEX "Contract_status_idx" ON "Contract"("status");
 CREATE INDEX "Contract_endDate_idx" ON "Contract"("endDate");
 
 -- CreateIndex
+CREATE INDEX "Contract_operatorId_idx" ON "Contract"("operatorId");
+
+-- CreateIndex
 CREATE INDEX "HumanitarianContractRenewal_contractId_idx" ON "HumanitarianContractRenewal"("contractId");
 
 -- CreateIndex
@@ -489,6 +530,9 @@ CREATE INDEX "HumanitarianContractRenewal_subStatus_idx" ON "HumanitarianContrac
 
 -- CreateIndex
 CREATE INDEX "HumanitarianContractRenewal_proposedStartDate_idx" ON "HumanitarianContractRenewal"("proposedStartDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Operator_code_key" ON "Operator"("code");
 
 -- CreateIndex
 CREATE INDEX "ServiceContract_contractId_idx" ON "ServiceContract"("contractId");
@@ -572,6 +616,9 @@ CREATE INDEX "Complaint_createdAt_idx" ON "Complaint"("createdAt");
 CREATE INDEX "Complaint_priority_idx" ON "Complaint"("priority");
 
 -- CreateIndex
+CREATE INDEX "Complaint_humanitarianOrgId_idx" ON "Complaint"("humanitarianOrgId");
+
+-- CreateIndex
 CREATE INDEX "ComplaintStatusHistory_complaintId_idx" ON "ComplaintStatusHistory"("complaintId");
 
 -- CreateIndex
@@ -640,6 +687,12 @@ CREATE INDEX "GeneratedReport_generatedAt_idx" ON "GeneratedReport"("generatedAt
 -- CreateIndex
 CREATE INDEX "GeneratedReport_scheduledReportId_idx" ON "GeneratedReport"("scheduledReportId");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "NotificationPreference_userId_key" ON "NotificationPreference"("userId");
+
+-- CreateIndex
+CREATE INDEX "NotificationPreference_userId_idx" ON "NotificationPreference"("userId");
+
 -- AddForeignKey
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -651,6 +704,9 @@ ALTER TABLE "TwoFactorConfirmation" ADD CONSTRAINT "TwoFactorConfirmation_userId
 
 -- AddForeignKey
 ALTER TABLE "Contract" ADD CONSTRAINT "Contract_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Provider"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Contract" ADD CONSTRAINT "Contract_operatorId_fkey" FOREIGN KEY ("operatorId") REFERENCES "Operator"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Contract" ADD CONSTRAINT "Contract_humanitarianOrgId_fkey" FOREIGN KEY ("humanitarianOrgId") REFERENCES "HumanitarianOrg"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -722,6 +778,9 @@ ALTER TABLE "Complaint" ADD CONSTRAINT "Complaint_submittedById_fkey" FOREIGN KE
 ALTER TABLE "Complaint" ADD CONSTRAINT "Complaint_assignedAgentId_fkey" FOREIGN KEY ("assignedAgentId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Complaint" ADD CONSTRAINT "Complaint_humanitarianOrgId_fkey" FOREIGN KEY ("humanitarianOrgId") REFERENCES "HumanitarianOrg"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ComplaintStatusHistory" ADD CONSTRAINT "ComplaintStatusHistory_complaintId_fkey" FOREIGN KEY ("complaintId") REFERENCES "Complaint"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -738,3 +797,6 @@ ALTER TABLE "ActivityLog" ADD CONSTRAINT "ActivityLog_userId_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NotificationPreference" ADD CONSTRAINT "NotificationPreference_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
