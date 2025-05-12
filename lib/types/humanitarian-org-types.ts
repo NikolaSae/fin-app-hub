@@ -18,6 +18,29 @@ export interface HumanitarianOrg {
 
 // Prošireni tip sa brojem povezanih entiteta
 export interface HumanitarianOrgWithDetails extends HumanitarianOrg {
+  contracts?: {
+    id: string;
+    name: string;
+    contractNumber: string;
+    status: string;
+    startDate: Date;
+    endDate: Date;
+    type: string;
+    revenuePercentage: number;
+    humanitarianRenewals?: {
+      id: string;
+      subStatus: string;
+      renewalStartDate: Date;
+      proposedStartDate: Date;
+      createdAt: Date;
+    }[];
+  }[];
+  complaints?: {
+    id: string;
+    title: string;
+    status: string;
+    createdAt: Date;
+  }[];
   _count?: {
     contracts: number;
     complaints: number;

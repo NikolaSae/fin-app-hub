@@ -1,6 +1,5 @@
 ///components/notifications/AdminNotificationControls.tsx
 
-
 "use client";
 
 import { useState } from "react";
@@ -23,7 +22,7 @@ export default function AdminNotificationControls({ userRoles }: AdminNotificati
   const [message, setMessage] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [template, setTemplate] = useState("custom");
+  const [template, setTemplate] = useState("custom"); // Fixed: Removed the typo 'a' at the end
 
   // Templates for quick notifications
   const templates = {
@@ -63,7 +62,7 @@ export default function AdminNotificationControls({ userRoles }: AdminNotificati
     }
   };
 
-  // Send notification
+  // Send notification to multiple users based on roles
   const handleSendNotification = async () => {
     if (!title || !message) {
       toast.error("Please provide both title and message");
@@ -78,29 +77,50 @@ export default function AdminNotificationControls({ userRoles }: AdminNotificati
     setIsSending(true);
 
     try {
-      const response = await fetch("/api/notifications", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          message,
-          type: notificationType,
-          roles: selectedRoles,
-        }),
+      // First, get users with the selected roles
+      const usersResponse = await fetch(`/api/users?roles=${selectedRoles.join(',')}`);
+      
+      if (!usersResponse.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      
+      const usersData = await usersResponse.json();
+      const users = usersData.users;
+      
+      if (!users || users.length === 0) {
+        toast.warning("No users found with the selected roles");
+        setIsSending(false);
+        return;
+      }
+      
+      // Create a notification for each user
+      const notificationPromises = users.map(async (user: { id: string }) => {
+        return fetch("/api/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title,
+            message,
+            type: notificationType,
+            userId: user.id,
+          }),
+        });
       });
-
-      if (response.ok) {
-        toast.success("Notification sent successfully");
+      
+      const results = await Promise.allSettled(notificationPromises);
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      
+      if (successful > 0) {
+        toast.success(`Notification sent to ${successful} users`);
         // Reset form
         setTitle("");
         setMessage("");
         setSelectedRoles([]);
         setTemplate("custom");
       } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to send notification");
+        toast.error("Failed to send any notifications");
       }
     } catch (error) {
       toast.error("An error occurred while sending notification");

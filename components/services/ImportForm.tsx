@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 // Uvozimo custom useToast hook (koristite VAŠU STVARNU putanju)
-import { useToast } from "@/components/toast/toast-context"; // <-- Proverite/Ispravite putanju!
+import { toast } from "sonner"; // <-- Proverite/Ispravite putanju!
 
 // Uvozimo Card komponente
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -37,7 +37,7 @@ type ImportFormValues = z.infer<typeof formSchema>;
 export function ImportForm() {
     // console.log("Rendering ImportForm (sa custom toast, rezultati prikazani)"); // Ažuriran log
 
-    const { showToastMessage } = useToast();
+    // const { showToastMessage } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     // importResult čuva rezultat akcije tipa VasImportResult
     const [importResult, setImportResult] = useState<VasImportResult | null>(null);

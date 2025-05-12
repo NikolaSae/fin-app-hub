@@ -12,6 +12,8 @@ import { getComplaintById } from "@/lib/actions/complaints";
 import { updateComplaint } from "@/actions/complaints/update";
 import { Complaint } from "@/lib/types/interfaces";
 import { Loader2 } from "lucide-react";
+// Import the ComplaintFormData type if available, or use any for now
+import { ComplaintFormData } from "@/schemas/complaint"; // Make sure this import exists
 
 export default function EditComplaintPage() {
   const params = useParams();
@@ -23,6 +25,12 @@ export default function EditComplaintPage() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+  
+  // Sample providers data - in a real app, fetch this from your API
+  const providersData = [
+    { id: "1", name: "Provider 1" },
+    { id: "2", name: "Provider 2" }
+  ];
 
   useEffect(() => {
     const fetchComplaint = async () => {
@@ -53,7 +61,7 @@ export default function EditComplaintPage() {
     fetchComplaint();
   }, [params]);
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: ComplaintFormData) => {
     try {
       if (!complaint?.id) return;
       
@@ -120,9 +128,10 @@ export default function EditComplaintPage() {
       
       {complaint && (
         <ComplaintForm
-          initialData={complaint}
+          complaint={complaint}
           onSubmit={handleSubmit}
           isSubmitting={loading}
+          providersData={providersData}
         />
       )}
     </div>

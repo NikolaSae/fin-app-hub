@@ -57,9 +57,8 @@ export async function GET(
                  complaints: {
                       select: { id: true, title: true, status: true, createdAt: true },
                  },
-                 humanitarianRenewals: true,
                  _count: {
-                      select: { contracts: true, complaints: true, humanitarianRenewals: true }
+                      select: { contracts: true, complaints: true }
                  }
             }
         });
