@@ -59,7 +59,6 @@ export default async function ReportsPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {recentReports && recentReports.length > 0 ? (
               recentReports.map((report) => (
-                // Render ReportPreview directly for each report
                 <ReportPreview key={report.id} report={report} />
               ))
             ) : (

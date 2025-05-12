@@ -1,4 +1,4 @@
-// Path: components/complaints/ComplaintList.tsx
+// Fixed ComplaintList Component
 "use client";
 
 import { useState } from "react";
@@ -56,6 +56,7 @@ type ComplaintWithRelations = Complaint & {
   product?: Product | null;
   provider?: Provider | null;
   submittedBy: User;
+  submittedBy: User; // Assuming submittedBy is always present based on type
   assignedAgent?: User | null;
 };
 
@@ -160,6 +161,10 @@ export function ComplaintList({
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
                           <MoreVertical className="h-4 w-4" />
+                      <DropdownMenuTrigger>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -203,6 +208,25 @@ export function ComplaintList({
               <PaginationItem key={pageNum} className={pageNum === page ? "font-bold" : ""}>
                 <PaginationLink
                   onClick={() => onPageChange(pageNum)}
+              <PaginationPrevious 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  onPageChange(Math.max(1, page - 1));
+                }} 
+                aria-disabled={page === 1}
+                className={page === 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <PaginationItem key={pageNum}>
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onPageChange(pageNum);
+                  }}
                   isActive={pageNum === page}
                 >
                   {pageNum}
@@ -213,6 +237,15 @@ export function ComplaintList({
               <PaginationNext
                 onClick={() => onPageChange(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
+            <PaginationItem>
+              <PaginationNext 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  onPageChange(Math.min(totalPages, page + 1));
+                }} 
+                aria-disabled={page === totalPages}
+                className={page === totalPages ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
           </PaginationContent>

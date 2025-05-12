@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 // Uvezite vaš custom useToast hook
-import { useToast } from "@/components/toast/toast-context";
+//import { useToast } from "sonner";
 import { NotificationPreferences } from "@/lib/types/notification-types";
 import { updateNotificationPreferences } from "@/actions/notifications/update-preferences";
 import { useTransition } from "react";
@@ -24,7 +24,7 @@ export default function NotificationSettings({ initialPreferences }: Notificatio
     const [isPending, startTransition] = useTransition();
 
     // !!! KORIGOVANO: Pribavite showToastMessage iz vašeg useToast hook-a !!!
-    const { showToastMessage } = useToast();
+    // const { showToastMessage } = useToast();
 
 
     useEffect(() => {

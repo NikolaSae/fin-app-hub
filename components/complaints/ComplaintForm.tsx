@@ -1,7 +1,6 @@
+
 // Path: components/complaints/ComplaintForm.tsx
 
-
-// components/complaints/ComplaintForm.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -17,6 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+
+
 
 interface ComplaintFormProps {
   complaint?: Complaint | null;
@@ -76,6 +77,14 @@ export function ComplaintForm({
   const handleProviderChange = (providerId: string) => {
     form.setValue('providerId', providerId, { shouldValidate: true });
     form.setValue('serviceId', '', { shouldValidate: true });
+
+      await onSubmit(data);
+  };
+
+  const handleProviderChange = (providerId: string) => {
+      form.setValue('providerId', providerId, { shouldValidate: true });
+      form.setValue('serviceId', '', { shouldValidate: true });
+
   };
 
   const handleServiceChange = (serviceId: string) => {
@@ -169,6 +178,8 @@ export function ComplaintForm({
                         onChange={(e) => {
                           const value = parseFloat(e.target.value);
                           field.onChange(isNaN(value) ? null : value);
+                            const value = parseFloat(e.target.value);
+                            field.onChange(isNaN(value) ? null : value);
                         }}
                       />
                     </FormControl>
@@ -177,7 +188,6 @@ export function ComplaintForm({
                 )}
               />
             </div>
-
             <FormField
               control={form.control}
               name="providerId"
@@ -199,6 +209,7 @@ export function ComplaintForm({
                       {/* FIX: Use a non-empty string value for the "No providers" option */}
                       {providersData.length === 0 && (
                         <SelectItem value="no-providers" disabled>No providers available</SelectItem>
+                        <SelectItem value="placeholder" disabled>No providers available</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -206,7 +217,6 @@ export function ComplaintForm({
                 </FormItem>
               )}
             />
-
             {watchedProviderId && (
               <FormField
                 control={form.control}
