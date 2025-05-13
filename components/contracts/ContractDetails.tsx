@@ -13,14 +13,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AttachmentList } from "@/components/contracts/AttachmentList";
 import { ReminderForm } from "@/components/contracts/ReminderForm";
-import { RevenueBreakdown } from "@/components/contracts/RevenueBreakdown";
 import { Contract, ContractAttachment, ContractReminder, Service } from "@prisma/client";
 
 interface ContractWithRelations extends Contract {
   provider?: { name: string; id: string } | null;
   humanitarianOrg?: { name: string; id: string } | null;
   parkingService?: { name: string; id: string } | null;
-  operator?: { name: string; id: string } | null; // Added operator relation
+  operator?: { name: string; id: string } | null;
   services?: { service: Service }[];
   attachments?: ContractAttachment[];
   reminders?: ContractReminder[];
@@ -68,7 +67,7 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
   };
 
   const relatedEntity = getRelatedEntityInfo();
-  
+
   const isExpiringSoon = () => {
     const today = new Date();
     const endDate = new Date(contract.endDate);
@@ -111,7 +110,7 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="details" className="space-y-4 mt-4">
           <Card>
             <CardHeader>
@@ -122,19 +121,19 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
                 <p className="text-sm font-medium text-muted-foreground">Contract Type</p>
                 <p>{contract.type}</p>
               </div>
-              
+
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Status</p>
                 <div>
                   <ContractStatusBadge status={contract.status} />
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">{relatedEntity.type}</p>
                 <p>
                   {relatedEntity.link ? (
-                    <Link 
+                    <Link
                       href={relatedEntity.link}
                       className="text-blue-600 hover:text-blue-800 hover:underline"
                     >
@@ -145,13 +144,12 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
                   )}
                 </p>
               </div>
-              
-              {/* Added Operator fields */}
+
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Operator</p>
                 <p>
                   {contract.operator?.id ? (
-                    <Link 
+                    <Link
                       href={`/operators/${contract.operator.id}`}
                       className="text-blue-600 hover:text-blue-800 hover:underline"
                     >
@@ -162,7 +160,7 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
                   )}
                 </p>
               </div>
-              
+
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Revenue Model</p>
                 <p>{contract.isRevenueSharing ? "Revenue Sharing" : "Standard"}</p>
@@ -172,44 +170,43 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
                 <p className="text-sm font-medium text-muted-foreground">Platform Revenue</p>
                 <p>{contract.revenuePercentage}%</p>
               </div>
-              
+
               {contract.isRevenueSharing && contract.operatorRevenue !== null && (
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">Operator Revenue</p>
                   <p>{contract.operatorRevenue}%</p>
                 </div>
               )}
-              
+
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Start Date</p>
                 <p>{formatDate(contract.startDate)}</p>
               </div>
-              
+
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">End Date</p>
                 <p>{formatDate(contract.endDate)}</p>
               </div>
-              
+
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Created By</p>
                 <p>{contract.createdBy?.name || "Unknown"}</p>
               </div>
-              
+
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Last Modified By</p>
                 <p>{contract.lastModifiedBy?.name || "N/A"}</p>
               </div>
-              
+
               <div className="col-span-2 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Description</p>
                 <p className="whitespace-pre-line">{contract.description || "No description provided."}</p>
               </div>
             </CardContent>
           </Card>
-          
-          <RevenueBreakdown contract={contract} />
+
         </TabsContent>
-        
+
         <TabsContent value="services" className="space-y-4 mt-4">
           <Card>
             <CardHeader>
@@ -237,7 +234,7 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="attachments" className="space-y-4 mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -250,14 +247,14 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
               </Button>
             </CardHeader>
             <CardContent>
-              <AttachmentList 
+              <AttachmentList
                 contractId={contract.id}
-                attachments={contract.attachments || []} 
+                attachments={contract.attachments || []}
               />
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="reminders" className="space-y-4 mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -269,8 +266,8 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
                 {contract.reminders && contract.reminders.length > 0 ? (
                   <div className="space-y-2">
                     {contract.reminders.map((reminder) => (
-                      <div 
-                        key={reminder.id} 
+                      <div
+                        key={reminder.id}
                         className={`p-4 border rounded-md ${
                           reminder.isAcknowledged ? 'bg-muted' : 'bg-white'
                         }`}
@@ -283,10 +280,10 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
                             </div>
                           </div>
                           {!reminder.isAcknowledged && (
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
-                              onClick={() => {/* Acknowledge reminder function */}}
+                              onClick={() => {}} // Prazna funkcija, dodajte logiku kasnije
                             >
                               Acknowledge
                             </Button>
@@ -299,7 +296,7 @@ export function ContractDetails({ contract }: ContractDetailsProps) {
                   <p className="text-muted-foreground">No reminders set for this contract.</p>
                 )}
               </div>
-              
+
               <div>
                 <h3 className="text-lg font-medium mb-4">Create New Reminder</h3>
                 <ReminderForm contractId={contract.id} />

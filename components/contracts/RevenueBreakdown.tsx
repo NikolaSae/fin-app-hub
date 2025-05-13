@@ -1,108 +1,198 @@
 // Path: /components/contracts/RevenueBreakdown.tsx
-import { formatDate } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
 
-interface RevenueBreakdownProps {
-  contract: {
-    revenuePercentage: number;
-    operatorRevenue?: number | null;
-    isRevenueSharing: boolean;
-    operator?: { name: string } | null;
-  };
+import { DollarSign, TrendingUp, PieChart } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { ContractType } from "@prisma/client";
+
+interface RevenueData {
+  totalRevenue: number;
+  platformPercentage: number;
+  partnerPercentage: number;
+  serviceBreakdown: {
+    id: string;
+    name: string;
+    revenueAmount: number;
+    percentage: number;
+  }[];
 }
 
-export function RevenueBreakdown({ contract }: RevenueBreakdownProps) {
-  // Calculate the remaining percentage (e.g., for the service provider)
-  const calculateRemainingPercentage = () => {
-    let totalAllocated = contract.revenuePercentage; // Platform percentage
-    
-    // Add operator percentage if revenue sharing is enabled and operator revenue is defined
-    if (contract.isRevenueSharing && typeof contract.operatorRevenue === 'number') {
-      totalAllocated += contract.operatorRevenue;
+interface RevenueBreakdownProps {
+  contractId: string;
+  contractType: ContractType;
+  revenuePercentage: number;
+  isRevenueSharing: boolean; // Dodato na osnovu page.tsx
+  operatorRevenue: number | null; // Dodato na osnovu page.tsx
+  revenueData?: RevenueData;
+}
+
+export function RevenueBreakdown({
+  contractId,
+  contractType,
+  revenuePercentage,
+  isRevenueSharing,
+  operatorRevenue,
+  revenueData,
+}: RevenueBreakdownProps) {
+  const formatCurrency = (amount: number) => {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      return formatCurrency(0);
     }
-    
-    // Return what's left for the service provider
-    return 100 - totalAllocated;
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 2,
+    }).format(amount);
   };
 
-  const remainingPercentage = calculateRemainingPercentage();
+  const getRandomColor = (index: number) => {
+    const colors = [
+      "bg-blue-500",
+      "bg-green-500",
+      "bg-purple-500",
+      "bg-yellow-500",
+      "bg-pink-500",
+      "bg-indigo-500",
+      "bg-teal-500",
+      "bg-orange-500",
+    ];
+    return colors[index % colors.length];
+  };
+
+  const getContractTypeLabel = (type: ContractType): string => {
+    switch (type) {
+      case "PROVIDER":
+        return "Provider";
+      case "HUMANITARIAN":
+        return "Humanitarian";
+      case "PARKING":
+        return "Parking";
+      default:
+        console.warn(`Unknown ContractType: ${type}`);
+        return "Unknown Type";
+    }
+  };
+
+  const dataToDisplay = revenueData || {
+    totalRevenue: 0,
+    platformPercentage: 0,
+    partnerPercentage: 0,
+    serviceBreakdown: [],
+  };
+
+  // Calculate partner revenue percentage based on revenue sharing logic
+  const partnerRevenuePercentage = isRevenueSharing && typeof operatorRevenue === 'number'
+    ? 100 - revenuePercentage - operatorRevenue
+    : 100 - revenuePercentage;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Revenue Breakdown</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium mb-2">Revenue Model: {contract.isRevenueSharing ? "Revenue Sharing" : "Standard"}</h3>
-            <div className="bg-muted rounded-md p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Platform</p>
-                  <p className="text-lg font-bold">{contract.revenuePercentage}%</p>
-                </div>
-                
-                {contract.isRevenueSharing && typeof contract.operatorRevenue === 'number' && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Operator {contract.operator?.name ? `(${contract.operator.name})` : ""}</p>
-                    <p className="text-lg font-bold">{contract.operatorRevenue}%</p>
+    <div className="space-y-6">
+      <h3 className="text-lg font-medium">Revenue Breakdown</h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(dataToDisplay.totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total revenue generated by this contract
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Platform Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(dataToDisplay.totalRevenue * (revenuePercentage / 100))}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {revenuePercentage}% of total revenue
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Partner Revenue</CardTitle> {/* Možda promeniti labelu u "Partner Revenue" */}
+            <PieChart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+             {/* Koristimo izračunatu partnerRevenuePercentage */}
+            <div className="text-2xl font-bold">{formatCurrency(dataToDisplay.totalRevenue * (partnerRevenuePercentage / 100))}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {partnerRevenuePercentage.toFixed(1)}% of total revenue ({getContractTypeLabel(contractType).toLowerCase()} share)
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Prikaz Operator Revenue kartice samo ako postoji revenue sharing */}
+      {isRevenueSharing && typeof operatorRevenue === 'number' && (
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> {/* Možda prilagoditi grid layout */}
+               <Card className="md:col-span-1"> {/* Prilagoditi span ako je potrebno */}
+                   <CardHeader className="flex flex-row items-center justify-between pb-2">
+                       <CardTitle className="text-sm font-medium">Operator Revenue</CardTitle>
+                       <DollarSign className="h-4 w-4 text-muted-foreground" /> {/* Možda druga ikonica */}
+                   </CardHeader>
+                   <CardContent>
+                       <div className="text-2xl font-bold">{formatCurrency(dataToDisplay.totalRevenue * (operatorRevenue / 100))}</div>
+                       <p className="text-xs text-muted-foreground mt-1">
+                           {operatorRevenue.toFixed(1)}% of total revenue (Operator share)
+                       </p>
+                   </CardContent>
+               </Card>
+           </div>
+       )}
+
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Revenue Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dataToDisplay.serviceBreakdown.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              No service revenue data available
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {dataToDisplay.serviceBreakdown.map((service, index) => (
+                <div key={service.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${getRandomColor(index)}`}></div>
+                      <span className="font-medium">{service.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {service.percentage.toFixed(1)}%
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(service.revenueAmount)}
+                      </span>
+                    </div>
                   </div>
-                )}
-                
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Service Provider</p>
-                  <p className="text-lg font-bold">{remainingPercentage}%</p>
+                  <Progress value={service.percentage} className="h-2" />
                 </div>
-              </div>
+              ))}
             </div>
-          </div>
-          
-          {/* Visual representation of the revenue breakdown */}
-          <div className="mt-4">
-            <p className="text-sm font-medium mb-2">Revenue Distribution</p>
-            <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 float-left" 
-                style={{ width: `${contract.revenuePercentage}%` }}
-                title={`Platform: ${contract.revenuePercentage}%`}
-              ></div>
-              
-              {contract.isRevenueSharing && typeof contract.operatorRevenue === 'number' && (
-                <div 
-                  className="h-full bg-purple-500 float-left" 
-                  style={{ width: `${contract.operatorRevenue}%` }}
-                  title={`Operator: ${contract.operatorRevenue}%`}
-                ></div>
-              )}
-              
-              <div 
-                className="h-full bg-green-500 float-left" 
-                style={{ width: `${remainingPercentage}%` }}
-                title={`Service Provider: ${remainingPercentage}%`}
-              ></div>
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-1"></div>
-                <span>Platform</span>
-              </div>
-              
-              {contract.isRevenueSharing && typeof contract.operatorRevenue === 'number' && (
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full mr-1"></div>
-                  <span>Operator</span>
-                </div>
-              )}
-              
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
-                <span>Service Provider</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="text-sm text-muted-foreground">
+        <p>
+          This contract has a {revenuePercentage}% revenue share agreement with the platform.
+          The remaining {partnerRevenuePercentage.toFixed(1)}% goes to the {getContractTypeLabel(contractType).toLowerCase()} partner.
+          {isRevenueSharing && typeof operatorRevenue === 'number' && ` An additional ${operatorRevenue.toFixed(1)}% is allocated to the operator.`}
+        </p>
+      </div>
+    </div>
   );
 }

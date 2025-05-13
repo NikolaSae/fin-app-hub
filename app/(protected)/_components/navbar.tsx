@@ -1,119 +1,169 @@
 // Path: /app/(protected)/_components/navbar.tsx
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { ClientSideUserButton } from "@/components/auth/client-side-user-button";
+
+import { cn } from "@/lib/utils";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { ClientSideUserButton } from "@/components/auth/client-side-user-button";
+
+// Definicija ListItem komponente (nepromenjena, već je ispravna)
+const ListItem = React.forwardRef<
+  React.ElementRef<"a">,
+  React.ComponentPropsWithoutRef<"a"> & { title: string; href: string }
+>(({ className, title, children, href, ...props }, ref) => {
+  return (
+    <li>
+      <NavigationMenuLink asChild>
+        <Link
+          href={href}
+          ref={ref}
+          className={cn(
+            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            className
+          )}
+          {...props}
+        >
+          <div className="text-sm font-medium leading-none">{title}</div>
+          {children && (
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+              {children}
+            </p>
+          )}
+        </Link>
+      </NavigationMenuLink>
+    </li>
+  );
+});
+ListItem.displayName = "ListItem";
 
 export const Navbar = () => {
   const pathname = usePathname();
+  const isActivePath = (href: string) => pathname.startsWith(href);
+  const isTriggerActive = (paths: string[]) => paths.some(p => isActivePath(p));
 
-  // Funkcija za proveru da li je link aktivan
-  const isActive = (href: string) => pathname.startsWith(href);
+  const reklamacijePaths = ["/complaints", "/admin/complaints"];
+  const analyticsPaths = ["/analytics", "/analytics/reports"];
 
   return (
     <nav className="w-full flex items-center justify-between p-4 shadow-sm">
-      {/* Kontejner za navigacione linkove */}
-      <div className="flex gap-x-2 overflow-x-auto pb-2">
-        {/* Link: Humanitarci */}
-        <Button
-          variant={isActive("/humanitarian-orgs") ? "default" : "outline"}
-          asChild
-        >
-          <Link href="/humanitarian-orgs">Humanitarci</Link>
-        </Button>
+      <div className="flex-grow overflow-x-auto pb-2">
+        <NavigationMenu>
+          <NavigationMenuList>
+            {/* Link: Humanitarci - IZMENJENO */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/humanitarian-orgs"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/humanitarian-orgs") && "bg-accent text-accent-foreground")}
+                >
+                  Humanitarci
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
 
-        {/* Link: Provajderi */}
-        <Button
-          variant={isActive("/providers") ? "default" : "outline"}
-          asChild
-        >
-          <Link href="/providers">Provajderi</Link>
-        </Button>
+            {/* Link: Provajderi - IZMENJENO */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/providers"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/providers") && "bg-accent text-accent-foreground")}
+                >
+                  Provajderi
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
 
-        {/* Link: Parking */}
-        <Button
-          variant={isActive("/parking") ? "default" : "outline"}
-          asChild
-        >
-          <Link href="/parking">Parking</Link>
-        </Button>
+            {/* Link: Parking - IZMENJENO */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/parking"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/parking") && "bg-accent text-accent-foreground")}
+                >
+                  Parking
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
 
-        {/* Reklamacije dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button 
-              type="button" 
-              variant={isActive("/complaints") || isActive("/admin/complaints") ? "default" : "outline"}
-            >
-              Reklamacije <ChevronDown className="ml-1 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem asChild>
-              <Link href="/complaints">Sve reklamacije</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/admin/complaints">Admin panel</Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            {/* Reklamacije dropdown (Trigger ostaje isti, ListItem unutar njega je već dobar) */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className={cn(isTriggerActive(reklamacijePaths) && "bg-accent text-accent-foreground")}>
+                Reklamacije
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid gap-1 p-2 md:w-[200px] lg:w-[230px]">
+                  <ListItem href="/complaints" title="Sve reklamacije" />
+                  <ListItem href="/admin/complaints" title="Admin panel" />
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
 
-        {/* Link: Ugovori */}
-        <Button
-          variant={isActive("/contracts") ? "default" : "outline"}
-          asChild
-        >
-          <Link href="/contracts">Ugovori</Link>
-        </Button>
+            {/* Link: Ugovori - IZMENJENO */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/contracts"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/contracts") && "bg-accent text-accent-foreground")}
+                >
+                  Ugovori
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
 
-        {/* Link: Servisi */}
-        <Button
-          variant={isActive("/services") ? "default" : "outline"}
-          asChild
-        >
-          <Link href="/services">Servisi</Link>
-        </Button>
+            {/* Link: Servisi - IZMENJENO */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/services"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/services") && "bg-accent text-accent-foreground")}
+                >
+                  Servisi
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
 
-        {/* Analytics dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button 
-              type="button" 
-              variant={isActive("/analytics") ? "default" : "outline"}
-            >
-              Analytics <ChevronDown className="ml-1 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem asChild>
-              <Link href="/analytics">Pregled</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/analytics/reports">Izveštaji</Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            {/* Analytics dropdown (Trigger ostaje isti, ListItem unutar njega je već dobar) */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className={cn(isTriggerActive(analyticsPaths) && "bg-accent text-accent-foreground")}>
+                Analytics
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid gap-1 p-2 md:w-[200px] lg:w-[230px]">
+                  <ListItem href="/analytics" title="Pregled" />
+                  <ListItem href="/analytics/reports" title="Izveštaji" />
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
 
-        {/* Link: Reports */}
-        <Button
-          variant={isActive("/reports") ? "default" : "outline"}
-          asChild
-        >
-          <Link href="/reports">Reports</Link>
-        </Button>
+            {/* Link: Reports - IZMENJENO */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/reports"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/reports") && "bg-accent text-accent-foreground")}
+                >
+                  Reports
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
       </div>
 
-      {/* User Button */}
-      <ClientSideUserButton />
+      <div className="ml-auto flex-shrink-0">
+        <ClientSideUserButton />
+      </div>
     </nav>
   );
 };
