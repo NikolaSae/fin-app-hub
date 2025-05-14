@@ -1,137 +1,96 @@
-// /actions/products/get.ts
+// actions/providers/get.ts
 'use server';
 
-import { db } from '@/lib/db';
-// Uvozimo ažurirane tipove
-import { ProductWithDetails, ProductFilterOptions, ProductsApiResponse } from '@/lib/types/product-types';
-// Uvozimo auth funkcije za proveru autentifikacije/autorizacije
+import db from '@/lib/db';
 import { auth } from '@/auth';
-import { currentRole } from "@/lib/auth";
-import { UserRole } from "@prisma/client";
+import { currentRole } from '@/lib/auth';
+import { UserRole } from '@prisma/client';
+import { ProviderWithCounts, ProviderFilterOptions } from '@/lib/types/provider-types';
 
-interface GetProductsParams extends ProductFilterOptions {
-    page?: number;
-    limit?: number;
-}
-
-/**
- * Server akcija za dohvatanje liste proizvoda sa filterima i paginacijom.
- * Koristi se u hooku useProducts i API rutama.
- * Usklađena sa Product modelom u schema.prisma.
- * @param params Opcije filtera i paginacije.
- * @returns Objekat sa listom proizvoda, ukupnim brojem rezultata i eventualnom greškom.
- */
-export async function getProducts(params: GetProductsParams): Promise<ProductsApiResponse & { error: string | null }> {
-     // Provera da li je korisnik ulogovan
-     const session = await auth();
-     if (!session?.user) {
-       return { data: [], total: 0, error: "Unauthorized" };
-     }
-
-     // Provera uloge ako je potrebna
-    // const role = await currentRole();
-    // if (role !== UserRole.ADMIN && role !== UserRole.MANAGER && role !== UserRole.USER) { // Prilagodite uloge
-    //    return { data: [], total: 0, error: "Forbidden" };
-    // }
-
-    try {
-        // Usklađeno sa ProductFilterOptions
-        const { search, isActive, page = 1, limit = 100 } = params;
-
-        // Izgradnja Prisma WHERE klauzule
-        const where: any = {};
-        if (search) {
-            // Pretraga po 'name', 'code' i 'description'
-            where.OR = [
-                { name: { contains: search, mode: 'insensitive' as const } },
-                { code: { contains: search, mode: 'insensitive' as const } }, // Pretraga i po code
-                { description: { contains: search, mode: 'insensitive' as const } },
-            ];
-        }
-         if (isActive !== null && isActive !== undefined) {
-             where.isActive = isActive;
-         }
-        // serviceId filter NE postoji na osnovu schema.prisma
-
-        const skip = (page - 1) * limit;
-        const take = limit;
-
-
-        // Dohvatanje podataka i ukupnog broja
-        const [products, totalCount] = await Promise.all([
-            db.product.findMany({
-                where,
-                take,
-                skip,
-                orderBy: { name: 'asc' }, // Podrazumevano sortiranje
-                 include: {
-                     // Uključite brojače za relacije koje postoje u schema.prisma Product modelu
-                     _count: {
-                          select: { complaints: true } // Relacija Complaint[]
-                     }
-                     // Relacija 'services' NE postoji na Product modelu
-                 }
-            }),
-            db.product.count({ where }),
-        ]);
-
-        // Vraćanje podataka i ukupnog broja (kastovano na ProductWithDetails)
-        return { data: products as ProductWithDetails[], total: totalCount, error: null };
-
-    } catch (error) {
-        console.error("Error fetching products in action:", error);
-        return { data: [], total: 0, error: "Failed to fetch products." };
+export async function getProviders(params: ProviderFilterOptions & {
+  page?: number;
+  limit?: number;
+}) {
+  try {
+  const session = await auth();
+    if (!session?.user) {
+      return {
+        data: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+        error: "Unauthorized: Please login to access this resource"
+      };
     }
-}
 
+    // Provera uloge
+    const role = await currentRole();
+    if (![UserRole.ADMIN, UserRole.MANAGER].includes(role!)) {
+      return {
+        data: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+        error: "Forbidden: You don't have permission to access this resource"
+      };
+    }
+    const { page = 1, limit = 10, ...filters } = params;
+    
+    // Build where clause
+    const where = {
+      AND: [
+        filters.search && {
+          OR: [
+            { name: { contains: filters.search, mode: 'insensitive' } },
+            { contactName: { contains: filters.search, mode: 'insensitive' } },
+            { email: { contains: filters.search, mode: 'insensitive' } }
+          ]
+        },
+        filters.isActive !== undefined && { isActive: filters.isActive },
+        filters.hasContracts && { contracts: { some: {} } },
+        filters.hasComplaints && { complaints: { some: {} } }
+      ].filter(Boolean)
+    };
 
-/**
- * Server akcija za dohvatanje pojedinačnog proizvoda po ID-u.
- * Dohvata više detalja (relacije) nego getProducts.
- * Usklađena sa Product modelom u schema.prisma.
- * @param id - ID proizvoda.
- * @returns Objekat sa proizvodom ili greškom.
- */
-export async function getProductById(id: string): Promise<{ data: ProductWithDetails | null; error: string | null }> {
-     // Provera autentifikacije/autorizacije
-      const session = await auth();
-      if (!session?.user) {
-        return { data: null, error: "Unauthorized" };
-      }
-     // Provera uloge ako je potrebna
+    // Handle sorting
+    const orderBy = filters.sortBy ? {
+      [filters.sortBy]: filters.sortDirection || 'asc'
+    } : undefined;
 
-    try {
-        const product = await db.product.findUnique({
-            where: { id },
-             include: {
-                  // Uključite relacije potrebne za prikaz detalja iz schema.prisma Product modela
-                 complaints: { // Relacija Complaint[]
-                      select: {
-                           id: true,
-                           title: true,
-                           status: true,
-                           createdAt: true,
-                           // Uključite relaciju Provider ako je potrebna na listi reklamacija
-                           // provider: { select: { id: true, name: true } }
-                       },
-                      orderBy: { createdAt: 'desc' }
-                 },
-                 // Relacija 'service' NE postoji
-                 _count: { // Brojači za detalje
-                      select: { complaints: true }
-                 }
+    const [providers, total] = await Promise.all([
+      db.provider.findMany({
+        where,
+        take: limit,
+        skip: (page - 1) * limit,
+        orderBy,
+        include: {
+          _count: {
+            select: {
+              contracts: true,
+              complaints: true
             }
-        });
-
-        if (!product) {
-            return { data: null, error: "Product not found." };
+          }
         }
+      }),
+      db.provider.count({ where })
+    ]);
 
-        // Vraćanje podataka, kastovano na ProductWithDetails
-        return { data: product as ProductWithDetails, error: null };
+    return {
+      data: providers as ProviderWithCounts[],
+      total,
+      page,
+      limit,
+      error: null
+    };
 
-    } catch (error) {
-        console.error(`Error fetching product with ID ${id} in action:`, error);
-        return { data: null, error: "Failed to fetch product details." };
-    }
+  } catch (error) {
+    console.error("Database Error:", error);
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+      error: "Failed to fetch providers"
+    };
+  }
 }

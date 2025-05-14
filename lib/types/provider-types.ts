@@ -1,39 +1,36 @@
 // /lib/types/provider-types.ts
+import { Provider } from "@prisma/client";
 
-import { Provider } from '@prisma/client'; // Uvoz osnovnog Prisma tipa
-import { z } from 'zod';
-// Importujemo Zod šemu da bismo izveli tip forme
-import { providerSchema } from '@/schemas/provider'; // Kreirali smo ovaj fajl
+// Основни типи
+export interface ProviderBase extends Provider {
+  // Поље 'services' није потребно јер се већ налази у Prisma типу
+}
 
-// Tip za podatke forme za kreiranje/ažuriranje provajdera (izveden iz Zod šeme)
-export type ProviderFormData = z.infer<typeof providerSchema>;
-
-
-// Tip za Provider model sa uključenim relacijama koje se često koriste (npr. u listama ili detaljima)
-// Ovo je proširenje osnovnog Prisma tipa
+// Проширени тип са бројачима релација
 export interface ProviderWithCounts extends Provider {
-    _count?: {
-        contracts: number;
-        vasServices: number;
-        bulkServices: number;
-        complaints: number;
-    };
-    // Dodajte druge include relacije ovde ako se često koriste (npr. liste povezanih ugovora na detaljnoj stranici)
-    // contracts?: Contract[]; // Potreban uvoz tipa Contract
-    // complaints?: Complaint[]; // Potreban uvoz tipa Complaint
-    // ...
+  _count?: {
+    contracts: number;
+    vasServices: number;
+    bulkServices: number;
+    complaints: number;
+  };
 }
 
-// Interfejs za opcije filtriranja provajdera (koristi se u hooku i API ruti)
+// Опције за филтрирање и сортирање
 export interface ProviderFilterOptions {
-    search?: string | null; // Pretraga po imenu, kontaktu, emailu, itd.
-    isActive?: boolean | null; // Filter po statusu aktivnost (true, false, null za sve)
-    // Dodajte ostala polja za filtere ako su potrebna
+  search?: string;
+  isActive?: boolean;
+  hasContracts?: boolean;
+  hasComplaints?: boolean;
+  sortBy?: 'name' | 'createdAt';
+  sortDirection?: 'asc' | 'desc';
 }
 
-
-// Interfejs za podatke koji se vraćaju sa API rute /api/providers
-export interface ProvidersApiResponse {
-    providers: ProviderWithCounts[];
-    totalCount: number;
+// Резултат API позива
+export interface ProvidersResult {
+  data: ProviderWithCounts[];
+  total: number;
+  page: number;
+  limit: number;
+  error?: string | null;
 }
