@@ -16,93 +16,78 @@ interface HumanitarianOrgFiltersProps {
 }
 
 export function HumanitarianOrgFilters({ onFilterChange, initialFilters }: HumanitarianOrgFiltersProps) {
-  // Initialize local state from initialFilters prop
   const [localFilters, setLocalFilters] = useState<HumanitarianOrgFilterOptions>(initialFilters);
-  // Separate state for search input to handle debounce
   const [searchInput, setSearchInput] = useState(initialFilters.search || '');
 
-  // --- ADDED EFFECT ---
-  // Sync localFilters and searchInput with initialFilters prop whenever initialFilters changes
   useEffect(() => {
     setLocalFilters(initialFilters);
     setSearchInput(initialFilters.search || '');
-  }, [initialFilters]); // Dependency: initialFilters prop
-  // --- END ADDED EFFECT ---
+  }, [initialFilters]);
 
-
-  // Debounce effect for search input
   useEffect(() => {
     const timer = setTimeout(() => {
       const newSearch = searchInput.trim() === '' ? undefined : searchInput.trim();
 
-      // Only update filters and call onFilterChange if the debounced search value actually changed
-      // Also ensure it's different from the current localFilters search to avoid unnecessary updates
       if (newSearch !== localFilters.search) {
-        // Create a new filter object with the updated search term
         const updatedFilters = { ...localFilters, search: newSearch };
-        setLocalFilters(updatedFilters); // Update local state
-        onFilterChange(updatedFilters); // Call parent's onFilterChange
+        setLocalFilters(updatedFilters);
+        onFilterChange(updatedFilters);
       }
-    }, 300); // Debounce period
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchInput, localFilters, onFilterChange]);
 
-    return () => clearTimeout(timer); // Cleanup timer
-  }, [searchInput, localFilters.search, onFilterChange]); // Dependencies: searchInput, localFilters.search, and onFilterChange
-
-
-  // Handlers for other filters that call onFilterChange directly
   const handleIsActiveChange = useCallback((value: string) => {
     const newValue = value === 'all' ? undefined : value === 'active';
-    // Create a new filter object with the updated isActive value
     const updatedFilters = { ...localFilters, isActive: newValue };
-    setLocalFilters(updatedFilters); // Update local state
-    onFilterChange(updatedFilters); // Call parent's onFilterChange
-  }, [localFilters, onFilterChange]); // Dependencies: localFilters and onFilterChange
+    setLocalFilters(updatedFilters);
+    onFilterChange(updatedFilters);
+  }, [localFilters, onFilterChange]);
 
   const handleSortByChange = useCallback((value: string) => {
     const newValue = value as HumanitarianOrgFilterOptions['sortBy'];
     const updatedFilters = { ...localFilters, sortBy: newValue };
     setLocalFilters(updatedFilters);
     onFilterChange(updatedFilters);
-  }, [localFilters, onFilterChange]); // Dependencies: localFilters and onFilterChange
+  }, [localFilters, onFilterChange]);
 
   const handleSortDirectionChange = useCallback((value: string) => {
     const newValue = value as HumanitarianOrgFilterOptions['sortDirection'];
     const updatedFilters = { ...localFilters, sortDirection: newValue };
     setLocalFilters(updatedFilters);
     onFilterChange(updatedFilters);
-  }, [localFilters, onFilterChange]); // Dependencies: localFilters and onFilterChange
+  }, [localFilters, onFilterChange]);
 
   const handleHasContractsChange = useCallback((checked: boolean | 'indeterminate') => {
     const newValue = checked === true ? true : undefined;
     const updatedFilters = { ...localFilters, hasContracts: newValue };
-    setLocalFilters(updatedFilters); // Update local state
-    onFilterChange(updatedFilters); // Call parent's onFilterChange
-  }, [localFilters, onFilterChange]); // Dependencies: localFilters and onFilterChange
+    setLocalFilters(updatedFilters);
+    onFilterChange(updatedFilters);
+  }, [localFilters, onFilterChange]);
 
   const handleHasComplaintsChange = useCallback((checked: boolean | 'indeterminate') => {
     const newValue = checked === true ? true : undefined;
     const updatedFilters = { ...localFilters, hasComplaints: newValue };
-    setLocalFilters(updatedFilters); // Update local state
-    onFilterChange(updatedFilters); // Call parent's onFilterChange
-  }, [localFilters, onFilterChange]); // Dependencies: localFilters and onFilterChange
+    setLocalFilters(updatedFilters);
+    onFilterChange(updatedFilters);
+  }, [localFilters, onFilterChange]);
 
-  // Reset filtera
   const handleResetFilters = useCallback(() => {
     const resetFilters: HumanitarianOrgFilterOptions = {
-      search: undefined, // Reset search to undefined
+      search: undefined,
       isActive: undefined,
       country: undefined,
       city: undefined,
       hasContracts: undefined,
       hasComplaints: undefined,
-      sortBy: 'name', // Default sort
-      sortDirection: 'asc' // Default direction
+      sortBy: 'name',
+      sortDirection: 'asc'
     };
-    setSearchInput(''); // Reset search input state
-    setLocalFilters(resetFilters); // Reset local filters state
-    onFilterChange(resetFilters); // Call parent's onFilterChange with reset values
-  }, [onFilterChange]); // Dependency: onFilterChange
-
+    setSearchInput('');
+    setLocalFilters(resetFilters);
+    onFilterChange(resetFilters);
+  }, [onFilterChange]);
 
   return (
     <div className="bg-white p-4 rounded-md border space-y-3">
@@ -139,36 +124,36 @@ export function HumanitarianOrgFilters({ onFilterChange, initialFilters }: Human
           </RadioGroup>
         </div>
         <div className="space-y-1.5">
-		  <Label htmlFor="sortBy">Sort By</Label>
-		  <div className="flex space-x-2">
-		    <Select
-		      value={localFilters.sortBy}
-		      onValueChange={handleSortByChange}
-		    >
-		      <SelectTrigger className="w-[180px]">
-		        <SelectValue placeholder="Sort by" />
-		      </SelectTrigger>
-		      <SelectContent>
-		        <SelectItem value="name">Name</SelectItem>
-		        <SelectItem value="createdAt">Date Created</SelectItem>
-		        <SelectItem value="contractsCount">Contracts Count</SelectItem>
-		        <SelectItem value="complaintsCount">Complaints Count</SelectItem>
-		      </SelectContent>
-		    </Select>
+          <Label htmlFor="sortBy">Sort By</Label>
+          <div className="flex space-x-2">
             <Select
-		      value={localFilters.sortDirection}
-		      onValueChange={handleSortDirectionChange}
-		    >
-		      <SelectTrigger className="w-[120px]">
-		        <SelectValue placeholder="Order" />
-		      </SelectTrigger>
-		      <SelectContent>
-		        <SelectItem value="asc">Ascending</SelectItem>
-		        <SelectItem value="desc">Descending</SelectItem>
-		      </SelectContent>
-		    </Select>
-		  </div>
-		</div>
+              value={localFilters.sortBy}
+              onValueChange={handleSortByChange}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="createdAt">Date Created</SelectItem>
+                <SelectItem value="contractsCount">Contracts Count</SelectItem>
+                <SelectItem value="complaintsCount">Complaints Count</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={localFilters.sortDirection}
+              onValueChange={handleSortDirectionChange}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">Ascending</SelectItem>
+                <SelectItem value="desc">Descending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <div className="space-y-1.5">
           <Label>Relations</Label>
           <div className="flex space-x-4">

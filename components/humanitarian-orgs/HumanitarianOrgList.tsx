@@ -1,7 +1,7 @@
 // Path: components/humanitarian-orgs/HumanitarianOrgList.tsx
 "use client";
 
-import { useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useHumanitarianOrgs } from "@/hooks/use-humanitarian-orgs";
@@ -21,97 +21,107 @@ import {
 export function HumanitarianOrgList() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    
+    // Parse filters from URL parameters
+    const getFiltersFromURL = useCallback(() => {
+        const filters: HumanitarianOrgFilterOptions = {
+            search: searchParams.get("search") || undefined,
+            isActive: searchParams.has("isActive") ? searchParams.get("isActive") === 'true' : undefined,
+            country: searchParams.get("country") || undefined,
+            city: searchParams.get("city") || undefined,
+            hasContracts: searchParams.has("hasContracts") ? searchParams.get("hasContracts") === 'true' : undefined,
+            hasComplaints: searchParams.has("hasComplaints") ? searchParams.get("hasComplaints") === 'true' : undefined,
+            sortBy: (searchParams.get("sortBy") as HumanitarianOrgFilterOptions['sortBy']) || 'name',
+            sortDirection: (searchParams.get("sortDirection") as HumanitarianOrgFilterOptions['sortDirection']) || 'asc',
+        };
+        return filters;
+    }, [searchParams]);
 
-    const initialFilters: HumanitarianOrgFilterOptions = {
-        search: searchParams.get("search") || undefined,
-        isActive: searchParams.has("isActive") ? searchParams.get("isActive") === 'true' : undefined,
-        country: searchParams.get("country") || undefined,
-        city: searchParams.get("city") || undefined,
-        hasContracts: searchParams.has("hasContracts") ? searchParams.get("hasContracts") === 'true' : undefined,
-        hasComplaints: searchParams.has("hasComplaints") ? searchParams.get("hasComplaints") === 'true' : undefined,
-        sortBy: (searchParams.get("sortBy") as HumanitarianOrgFilterOptions['sortBy']) || 'name',
-        sortDirection: (searchParams.get("sortDirection") as HumanitarianOrgFilterOptions['sortDirection']) || 'asc',
-    };
+    const getPaginationFromURL = useCallback(() => {
+        return {
+            page: parseInt(searchParams.get("page") || "1", 10),
+            limit: parseInt(searchParams.get("limit") || "10", 10),
+        };
+    }, [searchParams]);
 
-    const initialPagination: PaginationOptions = {
-        page: parseInt(searchParams.get("page") || "1", 10),
-        limit: parseInt(searchParams.get("limit") || "10", 10),
-    };
+    // Initialize state with URL parameters
+    const [filters, setFilters] = useState<HumanitarianOrgFilterOptions>(getFiltersFromURL);
+    const [pagination, setPagination] = useState<PaginationOptions>(getPaginationFromURL);
 
-    const { humanitarianOrgs, totalCount, loading, error, setFilters, setPagination } = useHumanitarianOrgs(
-        initialFilters,
-        initialPagination
+    // Fetch data using the current filters and pagination
+    const { humanitarianOrgs, totalCount, loading, error, refresh } = useHumanitarianOrgs(
+        filters,
+        pagination
     );
 
-    const totalPages = Math.ceil(totalCount / initialPagination.limit);
+    const totalPages = Math.ceil(totalCount / pagination.limit);
 
+    // Update state when URL parameters change 
+    useEffect(() => {
+        const newFilters = getFiltersFromURL();
+        const newPagination = getPaginationFromURL();
+        
+        // Only update state if there's a meaningful difference
+        if (JSON.stringify(newFilters) !== JSON.stringify(filters)) {
+            setFilters(newFilters);
+        }
+        
+        if (JSON.stringify(newPagination) !== JSON.stringify(pagination)) {
+            setPagination(newPagination);
+        }
+    }, [searchParams, getFiltersFromURL, getPaginationFromURL, filters, pagination]);
+
+    // Handle filter changes and update URL
     const handleFilterChange = useCallback((filterOptions: HumanitarianOrgFilterOptions) => {
-        const newSearchParams = new URLSearchParams(searchParams.toString());
+        const newSearchParams = new URLSearchParams();
 
         if (filterOptions.search) {
             newSearchParams.set("search", filterOptions.search);
-        } else {
-            newSearchParams.delete("search");
         }
 
         if (filterOptions.isActive !== undefined) {
             newSearchParams.set("isActive", filterOptions.isActive.toString());
-        } else {
-            newSearchParams.delete("isActive");
         }
 
         if (filterOptions.country) {
             newSearchParams.set("country", filterOptions.country);
-        } else {
-            newSearchParams.delete("country");
         }
 
         if (filterOptions.city) {
             newSearchParams.set("city", filterOptions.city);
-        } else {
-            newSearchParams.delete("city");
         }
 
         if (filterOptions.hasContracts !== undefined) {
              newSearchParams.set("hasContracts", filterOptions.hasContracts.toString());
-        } else {
-             newSearchParams.delete("hasContracts");
         }
 
         if (filterOptions.hasComplaints !== undefined) {
              newSearchParams.set("hasComplaints", filterOptions.hasComplaints.toString());
-        } else {
-             newSearchParams.delete("hasComplaints");
         }
 
         if (filterOptions.sortBy && filterOptions.sortBy !== 'name') {
              newSearchParams.set("sortBy", filterOptions.sortBy);
-        } else {
-             newSearchParams.delete("sortBy");
         }
 
         if (filterOptions.sortDirection && filterOptions.sortDirection !== 'asc') {
              newSearchParams.set("sortDirection", filterOptions.sortDirection);
-        } else {
-             newSearchParams.delete("sortDirection");
         }
 
+        // Reset to first page when filters change
         newSearchParams.set("page", "1");
 
-        router.push(`?${newSearchParams.toString()}`);
+        router.push(`?${newSearchParams.toString()}`, { scroll: false });
+    }, [router]);
 
-        setFilters(filterOptions);
-    }, [searchParams, router, setFilters]);
-
+    // Handle page change
     const handlePageChange = useCallback((newPage: number) => {
         const newSearchParams = new URLSearchParams(searchParams.toString());
         newSearchParams.set("page", newPage.toString());
-        router.push(`?${newSearchParams.toString()}`);
+        
+        router.push(`?${newSearchParams.toString()}`, { scroll: false });
+    }, [searchParams, router]);
 
-        setPagination(prev => ({ ...prev, page: newPage }));
-    }, [searchParams, router, setPagination]);
-
-    if (loading) {
+    if (loading && humanitarianOrgs.length === 0) {
         return <div className="text-center py-4 text-muted-foreground">Loading organizations...</div>;
     }
 
@@ -122,11 +132,11 @@ export function HumanitarianOrgList() {
     return (
         <div className="space-y-4">
             <HumanitarianOrgFilters
-                initialFilters={initialFilters}
+                initialFilters={filters}
                 onFilterChange={handleFilterChange}
             />
             <div className="rounded-md border">
-                    <Table>
+                <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Name</TableHead>
@@ -186,15 +196,15 @@ export function HumanitarianOrgList() {
                     <PaginationContent>
                         <PaginationItem>
                             <PaginationPrevious
-                                onClick={() => handlePageChange(Math.max(1, initialPagination.page - 1))}
-                                disabled={initialPagination.page === 1 || loading}
+                                onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
+                                disabled={pagination.page === 1 || loading}
                             />
                         </PaginationItem>
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                            <PaginationItem key={pageNum} className={pageNum === initialPagination.page ? "font-bold" : ""}>
+                            <PaginationItem key={pageNum} className={pageNum === pagination.page ? "font-bold" : ""}>
                                 <PaginationLink
                                     onClick={() => handlePageChange(pageNum)}
-                                    isActive={pageNum === initialPagination.page}
+                                    isActive={pageNum === pagination.page}
                                     disabled={loading}
                                 >
                                     {pageNum}
@@ -204,8 +214,8 @@ export function HumanitarianOrgList() {
 
                         <PaginationItem>
                             <PaginationNext
-                                onClick={() => handlePageChange(Math.min(totalPages, initialPagination.page + 1))}
-                                disabled={initialPagination.page === totalPages || loading}
+                                onClick={() => handlePageChange(Math.min(totalPages, pagination.page + 1))}
+                                disabled={pagination.page === totalPages || loading}
                             />
                         </PaginationItem>
                     </PaginationContent>

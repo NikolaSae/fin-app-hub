@@ -1,119 +1,170 @@
 // components/providers/ProviderFilters.tsx
 "use client";
+
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
 
-export function ProviderFilters({ initialFilters, onFilterChange }) {
-  const [searchInput, setSearchInput] = useState(initialFilters.search || "");
-  const [localFilters, setLocalFilters] = useState(initialFilters);
+interface FilterOptions {
+  search?: string;
+  isActive?: boolean;
+  hasContracts?: boolean;
+  hasComplaints?: boolean;
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
+}
 
+interface ProviderFiltersProps {
+  initialFilters: FilterOptions;
+  onFilterChange: (filters: FilterOptions) => void;
+}
+
+export function ProviderFilters({
+  initialFilters,
+  onFilterChange,
+}: ProviderFiltersProps) {
+  const [filters, setFilters] = useState<FilterOptions>(initialFilters);
+  const [searchQuery, setSearchQuery] = useState(initialFilters.search || "");
+  
+  // Одложено претраживање
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput !== localFilters.search) {
-        handleFilterChange({ search: searchInput });
+      if (searchQuery !== filters.search) {
+        const newFilters = { ...filters, search: searchQuery || undefined };
+        setFilters(newFilters);
+        onFilterChange(newFilters);
       }
     }, 500);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
 
-  const handleFilterChange = (newFilters) => {
-    const updatedFilters = { ...localFilters, ...newFilters };
-    setLocalFilters(updatedFilters);
-    onFilterChange(updatedFilters);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleFilterChange = (key: keyof FilterOptions, value: any) => {
+    const newFilters = { ...filters, [key]: value };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
   };
 
   const handleReset = () => {
-    setSearchInput("");
-    handleFilterChange({
-      search: "",
+    const defaultFilters: FilterOptions = {
+      search: undefined,
       isActive: undefined,
-      hasContracts: undefined,
-      hasComplaints: undefined,
-      sortBy: "name",
-      sortDirection: "asc"
-    });
+      hasContracts: false,
+      hasComplaints: false,
+      sortBy: "createdAt",
+      sortDirection: "desc",
+    };
+    setFilters(defaultFilters);
+    setSearchQuery("");
+    onFilterChange(defaultFilters);
   };
 
   return (
-    <div className="bg-white p-4 rounded-md border space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="space-y-1.5">
-          <Label>Search</Label>
+    <div className="bg-white p-4 rounded-md border space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Претрага */}
+        <div className="relative">
           <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search providers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
           />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
         </div>
 
-        <div className="space-y-1.5">
-          <Label>Status</Label>
-          <RadioGroup
-            value={localFilters.isActive ?? "all"}
-            onValueChange={(value) => handleFilterChange({ isActive: value === "all" ? undefined : value === "true" })}
-            className="flex space-x-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="all" id="status-all" />
-              <Label htmlFor="status-all">All</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="true" id="status-active" />
-              <Label htmlFor="status-active">Active</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="false" id="status-inactive" />
-              <Label htmlFor="status-inactive">Inactive</Label>
-            </div>
-          </RadioGroup>
-        </div>
+        {/* Статус филтер */}
+        <Select
+          value={filters.isActive === undefined ? "all" : filters.isActive ? "active" : "inactive"}
+          onValueChange={(value) => {
+            const isActiveMap = {
+              all: undefined,
+              active: true,
+              inactive: false,
+            };
+            handleFilterChange("isActive", isActiveMap[value as keyof typeof isActiveMap]);
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <div className="space-y-1.5">
-          <Label>Sort By</Label>
-          <Select
-            value={localFilters.sortBy}
-            onValueChange={(value) => handleFilterChange({ sortBy: value })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="createdAt">Date Created</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Relations</Label>
-          <div className="flex space-x-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasContracts"
-                checked={localFilters.hasContracts ?? false}
-                onCheckedChange={(checked) => handleFilterChange({ hasContracts: checked })}
-              />
-              <Label htmlFor="hasContracts">Has Contracts</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasComplaints"
-                checked={localFilters.hasComplaints ?? false}
-                onCheckedChange={(checked) => handleFilterChange({ hasComplaints: checked })}
-              />
-              <Label htmlFor="hasComplaints">Has Complaints</Label>
-            </div>
-          </div>
-        </div>
+        {/* Сортирање */}
+        <Select
+          value={`${filters.sortBy || "createdAt"}-${filters.sortDirection || "desc"}`}
+          onValueChange={(value) => {
+            const [sortBy, sortDirection] = value.split("-");
+            handleFilterChange("sortBy", sortBy);
+            handleFilterChange("sortDirection", sortDirection);
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+            <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+            <SelectItem value="createdAt-desc">Newest first</SelectItem>
+            <SelectItem value="createdAt-asc">Oldest first</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="flex justify-end">
-        <Button variant="outline" onClick={handleReset}>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="has-contracts"
+            checked={filters.hasContracts}
+            onCheckedChange={(checked) => 
+              handleFilterChange("hasContracts", checked === true)
+            }
+          />
+          <label
+            htmlFor="has-contracts"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Has contracts
+          </label>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="has-complaints"
+            checked={filters.hasComplaints}
+            onCheckedChange={(checked) => 
+              handleFilterChange("hasComplaints", checked === true)
+            }
+          />
+          <label
+            htmlFor="has-complaints"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Has complaints
+          </label>
+        </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleReset}
+          className="ml-auto"
+        >
+          <X className="mr-2 h-4 w-4" />
           Reset Filters
         </Button>
       </div>

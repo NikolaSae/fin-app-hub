@@ -1,62 +1,123 @@
-// components/providers/ProviderList.tsx
 "use client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+import { useState } from "react";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import Link from "next/link";
+import { ProviderCard } from "@/components/providers/ProviderCard";
+import { ProviderFilters } from "@/components/providers/ProviderFilters";
 import { useProviders } from "@/hooks/use-providers";
+import { toast } from "sonner";
 
 export function ProviderList() {
-  const { providers, total, pagination, loading, error, setPagination } = useProviders();
+  const { 
+    providers, 
+    total, 
+    pagination, 
+    loading, 
+    error, 
+    setPagination,
+    filters,
+    setFilters,
+    refreshData
+  } = useProviders();
+
+  const [actionLoading, setActionLoading] = useState(false);
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
 
-  if (loading) return <div className="text-center py-4">Loading providers...</div>;
-  if (error) return <div className="text-center py-4 text-red-500">{error}</div>;
+  const handleFilterChange = (newFilters) => {
+    // Reset to page 1 when filters change
+    setPagination(prev => ({ ...prev, page: 1 }));
+    setFilters(newFilters);
+  };
+
+  const handleStatusChange = async (id: string, isActive: boolean) => {
+    setActionLoading(true);
+    try {
+      // You'll need to implement this API call
+      const response = await fetch(`/api/providers/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update status: ${response.statusText}`);
+      }
+
+      toast.success(`Provider ${isActive ? 'activated' : 'deactivated'} successfully`);
+      refreshData();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update provider status");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRenewContract = async (id: string) => {
+    setActionLoading(true);
+    try {
+      // You'll need to implement this API call
+      const response = await fetch(`/api/providers/${id}/renew-contract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to renew contract: ${response.statusText}`);
+      }
+
+      toast.success("Contract renewed successfully");
+      refreshData();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to renew contract");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading && providers.length === 0) {
+    return <div className="text-center py-4">Loading providers...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-4 text-red-500">{error}</div>;
+  }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Active</TableHead>
-              <TableHead>Contracts</TableHead>
-              <TableHead>Complaints</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {providers.map(provider => (
-              <TableRow key={provider.id}>
-                <TableCell>
-                  <Link href={`/providers/${provider.id}`} className="font-medium text-blue-600 hover:underline">
-                    {provider.name}
-                  </Link>
-                </TableCell>
-                <TableCell>{provider.contactName || "N/A"}</TableCell>
-                <TableCell>{provider.email || "N/A"}</TableCell>
-                <TableCell>{provider.phone || "N/A"}</TableCell>
-                <TableCell>{provider.isActive ? "Yes" : "No"}</TableCell>
-                <TableCell>{provider._count?.contracts || 0}</TableCell>
-                <TableCell>{provider._count?.complaints || 0}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <ProviderFilters 
+        initialFilters={filters} 
+        onFilterChange={handleFilterChange} 
+      />
+      
+      {providers.length === 0 ? (
+        <div className="text-center py-8 bg-white rounded-md border">
+          <p className="text-gray-500">No providers found matching your criteria.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {providers.map(provider => (
+            <ProviderCard 
+              key={provider.id} 
+              provider={provider} 
+              onStatusChange={handleStatusChange}
+              onRenewContract={handleRenewContract}
+            />
+          ))}
+        </div>
+      )}
 
       {total > pagination.limit && (
-        <Pagination>
+        <Pagination className="mt-6">
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious 
                 onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
-                disabled={pagination.page === 1}
+                disabled={pagination.page === 1 || loading || actionLoading}
               />
             </PaginationItem>
             {Array.from({ length: Math.ceil(total / pagination.limit) }).map((_, index) => (
@@ -64,6 +125,7 @@ export function ProviderList() {
                 <PaginationLink
                   onClick={() => handlePageChange(index + 1)}
                   isActive={index + 1 === pagination.page}
+                  disabled={loading || actionLoading}
                 >
                   {index + 1}
                 </PaginationLink>
@@ -72,7 +134,7 @@ export function ProviderList() {
             <PaginationItem>
               <PaginationNext
                 onClick={() => handlePageChange(Math.min(Math.ceil(total / pagination.limit), pagination.page + 1))}
-                disabled={pagination.page >= Math.ceil(total / pagination.limit)}
+                disabled={pagination.page >= Math.ceil(total / pagination.limit) || loading || actionLoading}
               />
             </PaginationItem>
           </PaginationContent>

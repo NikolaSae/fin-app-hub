@@ -26,6 +26,12 @@ export interface ProviderFilterOptions {
   sortDirection?: 'asc' | 'desc';
 }
 
+// Опције за пагинацију
+export interface PaginationOptions {
+  page: number;
+  limit: number;
+}
+
 // Резултат API позива
 export interface ProvidersResult {
   data: ProviderWithCounts[];

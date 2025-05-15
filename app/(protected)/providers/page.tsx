@@ -9,15 +9,15 @@ export const metadata: Metadata = {
   description: "View and manage all providers in the system",
 };
 
-export default async function ProvidersPage() { // Dodat async ovde
+export default async function ProvidersPage() {
   const session = await auth();
   const currentUser = session?.user;
   const userRole = currentUser?.role as UserRole | undefined;
-
+  
   if (!userRole || ![UserRole.ADMIN, UserRole.MANAGER].includes(userRole)) {
     return <div>Unauthorized</div>;
   }
-
+  
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -36,7 +36,7 @@ export default async function ProvidersPage() { // Dodat async ovde
           </a>
         </div>
       </div>
-
+      
       <ProviderList />
     </div>
   );

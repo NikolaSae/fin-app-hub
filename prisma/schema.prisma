@@ -215,10 +215,10 @@ model Contract {
   providerId        String?
   provider          Provider?           @relation(fields: [providerId], references: [id])
   operator          Operator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
-  humanitarianOrgId String?
+  humanitarianOrgId String?             @unique
   humanitarianOrg   HumanitarianOrg?    @relation(fields: [humanitarianOrgId], references: [id])
   
-  parkingServiceId  String?
+  parkingServiceId  String?             @unique
   parkingService    ParkingService?     @relation(fields: [parkingServiceId], references: [id])
   
   // Services linked to this contract
@@ -316,7 +316,7 @@ model ServiceContract {
   id            String    @id @default(cuid())
   contractId    String
   contract      Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  serviceId     String
+  serviceId     String    @unique
   service       Service   @relation(fields: [serviceId], references: [id])
   
   // Service-specific terms
@@ -368,7 +368,10 @@ enum ServiceType {
   HUMANITARIAN
   PARKING
 }
-
+enum BillingType {
+  PREPAID
+  POSTPAID
+}
 model Service {
   id            String           @id @default(cuid())
   name          String
@@ -377,7 +380,7 @@ model Service {
   isActive      Boolean          @default(true)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-  
+  billingType   BillingType?
   // Relations
   contracts     ServiceContract[]
   vasServices   VasService[]
