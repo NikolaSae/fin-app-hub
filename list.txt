@@ -491,6 +491,45 @@ Sekcija 9: Humanitarian Organizations Structure [G - KOMPLETIRANO]
 9.5 Types & Schemas
 /schemas/humanitarian-org.ts [G]
 /lib/types/humanitarian-org-types.ts [G]
+
+
+treba da zavrsimo izradu fajlova za Operatora, ovo je spisak svih fajlova
+10. Operators
+
+10.1. App Routes
+/app/(protected)/operators/page.tsx - Main operators listing page - kreiran
+/app/(protected)/operators/new/page.tsx - Create new operator page - kreiran
+/app/(protected)/operators/[id]/page.tsx - Individual operator details view - kreiran
+/app/(protected)/operators/[id]/edit/page.tsx - Edit operator page - kreiran
+
+10.2. Components
+/components/operators/OperatorList.tsx - Tabular list of all operators  - kreiran
+/components/operators/OperatorForm.tsx - Form for creating/editing operators - kreiran
+/components/operators/OperatorDetails.tsx - Operator details display - kreiran
+/components/operators/OperatorFilters.tsx - Filter controls for operators - kreiran
+/components/operators/OperatorCard.tsx - Card component for operator display - kreiran
+/components/operators/OperatorContracts.tsx - List of contracts associated with an operator - kreiran
+
+10.3. Actions & API Routes
+// actions/operators/index.ts -kreiran
+/actions/operators/create.ts - Create new operator - kreiran
+/actions/operators/update.ts - Update existing operator - kreiran
+/actions/operators/delete.ts - Delete operator - kreiran
+/app/api/operators/route.ts - Operators CRUD API - kreiran
+/app/api/operators/[id]/route.ts - Individual operator API - kreiran
+/app/api/operators/[id]/contracts/route.ts - Operator contracts API - kreiran
+
+10.4. Hooks & Utils
+/hooks/use-operators.ts - Custom hook for operator data - kreiran
+/lib/operators/validators.ts - Operator validation utilities - kreiran
+
+10.5. Types & Schemas
+/schemas/operator.ts - Zod validation schema for operators - kreiran
+/lib/types/operator-types.ts - TypeScript types for operators - kreiran
+
+treba da napravis fajlove koje jos uvek nemam
+
+
 Ovo su svi fajlovi koje smo definisali i generisali u okviru ove dve sekcije.
 
 
