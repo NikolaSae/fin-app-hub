@@ -512,6 +512,10 @@ treba da zavrsimo izradu fajlova za Operatora, ovo je spisak svih fajlova
 
 10.3. Actions & API Routes
 // actions/operators/index.ts -kreiran
+/actions/operators/getAllOperators.ts - kreiran
+/actions/operators/getContractsByOperatorId.ts - kreiran
+/actions/operators/getOperatorById.ts - kreiran
+/actions/operators/getOperators.ts - kreiran
 /actions/operators/create.ts - Create new operator - kreiran
 /actions/operators/update.ts - Update existing operator - kreiran
 /actions/operators/delete.ts - Delete operator - kreiran
