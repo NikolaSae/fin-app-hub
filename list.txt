@@ -535,17 +535,17 @@ treba da zavrsimo izradu fajlova za Operatora, ovo je spisak svih fajlova
 
 11. Parking Services Structure
 11.1 App Routes
-/app/(protected)/parking-services/page.tsx - Main parking services listing page
-/app/(protected)/parking-services/new/page.tsx - Create new parking service page
-/app/(protected)/parking-services/[id]/page.tsx - Individual parking service details view
-/app/(protected)/parking-services/[id]/edit/page.tsx - Edit parking service page
+/app/(protected)/parking-services/page.tsx - Main parking services listing page - kreirao
+/app/(protected)/parking-services/new/page.tsx - Create new parking service page - kreirao
+/app/(protected)/parking-services/[id]/page.tsx - Individual parking service details view - kreirao
+/app/(protected)/parking-services/[id]/edit/page.tsx - Edit parking service page - kreirao
 11.2 Components
 /components/parking-services/ParkingServiceList.tsx - Tabular list of all parking services - kreirao
 /components/parking-services/ParkingServiceForm.tsx - Form for creating/editing parking services - kreirao
 /components/parking-services/ParkingServiceDetails.tsx - Parking service details display - kreirao
 /components/parking-services/ParkingServiceFilters.tsx - Filter controls for parking services - kreirao
 /components/parking-services/ParkingServiceCard.tsx - Card component for parking service display - kreirao
-/components/parking-services/ParkingServiceContracts.tsx - List of contracts associated with a parking service
+/components/parking-services/ParkingServiceContracts.tsx - List of contracts associated with a parking service - kreirao
 11.3 Actions & API Routes
 /actions/parking-services/index.ts - Export all parking service actions - kreirao
 /actions/parking-services/getAllParkingServices.ts - Get all parking services - kreirao
@@ -555,13 +555,13 @@ treba da zavrsimo izradu fajlova za Operatora, ovo je spisak svih fajlova
 /actions/parking-services/create.ts - Create new parking service - kreirao
 /actions/parking-services/update.ts - Update existing parking service - kreirao
 /actions/parking-services/delete.ts - Delete parking service - kreirao
-/app/api/parking-services/route.ts - Parking services CRUD API
+/app/api/parking-services/route.ts - Parking services CRUD API - kreirao
 /app/api/parking-services/[id]/route.ts - Individual parking service API
 /app/api/parking-services/[id]/contracts/route.ts - Parking service contracts API
 11.4 Hooks & Utils
 /hooks/use-parking-services.ts - Custom hook for parking service data - kreirao
-/hooks/use-parking-service-contracts.ts - Hook for parking service contracts
-/lib/parking-services/validators.ts - Parking service validation utilities
+/hooks/use-parking-service-contracts.ts - Hook for parking service contracts - kreirao
+/lib/parking-services/validators.ts - Parking service validation utilities - kreirao
 11.5 Types & Schemas
 /schemas/parking-service.ts - Zod validation schema for parking services - kreirao
 /lib/types/parking-service-types.ts - TypeScript types for parking services - kreirao
