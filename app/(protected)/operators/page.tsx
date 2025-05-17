@@ -28,6 +28,25 @@ export default async function OperatorsPage({
     pageSize?: string;
   };
 }) {
+  // In Next.js v5, you need to await searchParams before accessing its properties
+  const searchParamsData = await searchParams;
+  
+  const initialFilters = {
+    search: searchParamsData.search ?? "",
+    active: (searchParamsData.active ?? "all") as "all" | "active" | "inactive",
+    sortBy: (searchParamsData.sortBy ?? "name") as "name" | "code" | "createdAt",
+    sortOrder: (searchParamsData.sortOrder ?? "asc") as "asc" | "desc",
+    page: searchParamsData.page ? Number(searchParamsData.page) : 1,
+    pageSize: searchParamsData.pageSize ? Number(searchParamsData.pageSize) : 10,
+  };
+
+  // Additional check for NaN after Number() parsing
+  const safeFilters = {
+    ...initialFilters,
+    page: isNaN(initialFilters.page) ? 1 : initialFilters.page,
+    pageSize: isNaN(initialFilters.pageSize) ? 10 : initialFilters.pageSize,
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
@@ -47,56 +66,37 @@ export default async function OperatorsPage({
 
       <Separator className="my-6" />
 
-      {/* OperatorFilters je Client Component i treba da koristi useSearchParams */}
-      {/* Prosleđivanje initialFilters iz searchParams je u redu za inicijalizaciju */}
-      <OperatorFilters initialFilters={searchParams} />
+      {/* Pass the awaited searchParams to the client component */}
+      <OperatorFilters initialFilters={searchParamsData} />
 
       <Suspense fallback={<OperatorListSkeleton />}>
-        {/* Prosleđujemo searchParams pomoćnoj komponenti OperatorsList */}
-        <OperatorsList searchParams={searchParams} />
+        {/* Pass the processed filters to the OperatorsList component */}
+        <OperatorsList filters={safeFilters} />
       </Suspense>
     </div>
   );
 }
 
-// Pomoćna async komponenta za dohvatanje podataka i renderovanje liste
-async function OperatorsList({ searchParams }: {
-    searchParams: {
-        search?: string;
-        active?: "all" | "active" | "inactive";
-        sortBy?: "name" | "code" | "createdAt";
-        sortOrder?: "asc" | "desc";
-        page?: string;
-        pageSize?: string;
+// Helper async component for fetching data and rendering the list
+async function OperatorsList({ filters }: {
+    filters: {
+      search: string;
+      active: "all" | "active" | "inactive";
+      sortBy: "name" | "code" | "createdAt";
+      sortOrder: "asc" | "desc";
+      page: number;
+      pageSize: number;
     };
 }) {
-  // Parsiramo parametre OVDE, ne u roditeljskoj komponenti OperatorsPage
-   const params = {
-     search: searchParams.search ?? "",
-     active: (searchParams.active ?? "all") as "all" | "active" | "inactive",
-     sortBy: (searchParams.sortBy ?? "name") as "name" | "code" | "createdAt",
-     sortOrder: (searchParams.sortOrder ?? "asc") as "asc" | "desc",
-     page: searchParams.page ? Number(searchParams.page) : 1,
-     pageSize: searchParams.pageSize ? Number(searchParams.pageSize) : 10,
-   };
+  // Call Server Action to fetch data using the processed filters
+  const result = await getOperators(filters);
 
-   // Dodatna provera za NaN nakon Number() parsiranja
-   const safeParams = {
-       ...params,
-       page: isNaN(params.page) ? 1 : params.page,
-       pageSize: isNaN(params.pageSize) ? 10 : params.pageSize,
-   };
-
-  // Poziv Server Action za dohvatanje podataka
-  const result = await getOperators(safeParams); // getOperators vraća { operators: [...], ... }
-
-  // --- FIX: Prosleđujemo SAMO niz operatora komponenti OperatorList ---
-  // Takođe prosleđujemo podatke za paginaciju
+  // Pass only the operators array to the OperatorList component
+  // Also pass pagination data
   return <OperatorList data={result.operators} totalCount={result.totalCount} pageCount={result.pageCount} currentPage={result.currentPage} />;
-  // ------------------------------------------------------------------
 }
 
-// Komponenta za prikaz Skeletona dok se podaci učitavaju
+// Component to display skeleton while data is loading
 function OperatorListSkeleton() {
   return (
     <div className="space-y-4 mt-6">

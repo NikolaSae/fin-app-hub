@@ -165,12 +165,14 @@ export function ContractForm({
         isValid = false;
       }
 
-      if (values.isRevenueSharing && values.operatorId && !values.operatorRevenue) {
-        isValid = false;
-      }
-
-      if (values.operatorRevenue && (values.operatorRevenue < 0 || values.operatorRevenue > 100)) {
-        isValid = false;
+      // Check if revenue sharing is enabled and operator fields are filled
+      if (values.isRevenueSharing) {
+        if (!values.operatorId) {
+          isValid = false;
+        }
+        if (values.operatorRevenue === undefined || values.operatorRevenue < 0 || values.operatorRevenue > 100) {
+          isValid = false;
+        }
       }
 
       setSubmitEnabled(isValid && !isLoading);
@@ -186,6 +188,16 @@ export function ContractForm({
   }, [form, selectedServices, isLoading]);
 
   useEffect(() => {
+    // Reset or clear operator fields when revenue sharing is toggled off
+    const isRevenueSharingEnabled = form.watch('isRevenueSharing');
+    
+    if (!isRevenueSharingEnabled) {
+      form.setValue('operatorId', '');
+      form.setValue('operatorRevenue', 0);
+    }
+  }, [form.watch('isRevenueSharing'), form]);
+
+  useEffect(() => {
     form.setValue('services', selectedServices);
   }, [selectedServices, form]);
 
@@ -195,14 +207,23 @@ export function ContractForm({
   const onSubmit = async (data: ContractFormData) => {
     setIsLoading(true);
     try {
+      // Ensure operatorId is included only when revenue sharing is enabled
+      const formData = { ...data };
+      if (!formData.isRevenueSharing) {
+        formData.operatorId = '';
+        formData.operatorRevenue = 0;
+      }
+      
       const payload = {
-        ...data,
+        ...formData,
         services: selectedServices,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
+        startDate: new Date(formData.startDate),
+        endDate: new Date(formData.endDate),
       };
 
-      console.log('Submitting contract:', payload);
+      console.log('Submitting contract payload:', payload);
+      console.log('Payload operatorId:', payload.operatorId);
+      console.log('isRevenueSharing:', payload.isRevenueSharing);
 
       const result = isEditing && contract
         ? await updateContract(contract.id, payload)
@@ -221,6 +242,7 @@ export function ContractForm({
       setIsLoading(false);
     }
   };
+
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -364,11 +386,8 @@ export function ContractForm({
                 )}
               />
             </div>
-
-            {/* Revenue Configuration Section */}
             <div className="border p-4 rounded-md">
               <h3 className="font-medium mb-4">Revenue Configuration</h3>
-              
               <FormField
                 control={form.control}
                 name="revenuePercentage"
@@ -390,7 +409,6 @@ export function ContractForm({
                   </FormItem>
                 )}
               />
-
               <div className="mt-4">
                 <FormField
                   control={form.control}
@@ -411,7 +429,6 @@ export function ContractForm({
                   )}
                 />
               </div>
-
               {isRevenueSharing && (
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
@@ -421,7 +438,12 @@ export function ContractForm({
                       <FormItem>
                         <FormLabel>Operator *</FormLabel>
                         <Select
-                          onValueChange={field.onChange}
+                          onValueChange={(value) => {
+                            console.log('Select operatorId value changed:', value);
+                            field.onChange(value);
+                            // Ensure the form value is updated
+                            form.setValue('operatorId', value, { shouldValidate: true });
+                          }}
                           value={field.value || ""}
                           disabled={isLoading}
                         >
@@ -441,8 +463,7 @@ export function ContractForm({
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
-                  
+                  />                
                   <FormField
                     control={form.control}
                     name="operatorRevenue"
@@ -467,7 +488,6 @@ export function ContractForm({
                 </div>
               )}
             </div>
-
             {contractType === ContractType.PROVIDER && (
               <FormField
                 control={form.control}

@@ -10,6 +10,13 @@ import { z } from 'zod';
 
 export async function createContract(data: ContractFormData) {
   try {
+    // Debug logs to help troubleshoot form submissions
+    console.log("[CREATE_CONTRACT] Received data:", JSON.stringify({
+      ...data,
+      operatorId: data.operatorId,
+      isRevenueSharing: data.isRevenueSharing
+    }, null, 2));
+
     const formattedData = {
       ...data,
       startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
@@ -17,14 +24,26 @@ export async function createContract(data: ContractFormData) {
       providerId: data.type === 'PROVIDER' ? data.providerId : null,
       humanitarianOrgId: data.type === 'HUMANITARIAN' ? data.humanitarianOrgId : null,
       parkingServiceId: data.type === 'PARKING' ? data.parkingServiceId : null,
-      operatorId: data.operatorId || null,
-      isRevenueSharing: data.isRevenueSharing !== undefined ? data.isRevenueSharing : true,
-      operatorRevenue: data.operatorRevenue || null,
+      // Fix: Properly handle operatorId by checking for empty strings
+      operatorId: data.operatorId && data.operatorId.trim() !== '' ? data.operatorId : null,
+      // Fix: Ensure isRevenueSharing has a default boolean value
+      isRevenueSharing: typeof data.isRevenueSharing === 'boolean' ? data.isRevenueSharing : true,
+      // Fix: Ensure operatorRevenue is a number or null
+      operatorRevenue: data.operatorRevenue !== undefined && data.operatorRevenue !== '' 
+        ? Number(data.operatorRevenue) 
+        : null,
     };
+
+    // Debug logs after formatting
+    console.log("[CREATE_CONTRACT] Formatted data:", JSON.stringify({
+      operatorId: formattedData.operatorId,
+      isRevenueSharing: formattedData.isRevenueSharing,
+      operatorRevenue: formattedData.operatorRevenue
+    }, null, 2));
 
     const validationResult = contractSchema.safeParse(formattedData);
     if (!validationResult.success) {
-      console.error("Validation failed:", validationResult.error.flatten());
+      console.error("[CREATE_CONTRACT] Validation failed:", validationResult.error.flatten());
       return {
         error: "Validation failed",
         details: validationResult.error.flatten(),
@@ -41,7 +60,7 @@ export async function createContract(data: ContractFormData) {
       where: { contractNumber: formattedData.contractNumber },
     });
     if (existingContract) {
-      console.warn(`Attempted to create duplicate contract number: ${formattedData.contractNumber}`);
+      console.warn(`[CREATE_CONTRACT] Attempted to create duplicate contract number: ${formattedData.contractNumber}`);
       return { error: "Contract number already exists", success: false };
     }
 
@@ -68,6 +87,13 @@ export async function createContract(data: ContractFormData) {
       },
       createdById: session.user.id,
     };
+
+    // Log the final contract data before submission
+    console.log("[CREATE_CONTRACT] Final contract data:", JSON.stringify({
+      operatorId: contractData.operatorId,
+      isRevenueSharing: contractData.isRevenueSharing,
+      operatorRevenue: contractData.operatorRevenue
+    }, null, 2));
 
     const newContract = await db.contract.create({
       data: contractData,

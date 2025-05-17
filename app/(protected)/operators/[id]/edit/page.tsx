@@ -25,7 +25,7 @@ interface EditOperatorPageProps {
 }
 
 export default async function EditOperatorPage({ params }: EditOperatorPageProps) {
-  const { id } = params;
+  const { id } = await params;
   const userRole = await getUserRole();
   
   // Only ADMIN and MANAGER can edit operators

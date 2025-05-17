@@ -26,7 +26,7 @@ interface OperatorDetailsPageProps {
 }
 
 export default async function OperatorDetailsPage({ params }: OperatorDetailsPageProps) {
-  const { id } = params;
+  const { id } = await params;
   const operator = await getOperatorById(id);
 
   if (!operator) {

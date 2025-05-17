@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { cn, formatDate } from "@/lib/utils";
 import { createReminder } from "@/actions/contracts/create-reminder";
 import { acknowledgeReminder } from "@/actions/contracts/acknowledge-reminder";
-import { useToast } from "@/components/toast/toast-context";
+import { toast } from "sonner";
 
 interface Reminder {
   id: string;
@@ -54,7 +54,7 @@ export function ReminderForm({
   const [reminderType, setReminderType] = useState<string>("expiration");
   const [creating, setCreating] = useState(false);
   const [acknowledging, setAcknowledging] = useState<string | null>(null);
-  const { toast } = useToast();
+  // const { toast } = useToast();
 
   const handleCreate = async () => {
     if (!date) {

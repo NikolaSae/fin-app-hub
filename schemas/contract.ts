@@ -31,6 +31,10 @@ const baseContractSchema = z.object({
   providerId: z.string().optional().nullable(),
   humanitarianOrgId: z.string().optional().nullable(),
   parkingServiceId: z.string().optional().nullable(),
+  // Add missing fields
+  operatorId: z.string().optional().nullable(),
+  isRevenueSharing: z.boolean().default(true),
+  operatorRevenue: z.number().optional().nullable(),
   // Services with specific terms
   services: z.array(serviceSchema).default([])
 });
@@ -39,7 +43,6 @@ export const contractSchema = baseContractSchema.superRefine((data, ctx) => {
   // Date validation - parse dates for comparison
   const startDate = new Date(data.startDate);
   const endDate = new Date(data.endDate);
-
   if (endDate < startDate) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -93,6 +96,15 @@ export const contractSchema = baseContractSchema.superRefine((data, ctx) => {
       code: z.ZodIssueCode.custom,
       message: "All services must have a valid service ID",
       path: ['services'],
+    });
+  }
+
+  // Revenue validation
+  if (data.isRevenueSharing === false && (data.operatorRevenue === null || data.operatorRevenue === undefined)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Operator revenue is required when 'Revenue Sharing' is disabled",
+      path: ['operatorRevenue'],
     });
   }
 });
