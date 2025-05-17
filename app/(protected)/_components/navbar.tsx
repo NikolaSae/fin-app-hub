@@ -88,8 +88,8 @@ export const Navbar = () => {
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
                 <Link
-                  href="/parking"
-                  className={cn(navigationMenuTriggerStyle(), isActivePath("/parking") && "bg-accent text-accent-foreground")}
+                  href="/parking-services"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/parking-services") && "bg-accent text-accent-foreground")}
                 >
                   Parking
                 </Link>

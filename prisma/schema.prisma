@@ -199,7 +199,7 @@ enum ContractType {
 model Contract {
   id                String              @id @default(cuid())
   name              String
-  contractNumber    String              @unique
+  contractNumber    String              @unique // Broj ugovora je jedinstven globalno
   type              ContractType
   status            ContractStatus      @default(ACTIVE)
   startDate         DateTime
@@ -207,29 +207,32 @@ model Contract {
   revenuePercentage Float               // Percentage of revenue for the platform
   description       String?             @db.Text
 
-  operatorRevenue   Float?    // Percentage for the operator
-  isRevenueSharing  Boolean   @default(true)
+  operatorRevenue   Float?              // Percentage for the operator
+  isRevenueSharing  Boolean             @default(true)
   operatorId        String?
 
   // Relations
   providerId        String?
   provider          Provider?           @relation(fields: [providerId], references: [id])
-  operator          Operator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
-  humanitarianOrgId String?             @unique
+  operator          Operator?           @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+
+  // Uklonjeno @unique sa humanitarianOrgId
+  humanitarianOrgId String?
   humanitarianOrg   HumanitarianOrg?    @relation(fields: [humanitarianOrgId], references: [id])
-  
-  parkingServiceId  String?             @unique
+
+  // Uklonjeno @unique sa parkingServiceId
+  parkingServiceId  String?
   parkingService    ParkingService?     @relation(fields: [parkingServiceId], references: [id])
-  
+
   // Services linked to this contract
   services          ServiceContract[]
-  
+
   // Attachments and documents
   attachments       ContractAttachment[]
-  
+
   // Renewals for humanitarian contracts
   humanitarianRenewals HumanitarianContractRenewal[]
-  
+
   // Audit fields
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -237,16 +240,17 @@ model Contract {
   createdBy         User                @relation("ContractCreator", fields: [createdById], references: [id])
   lastModifiedById  String?
   lastModifiedBy    User?               @relation("ContractModifier", fields: [lastModifiedById], references: [id])
-  
+
   // Reminders and notifications
   reminders         ContractReminder[]
-  
+
   @@index([providerId])
   @@index([humanitarianOrgId])
   @@index([parkingServiceId])
   @@index([status])
   @@index([endDate]) // For efficient expiration checks
   @@index([operatorId])
+
 }
 
 // Humanitarian Contract Renewal Sub-statuses
@@ -316,7 +320,7 @@ model ServiceContract {
   id            String    @id @default(cuid())
   contractId    String
   contract      Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  serviceId     String    @unique
+  serviceId     String
   service       Service   @relation(fields: [serviceId], references: [id])
   
   // Service-specific terms
