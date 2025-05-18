@@ -10,6 +10,7 @@ export interface Provider {
   email?: string | null;
   phone?: string | null;
   isActive: boolean;
+  imageUrl?: string | null; // Added imageUrl field
   _count?: {
     contracts?: number;
     complaints?: number;
@@ -33,7 +34,7 @@ export interface FilterOptions {
 }
 
 export function useProviders(
-  initialFilters: FilterOptions = {}, 
+  initialFilters: FilterOptions = {},
   initialPagination: PaginationOptions = { page: 1, limit: 12 }
 ) {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -46,46 +47,42 @@ export function useProviders(
   const fetchProviders = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Конвертовање филтера у URL параметре
       const params = new URLSearchParams();
-      
-      // Додавање параметара за пагинацију
+
       params.append("page", pagination.page.toString());
       params.append("limit", pagination.limit.toString());
-      
-      // Додавање филтера
+
       if (filters.search) {
         params.append("search", filters.search);
       }
-      
+
       if (filters.isActive !== undefined) {
         params.append("isActive", filters.isActive.toString());
       }
-      
+
       if (filters.hasContracts) {
         params.append("hasContracts", "true");
       }
-      
+
       if (filters.hasComplaints) {
         params.append("hasComplaints", "true");
       }
-      
+
       if (filters.sortBy) {
         params.append("sortBy", filters.sortBy);
         params.append("sortDirection", filters.sortDirection || "asc");
       }
-      
-      // Позив API-ја
+
       const response = await fetch(`/api/providers?${params.toString()}`);
-      
+
       if (!response.ok) {
         throw new Error(`Error fetching providers: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
+
       setProviders(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -96,7 +93,6 @@ export function useProviders(
     }
   };
 
-  // Преузимање података када се компонента монтира или када се промене филтери/пагинација
   useEffect(() => {
     fetchProviders();
   }, [pagination.page, pagination.limit, filters]);

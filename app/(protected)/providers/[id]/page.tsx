@@ -2,12 +2,24 @@
  
 import { Metadata } from "next";
 import { notFound } from 'next/navigation';
-import { db } from '@/lib/db';
-import { Provider } from '@prisma/client'; // Uvoz osnovnog Provider modela
- 
-import { ProviderDetails } from "@/components/providers/ProviderDetails";
- 
-import { ProviderWithDetails } from '@/lib/types/provider-types';
+import { Suspense } from 'react';
+
+// Assuming you have an action that fetches provider details and returns { success, data, error }
+import { getProviderDetails } from '@/actions/providers/getProviderDetails'; // Update this import if needed
+
+// Import UI and custom components
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Pencil } from "lucide-react";
+import Link from "next/link";
+import PageHeader from "@/components/PageHeader"; // Assuming PageHeader exists
+import DetailSkeleton from "@/components/skeletons/DetailSkeleton"; // Assuming DetailSkeleton exists
+
+// Import the ProviderDetails component (from the immersive artifact)
+import ProviderDetails from "@/components/providers/ProviderDetails";
+// Import the ProviderContracts component (assuming it exists)
+import ProviderContracts from "@/components/providers/ProviderContracts";
 
 
 interface ProviderDetailsPageProps {
@@ -16,72 +28,123 @@ interface ProviderDetailsPageProps {
     };
 }
 
- 
-async function getProviderDetails(providerId: string): Promise<ProviderWithDetails | null> {
-    try {
-        const provider = await db.provider.findUnique({
-            where: { id: providerId },
-            include: {
-                 contracts: { select: { id: true, name: true, contractNumber: true, status: true, endDate: true } },
-                 vasServices: { select: { id: true, proizvod: true, mesec_pruzanja_usluge: true, naplacen_iznos: true } },
-                 bulkServices: { select: { id: true, service_name: true, requests: true } },
-                 complaints: { select: { id: true, title: true, status: true, createdAt: true } },
-                 _count: {
-                     select: { contracts: true, vasServices: true, bulkServices: true, complaints: true }
-                 }
-            }
-        });
-
-        // Osiguravamo da se vrati tačan tip
-        return provider as ProviderWithDetails | null;
-
-    } catch (error) {
-        console.error(`Error fetching provider ${providerId} details from DB:`, error);
-        return null;
-    }
-}
-
 // Generisanje metadata za stranicu
 export async function generateMetadata({ params }: ProviderDetailsPageProps): Promise<Metadata> {
      const { id } = await params;
-     const provider = await getProviderDetails(id);
+     // Use the action to fetch data for metadata
+     const providerResult = await getProviderDetails(id);
 
      return {
-         title: provider ? `${provider.name} | Provider Details` : 'Provider Not Found',
-         description: provider ? `Details for provider ${provider.name}.` : 'Details for provider.',
+         title: providerResult.success && providerResult.data ? `${providerResult.data.name} | Provider Details` : 'Provider Not Found',
+         description: providerResult.success && providerResult.data ? `Details for provider ${providerResult.data.name}.` : 'Details for provider.',
      };
- }
+}
 
-// Glavna Server Komponenta za stranicu detalja provajdera
-export default async function ProviderDetailsPage({ params }: ProviderDetailsPageProps) {
-    const { id: providerId } = await params;
+// Async Server Component to fetch and render provider details
+async function ProviderDetailsFetcher({ providerId }: { providerId: string }) {
+    const providerResult = await getProviderDetails(providerId);
 
-    const provider = await getProviderDetails(providerId);
-
-    if (!provider) {
+    if (!providerResult.success || !providerResult.data) {
+        // If details fetching fails or provider not found, call notFound
         notFound();
     }
 
+    const provider = providerResult.data;
+
+    // Render the ProviderDetails component with the fetched data
+    return <ProviderDetails provider={provider} />;
+}
+
+// Async Server Component to fetch and render provider contracts
+async function ProviderContractsFetcher({ providerId }: { providerId: string }) {
+    // This component will likely pass the providerId to a Client Component
+    // (like ProviderContracts) that uses a hook to fetch the contracts.
+    // If you have a server action to fetch contracts by provider ID,
+    // you would call it here and pass the data to ProviderContracts.
+    // For now, we assume ProviderContracts handles its own fetching via hook.
+    return <ProviderContracts providerId={providerId} />;
+}
+
+
+// Glavna Server Komponenta za stranicu detalja provajdera
+export default async function ProviderDetailsPage({ params }: ProviderDetailsPageProps) {
+    // Await params before accessing its properties
+    const { id: providerId } = await params;
+
+    // Fetch provider details here to get the name for the PageHeader
+    // This is a separate fetch, but can be optimized depending on your needs
+    const providerHeaderResult = await getProviderDetails(providerId);
+
+     if (!providerHeaderResult.success || !providerHeaderResult.data) {
+         // If the provider is not found, show 404
+         notFound();
+     }
+
+     const providerForHeader = providerHeaderResult.data;
+
+
     return (
-        <div className="p-6 space-y-6">
-             <div className="flex items-center justify-between">
-                <div>
-                     <h1 className="text-2xl font-bold tracking-tight">{provider.name}</h1>
-                    <p className="text-gray-500">
-                         Details for provider: {provider.id}
-                    </p>
-                </div>
-                 <div className="flex items-center gap-4">
-                    <a
-                        href={`/providers/${provider.id}/edit`}
-                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-10 py-2 px-4"
-                    >
-                        Edit Provider
-                    </a>
-                 </div>
-             </div>
- 
-                <ProviderDetails provider={provider} />
+        <div className="container mx-auto py-6 space-y-6">
+            {/* Page Header */}
+             <PageHeader
+                 title={providerForHeader.name}
+                 description={`Details for provider: ${providerId}`} // Or a more user-friendly description
+                 actions={
+                     <Link href={`/providers/${providerId}/edit`} passHref>
+                         <Button>
+                             <Pencil className="mr-2 h-4 w-4" />
+                             Edit Provider
+                         </Button>
+                     </Link>
+                 }
+                 backLink={{
+                     href: "/providers",
+                     label: "Back to Providers",
+                 }}
+             />
+
+
+            {/* Tabs for Details and other sections */}
+            <Tabs defaultValue="details">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="contracts">Contracts</TabsTrigger>
+                    {/* Add more tabs for other relations if needed */}
+                    {/* <TabsTrigger value="vas-services">VAS Services</TabsTrigger> */}
+                    {/* <TabsTrigger value="bulk-services">Bulk Services</TabsTrigger> */}
+                    {/* <TabsTrigger value="complaints">Complaints</TabsTrigger> */}
+                </TabsList>
+
+                {/* Details Tab Content */}
+                <TabsContent value="details">
+                    <Card>
+                        <CardContent className="pt-6">
+                            {/* Suspense for the main provider details fetching */}
+                            <Suspense fallback={<DetailSkeleton />}>
+                                {/* ProviderDetailsFetcher handles fetching and rendering ProviderDetails */}
+                                <ProviderDetailsFetcher providerId={providerId} />
+                            </Suspense>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Contracts Tab Content */}
+                <TabsContent value="contracts">
+                     <Card>
+                        <CardContent className="pt-6">
+                             {/* Suspense for the contracts list fetching */}
+                             {/* Use ListSkeleton or a more specific ContractsListSkeleton */}
+                            <Suspense fallback={<DetailSkeleton />}> {/* Using DetailSkeleton for simplicity, consider ListSkeleton */}
+                                {/* ProviderContractsFetcher handles fetching and rendering ProviderContracts */}
+                                <ProviderContractsFetcher providerId={providerId} />
+                            </Suspense>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                 {/* Add more TabsContent for other relations if needed */}
+
+            </Tabs>
         </div>
     );
 }

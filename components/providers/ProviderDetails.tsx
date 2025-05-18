@@ -3,110 +3,120 @@
 
 import { ProviderWithDetails } from '@/lib/types/provider-types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-
+import { Separator } from '@/components/ui/separator'; // Keep Separator if you want it
+import { formatDate } from "@/lib/utils"; // Assuming formatDate exists
+import { AlertCircle, Phone, Mail, MapPin, Calendar, Clock } from "lucide-react"; // Import icons
+import React from 'react'; // Import React
 
 interface ProviderDetailsProps {
     provider: ProviderWithDetails;
 }
 
-export function ProviderDetails({ provider }: ProviderDetailsProps) {
+const ProviderDetails: React.FC<ProviderDetailsProps> = ({ provider }) => {
     // Pretpostavljamo da provider prop nikada neće biti null/undefined
     // Parent page (npr. [id]/page.tsx) treba da rukuje 404 stanjem ako provajder nije pronađen.
 
     return (
         <div className="space-y-6">
+            {/* Contact Information Card - Styled like ParkingServiceDetails */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Basic Information</CardTitle>
+                    <CardTitle className="text-lg">Contact Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <div>
-                             <p className="text-sm font-medium text-muted-foreground">Name</p>
-                             <p>{provider.name}</p>
-                         </div>
-                         <div>
-                              <p className="text-sm font-medium text-muted-foreground">Contact Name</p>
-                              <p>{provider.contactName || 'N/A'}</p>
-                         </div>
-                         <div>
-                             <p className="text-sm font-medium text-muted-foreground">Email</p>
-                             <p>{provider.email || 'N/A'}</p>
-                         </div>
-                         <div>
-                             <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                             <p>{provider.phone || 'N/A'}</p>
-                         </div>
-                         <div className="md:col-span-2">
-                             <p className="text-sm font-medium text-muted-foreground">Address</p>
-                             <p>{provider.address || 'N/A'}</p>
-                         </div>
-                         <div>
-                             <p className="text-sm font-medium text-muted-foreground">Active</p>
-                             <p>{provider.isActive ? 'Yes' : 'No'}</p>
-                         </div>
-                    </div>
+                    {provider.contactName && (
+                        <div className="flex items-start gap-2">
+                             <span className="font-medium min-w-28">Contact Person:</span>
+                             <span>{provider.contactName}</span>
+                        </div>
+                    )}
+                    {provider.email && (
+                        <div className="flex items-start gap-2">
+                            <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                            <span>{provider.email}</span>
+                        </div>
+                    )}
+                    {provider.phone && (
+                        <div className="flex items-start gap-2">
+                            <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                            <span>{provider.phone}</span>
+                        </div>
+                    )}
+                    {provider.address && (
+                        <div className="flex items-start gap-2">
+                            <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                            <span>{provider.address}</span>
+                        </div>
+                    )}
+                    {!provider.contactName &&
+                     !provider.email &&
+                     !provider.phone &&
+                     !provider.address && (
+                      <div className="flex items-center text-muted-foreground">
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        No contact information available
+                      </div>
+                    )}
+                </CardContent>
+            </Card>
 
-                    <Separator />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
-                         <div>
-                             <p className="font-medium">Created</p>
-                             <p>{provider.createdAt.toLocaleString()}</p>
-                         </div>
-                         <div>
-                             <p className="font-medium">Last Updated</p>
-                             <p>{provider.updatedAt.toLocaleString()}</p>
-                         </div>
-                    </div>
-
+            {/* System Information Card - Styled like ParkingServiceDetails */}
+             <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">System Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                   <div className="flex items-start gap-2">
+                      <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                         <span className="text-muted-foreground mr-1">Created:</span>
+                         {/* Use formatDate for consistent date display */}
+                         <span>{formatDate(provider.createdAt)}</span>
+                      </div>
+                   </div>
+                   <div className="flex items-start gap-2">
+                      <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                       <div>
+                         <span className="text-muted-foreground mr-1">Last Updated:</span>
+                         {/* Use formatDate for consistent date display */}
+                         <span>{formatDate(provider.updatedAt)}</span>
+                      </div>
+                   </div>
                 </CardContent>
             </Card>
 
 
+            {/* Related Entities Card - Keep this as it's specific to Provider */}
             {provider._count && (
-                <Card>
+                 <Card>
                      <CardHeader>
-                         <CardTitle>Related Entities</CardTitle>
+                          <CardTitle className="text-lg">Related Entities</CardTitle>
                      </CardHeader>
-                     <CardContent>
+                     <CardContent className="space-y-4"> {/* Added space-y-4 for consistent spacing */}
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                   <p className="text-sm font-medium text-muted-foreground">Contracts</p>
-                                   <p>{provider._count.contracts}</p>
+                                  <p>{provider._count.contracts}</p>
                               </div>
                               <div>
-                                   <p className="text-sm font-medium text-muted-foreground">VAS Services</p>
-                                   <p>{provider._count.vasServices}</p>
+                                  <p className="text-sm font-medium text-muted-foreground">VAS Services</p>
+                                  <p>{provider._count.vasServices}</p>
                               </div>
                               <div>
-                                   <p className="text-sm font-medium text-muted-foreground">Bulk Services</p>
-                                   <p>{provider._count.bulkServices}</p>
+                                  <p className="text-sm font-medium text-muted-foreground">Bulk Services</p>
+                                  <p>{provider._count.bulkServices}</p>
                               </div>
                               <div>
-                                   <p className="text-sm font-medium text-muted-foreground">Complaints</p>
-                                   <p>{provider._count.complaints}</p>
+                                  <p className="text-sm font-medium text-muted-foreground">Complaints</p>
+                                  <p>{provider._count.complaints}</p>
                               </div>
                          </div>
                      </CardContent>
-                </Card>
-            )}
-
-            {/* Opciono: Sekcije za prikaz povezanih lista (ugovori, reklamacije, itd.) ako su fetchovane i prosleđene */}
-            {/* Primer strukture za ugovore ako su uključeni u fetch sa 'include: { contracts: true }' */}
-            {/* {provider.contracts && provider.contracts.length > 0 && (
-                 <Card>
-                     <CardHeader>
-                         <CardTitle>Contracts ({provider.contracts.length})</CardTitle>
-                     </CardHeader>
-                     <CardContent>
-                          // Renderujte listu ugovora ovde, možda sa linkovima ka detaljima ugovora
-                     </CardContent>
                  </Card>
-             )} */}
-
+             )}
 
         </div>
     );
-}
+};
+
+export default ProviderDetails; // Ensure default export if used as default in parent

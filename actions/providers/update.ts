@@ -69,6 +69,7 @@ export async function updateProvider(id: string, data: ProviderFormData): Promis
                 phone: validatedData.phone || null,
                 address: validatedData.address || null,
                 isActive: validatedData.isActive,
+                imageUrl: validatedData.imageUrl || null,
             },
         });
 

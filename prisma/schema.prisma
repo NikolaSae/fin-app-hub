@@ -10,10 +10,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
 }
 
-// --- Authentication Models (Provided Initially) ---
+// --- Authentication Models ---
 model Account {
   id                String  @id @default(cuid())
   userId            String  @map("user_id")
@@ -40,7 +40,7 @@ model Session {
   userId       String   @map("user_id")
   expires      DateTime
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
@@ -51,6 +51,7 @@ enum UserRole {
   AGENT
   USER
 }
+
 model VerificationToken {
   id      String   @id @default(cuid())
   email   String
@@ -85,100 +86,111 @@ model TwoFactorConfirmation {
   id     String @id @default(cuid())
   userId String @unique
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // User model
 model User {
-  id                     String               @id @default(cuid())
-  name                   String?
-  email                  String               @unique
-  emailVerified          DateTime?            @map("email_verified")
-  password               String?
-  role                   UserRole             @default(USER)
-  isActive               Boolean              @default(true)
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  
+  id                      String                 @id @default(cuid())
+  name                    String?
+  email                   String                 @unique
+  emailVerified           DateTime?              @map("email_verified")
+  password                String?
+  role                    UserRole               @default(USER)
+  isActive                Boolean                @default(true)
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
   // Authentication Relations
-  accounts               Account[]            // Added relation to Account
-  sessions               Session[]            // Added relation to Session
-  twoFactorConfirmation  TwoFactorConfirmation? // Added relation to TwoFactorConfirmation
+  accounts                Account[]
+  sessions                Session[]
+  twoFactorConfirmation   TwoFactorConfirmation?
+
   // Relations
-  createdContracts       Contract[]           @relation("ContractCreator")
-  modifiedContracts      Contract[]           @relation("ContractModifier")
-  uploadedAttachments    ContractAttachment[]
-  acknowledgedReminders  ContractReminder[]
-  submittedComplaints    Complaint[]          @relation("ComplaintSubmitter")
-  assignedComplaints     Complaint[]          @relation("ComplaintAgent")
-  comments               Comment[]
-  activities             ActivityLog[]
-  notifications          Notification[]
+  createdContracts        Contract[]             @relation("ContractCreator")
+  modifiedContracts       Contract[]             @relation("ContractModifier")
+  uploadedAttachments     ContractAttachment[]
+  acknowledgedReminders   ContractReminder[]
+  submittedComplaints     Complaint[]            @relation("ComplaintSubmitter")
+  assignedComplaints      Complaint[]            @relation("ComplaintAgent")
+  comments                Comment[]
+  activities              ActivityLog[]
+  notifications           Notification[]
   notificationPreferences NotificationPreference?
   createdHumanitarianRenewals HumanitarianContractRenewal[] @relation("RenewalCreator")
   modifiedHumanitarianRenewals HumanitarianContractRenewal[] @relation("RenewalModifier")
-}
 
+  // Added the inverse relation to LogEntry, using the relation name
+  logEntries              LogEntry[]             @relation("LogCreator")
+  updatedLogs             LogEntry[]             @relation("LogUpdater") // Relacija ka logovima koje je ažurirao
+}
 
 // Provider model
 model Provider {
-  id          String        @id @default(cuid())
-  name        String        @unique
+  id          String    @id @default(cuid())
+  name        String    @unique
   contactName String?
   email       String?
   phone       String?
   address     String?
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  imageUrl    String?
+
   // Relations
   contracts   Contract[]
   vasServices VasService[]
   bulkServices BulkService[]
   complaints  Complaint[]
-  
-  // @@index([name])
+
+  // Added the inverse relation to LogEntry
+  logEntries  LogEntry[]
+
+  @@index([name])
 }
 
 // Humanitarian Organization model
 model HumanitarianOrg {
-  id          String        @id @default(cuid())
-  name        String        @unique
+  id          String    @id @default(cuid())
+  name        String    @unique
   contactName String?
   email       String?
   phone       String?
   address     String?
   website     String?
   mission     String?
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   // Relations
   contracts   Contract[]
   renewals    HumanitarianContractRenewal[]
   complaints  Complaint[]
-  
+
   @@index([name])
 }
 
 // Parking Service model
 model ParkingService {
-  id          String        @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
   contactName String?
   email       String?
   phone       String?
   address     String?
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   // Relations
   contracts   Contract[]
-  
+
+  // Added the inverse relation to LogEntry
+  logEntries  LogEntry[]
+
   @@index([name])
 }
 
@@ -188,6 +200,7 @@ enum ContractStatus {
   EXPIRED
   PENDING
   RENEWAL_IN_PROGRESS // Used when a renewal process has been started
+  TERMINATED // Added TERMINATED status based on previous context
 }
 
 enum ContractType {
@@ -197,32 +210,32 @@ enum ContractType {
 }
 
 model Contract {
-  id                String              @id @default(cuid())
+  id                String    @id @default(cuid())
   name              String
-  contractNumber    String              @unique // Broj ugovora je jedinstven globalno
+  contractNumber    String    @unique // Broj ugovora je jedinstven globalno
   type              ContractType
-  status            ContractStatus      @default(ACTIVE)
+  status            ContractStatus @default(ACTIVE)
   startDate         DateTime
   endDate           DateTime
-  revenuePercentage Float               // Percentage of revenue for the platform
-  description       String?             @db.Text
+  revenuePercentage Float // Percentage of revenue for the platform
+  description       String?   @db.Text
 
-  operatorRevenue   Float?              // Percentage for the operator
-  isRevenueSharing  Boolean             @default(true)
+  operatorRevenue   Float? // Percentage for the operator
+  isRevenueSharing  Boolean @default(true)
   operatorId        String?
 
   // Relations
   providerId        String?
-  provider          Provider?           @relation(fields: [providerId], references: [id])
-  operator          Operator?           @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+  provider          Provider? @relation(fields: [providerId], references: [id])
+  operator          Operator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
 
-  // Uklonjeno @unique sa humanitarianOrgId
+  // Uklonjeno @unique sa humanitarianOrgId (based on previous context)
   humanitarianOrgId String?
-  humanitarianOrg   HumanitarianOrg?    @relation(fields: [humanitarianOrgId], references: [id])
+  humanitarianOrg   HumanitarianOrg? @relation(fields: [humanitarianOrgId], references: [id])
 
-  // Uklonjeno @unique sa parkingServiceId
+  // Uklonjeno @unique sa parkingServiceId (based on previous context)
   parkingServiceId  String?
-  parkingService    ParkingService?     @relation(fields: [parkingServiceId], references: [id])
+  parkingService    ParkingService? @relation(fields: [parkingServiceId], references: [id])
 
   // Services linked to this contract
   services          ServiceContract[]
@@ -234,12 +247,12 @@ model Contract {
   humanitarianRenewals HumanitarianContractRenewal[]
 
   // Audit fields
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   createdById       String
-  createdBy         User                @relation("ContractCreator", fields: [createdById], references: [id])
+  createdBy         User     @relation("ContractCreator", fields: [createdById], references: [id])
   lastModifiedById  String?
-  lastModifiedBy    User?               @relation("ContractModifier", fields: [lastModifiedById], references: [id])
+  lastModifiedBy    User?    @relation("ContractModifier", fields: [lastModifiedById], references: [id])
 
   // Reminders and notifications
   reminders         ContractReminder[]
@@ -250,49 +263,48 @@ model Contract {
   @@index([status])
   @@index([endDate]) // For efficient expiration checks
   @@index([operatorId])
-
 }
 
 // Humanitarian Contract Renewal Sub-statuses
 enum HumanitarianRenewalSubStatus {
-  DOCUMENT_COLLECTION    // Collecting required documents
-  LEGAL_REVIEW           // Legal department review
-  FINANCIAL_APPROVAL     // Financial approval
-  AWAITING_SIGNATURE     // Waiting for signatures
-  FINAL_PROCESSING       // Final processing before activation
+  DOCUMENT_COLLECTION // Collecting required documents
+  LEGAL_REVIEW // Legal department review
+  FINANCIAL_APPROVAL // Financial approval
+  AWAITING_SIGNATURE // Waiting for signatures
+  FINAL_PROCESSING // Final processing before activation
 }
 
 model HumanitarianContractRenewal {
-  id                String                      @id @default(cuid())
-  contractId        String
-  contract          Contract                    @relation(fields: [contractId], references: [id])
-  humanitarianOrgId String
-  humanitarianOrg   HumanitarianOrg             @relation(fields: [humanitarianOrgId], references: [id])
-  
+  id                  String                       @id @default(cuid())
+  contractId          String
+  contract            Contract                     @relation(fields: [contractId], references: [id])
+  humanitarianOrgId   String
+  humanitarianOrg     HumanitarianOrg              @relation(fields: [humanitarianOrgId], references: [id])
+
   // Renewal specifics
-  subStatus         HumanitarianRenewalSubStatus @default(DOCUMENT_COLLECTION)
-  renewalStartDate  DateTime                    @default(now())
-  proposedStartDate DateTime                    // New contract start date
-  proposedEndDate   DateTime                    // New contract end date
-  proposedRevenue   Float                       // New revenue percentage
-  
+  subStatus           HumanitarianRenewalSubStatus @default(DOCUMENT_COLLECTION)
+  renewalStartDate    DateTime                     @default(now())
+  proposedStartDate   DateTime // New contract start date
+  proposedEndDate     DateTime // New contract end date
+  proposedRevenue     Float // New revenue percentage
+
   // Document tracking
-  documentsReceived Boolean                     @default(false)
-  legalApproved     Boolean                     @default(false)
-  financialApproved Boolean                     @default(false)
-  signatureReceived Boolean                     @default(false)
-  
+  documentsReceived   Boolean                      @default(false)
+  legalApproved       Boolean                      @default(false)
+  financialApproved   Boolean                      @default(false)
+  signatureReceived   Boolean                      @default(false)
+
   // Notes
-  notes             String?                     @db.Text
-  
+  notes               String?                      @db.Text
+
   // Audit fields
-  createdAt         DateTime                    @default(now())
-  updatedAt         DateTime                    @updatedAt
-  createdById       String
-  createdBy         User                        @relation("RenewalCreator", fields: [createdById], references: [id])
-  lastModifiedById  String?
-  lastModifiedBy    User?                       @relation("RenewalModifier", fields: [lastModifiedById], references: [id])
-  
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  createdById         String
+  createdBy           User                         @relation("RenewalCreator", fields: [createdById], references: [id])
+  lastModifiedById    String?
+  lastModifiedBy      User?                        @relation("RenewalModifier", fields: [lastModifiedById], references: [id])
+
   @@index([contractId])
   @@index([humanitarianOrgId])
   @@index([subStatus])
@@ -300,66 +312,66 @@ model HumanitarianContractRenewal {
 }
 
 model Operator {
-  id            String    @id @default(cuid())
-  name          String
-  code          String    @unique
-  description   String?   @db.Text
-  logoUrl       String?
-  website       String?
-  contactEmail  String?
-  contactPhone  String?
-  active        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  code         String   @unique
+  description  String?  @db.Text
+  logoUrl      String?
+  website      String?
+  contactEmail String?
+  contactPhone String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relationships
-  contracts     Contract[]
+  contracts    Contract[]
 }
 
 model ServiceContract {
-  id            String    @id @default(cuid())
+  id            String  @id @default(cuid())
   contractId    String
-  contract      Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  serviceId     String
-  service       Service   @relation(fields: [serviceId], references: [id])
-  
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  serviceId     String // Uklonjeno @unique (based on previous context)
+  service       Service  @relation(fields: [serviceId], references: [id])
+
   // Service-specific terms
-  specificTerms String?   @db.Text
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  @@unique([contractId, serviceId])
+  specificTerms String? @db.Text
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([contractId, serviceId]) // Keep the composite unique constraint
   @@index([contractId])
   @@index([serviceId])
 }
 
 model ContractAttachment {
-  id          String    @id @default(cuid())
-  contractId  String
-  contract    Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  name        String
-  fileUrl     String
-  fileType    String
-  uploadedAt  DateTime  @default(now())
+  id           String   @id @default(cuid())
+  contractId   String
+  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  name         String
+  fileUrl      String
+  fileType     String
+  uploadedAt   DateTime @default(now())
   uploadedById String
-  uploadedBy  User      @relation(fields: [uploadedById], references: [id])
-  
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+
   @@index([contractId])
 }
 
 model ContractReminder {
-  id          String    @id @default(cuid())
-  contractId  String
-  contract    Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  reminderDate DateTime
-  reminderType String    // "expiration", "renewal", "review"
-  isAcknowledged Boolean @default(false)
+  id               String   @id @default(cuid())
+  contractId       String
+  contract         Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  reminderDate     DateTime
+  reminderType     String   // "expiration", "renewal", "review"
+  isAcknowledged   Boolean  @default(false)
   acknowledgedById String?
-  acknowledgedBy User?   @relation(fields: [acknowledgedById], references: [id])
-  
-  createdAt   DateTime  @default(now())
-  
+  acknowledgedBy   User?    @relation(fields: [acknowledgedById], references: [id])
+
+  createdAt        DateTime @default(now())
+
   @@index([contractId])
   @@index([reminderDate])
   @@index([isAcknowledged])
@@ -372,56 +384,58 @@ enum ServiceType {
   HUMANITARIAN
   PARKING
 }
+
 enum BillingType {
   PREPAID
   POSTPAID
 }
+
 model Service {
-  id            String           @id @default(cuid())
+  id            String          @id @default(cuid())
   name          String
   type          ServiceType
-  description   String?          @db.Text
-  isActive      Boolean          @default(true)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  description   String?         @db.Text
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
   billingType   BillingType?
   // Relations
   contracts     ServiceContract[]
   vasServices   VasService[]
   bulkServices  BulkService[]
   complaints    Complaint[]
-  
+
   @@index([type])
   @@index([name])
 }
 
 // VAS Service model
 model VasService {
-  id                          String    @id @default(cuid())
-  proizvod                    String    // Proizvod iz CSV
-  mesec_pruzanja_usluge       DateTime  // Mesec_pruzanja_usluge iz CSV
-  jedinicna_cena              Float     // Jedinicna_cena iz CSV
-  broj_transakcija            Int       // Broj_transakcija iz CSV
-  fakturisan_iznos            Float     // Fakturisan_iznos iz CSV
-  fakturisan_korigovan_iznos  Float     // Fakturisan_korigovan_iznos iz CSV
-  naplacen_iznos              Float     // Naplacen_iznos iz CSV
-  kumulativ_naplacenih_iznosa Float     // Kumulativ_naplacenih_iznosa iz CSV
-  nenaplacen_iznos            Float     // Nenaplacen_iznos iz CSV
-  nenaplacen_korigovan_iznos  Float     // Nenaplacen_korigovan_iznos iz CSV
-  storniran_iznos             Float     // Storniran_iznos_u_tekucem_mesecu_iz_perioda_pracenja iz CSV
-  otkazan_iznos               Float     // Otkazan_iznos iz CSV
-  kumulativ_otkazanih_iznosa  Float     // Kumulativ_otkazanih_iznosa iz CSV
-  iznos_za_prenos_sredstava   Float     // Iznos_za_prenos_sredstava iz CSV
-  
+  id                        String   @id @default(cuid())
+  proizvod                  String // Proizvod iz CSV
+  mesec_pruzanja_usluge     DateTime // Mesec_pruzanja_usluge iz CSV
+  jedinicna_cena            Float // Jedinicna_cena iz CSV
+  broj_transakcija          Int // Broj_transakcija iz CSV
+  fakturisan_iznos          Float // Fakturisan_iznos iz CSV
+  fakturisan_korigovan_iznos Float // Fakturisan_korigovan_iznos iz CSV
+  naplacen_iznos            Float // Naplacen_iznos iz CSV
+  kumulativ_naplacenih_iznosa Float // Kumulativ_naplacenih_iznosa iz CSV
+  nenaplacen_iznos          Float // Nenaplacen_iznos iz CSV
+  nenaplacen_korigovan_iznos Float // Nenaplacen_korigovan_iznos iz CSV
+  storniran_iznos           Float // Storniran_iznos_u_tekucem_mesecu_iz_perioda_pracenja iz CSV
+  otkazan_iznos             Float // Otkazan_iznos iz CSV
+  kumulativ_otkazanih_iznosa Float // Kumulativ_otkazanih_iznosa iz CSV
+  iznos_za_prenos_sredstava Float // Iznos_za_prenos_sredstava iz CSV
+
   // Relations
-  serviceId                   String
-  service                     Service   @relation(fields: [serviceId], references: [id])
-  provajderId                 String
-  provider                    Provider  @relation(fields: [provajderId], references: [id])
-  
-  createdAt                   DateTime  @default(now())
-  updatedAt                   DateTime  @updatedAt
-  
+  serviceId                 String
+  service                   Service  @relation(fields: [serviceId], references: [id])
+  provajderId               String
+  provider                  Provider @relation(fields: [provajderId], references: [id])
+
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
   @@unique([proizvod, mesec_pruzanja_usluge, provajderId])
   @@index([serviceId])
   @@index([provajderId])
@@ -430,24 +444,27 @@ model VasService {
 
 // Bulk Service model
 model BulkService {
-  id              String    @id @default(cuid())
-  provider_name   String    // Provider Name iz CSV
-  agreement_name  String    // Agreement Name iz CSV
-  service_name    String    // Service Name iz CSV
-  step_name       String    // Step Name iz CSV
-  sender_name     String    // Sender Name iz CSV
-  requests        Int       // Requests iz CSV
-  message_parts   Int       // Message parts iz CSV
-  
+  id            String   @id @default(cuid())
+  provider_name String // Provider Name iz CSV
+  agreement_name String // Agreement Name iz CSV
+  service_name  String // Service Name iz CSV
+  step_name     String // Step Name iz CSV
+  sender_name   String // Sender Name iz CSV
+  requests      Int // Requests iz CSV
+  message_parts Int // Message parts iz CSV
+
   // Relations
-  serviceId       String
-  service         Service   @relation(fields: [serviceId], references: [id])
-  providerId      String
-  provider        Provider  @relation(fields: [providerId], references: [id])
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  serviceId     String
+  service       Service  @relation(fields: [serviceId], references: [id])
+  providerId    String
+  provider      Provider @relation(fields: [providerId], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+   // Added the inverse relation to LogEntry
+  logEntries    LogEntry[]
+
   @@unique([provider_name, agreement_name, service_name, sender_name, requests, message_parts])
   @@index([serviceId])
   @@index([providerId])
@@ -455,17 +472,17 @@ model BulkService {
 
 // Product model
 model Product {
-  id          String        @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  code        String        @unique
-  description String?       @db.Text
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
+  code        String    @unique
+  description String?   @db.Text
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   // Relations
   complaints  Complaint[]
-  
+
   @@index([name])
   @@index([code])
 }
@@ -482,45 +499,45 @@ enum ComplaintStatus {
 }
 
 model Complaint {
-  id                String          @id @default(cuid())
+  id                String                 @id @default(cuid())
   title             String
-  description       String          @db.Text
-  status            ComplaintStatus @default(NEW)
-  priority          Int             @default(3) // 1 (highest) to 5 (lowest)
+  description       String                 @db.Text
+  status            ComplaintStatus        @default(NEW)
+  priority          Int                    @default(3) // 1 (highest) to 5 (lowest)
   financialImpact   Float?
-  
+
   // Relations
   serviceId         String?
-  service           Service?        @relation(fields: [serviceId], references: [id])
+  service           Service?               @relation(fields: [serviceId], references: [id])
   productId         String?
-  product           Product?        @relation(fields: [productId], references: [id])
+  product           Product?               @relation(fields: [productId], references: [id])
   providerId        String?
-  provider          Provider?       @relation(fields: [providerId], references: [id])
-  
+  provider          Provider?              @relation(fields: [providerId], references: [id])
+
   // Submission info
   submittedById     String
-  submittedBy       User            @relation("ComplaintSubmitter", fields: [submittedById], references: [id])
-  
+  submittedBy       User                   @relation("ComplaintSubmitter", fields: [submittedById], references: [id])
+
   // Assignment info
   assignedAgentId   String?
-  assignedAgent     User?           @relation("ComplaintAgent", fields: [assignedAgentId], references: [id])
+  assignedAgent     User?                  @relation("ComplaintAgent", fields: [assignedAgentId], references: [id])
   assignedAt        DateTime?
-  
+
   // Timestamps
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
   resolvedAt        DateTime?
   closedAt          DateTime?
-  
+
   // Related data
   comments          Comment[]
   attachments       Attachment[]
   humanitarianOrgId String?
-  humanitarianOrg   HumanitarianOrg? @relation(fields: [humanitarianOrgId], references: [id])
-  
+  humanitarianOrg   HumanitarianOrg?       @relation(fields: [humanitarianOrgId], references: [id])
+
   // Activity tracking
   statusHistory     ComplaintStatusHistory[]
-  
+
   @@index([status])
   @@index([serviceId])
   @@index([productId])
@@ -533,46 +550,110 @@ model Complaint {
 }
 
 model ComplaintStatusHistory {
-  id            String          @id @default(cuid())
-  complaintId   String
-  complaint     Complaint       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  id             String          @id @default(cuid())
+  complaintId    String
+  complaint      Complaint       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
   previousStatus ComplaintStatus?
-  newStatus     ComplaintStatus
-  changedById   String
-  changedAt     DateTime        @default(now())
-  notes         String?         @db.Text
-  
+  newStatus      ComplaintStatus
+  changedById    String
+  changedAt      DateTime        @default(now())
+  notes          String?         @db.Text
+
   @@index([complaintId])
   @@index([changedAt])
 }
 
 model Comment {
-  id            String      @id @default(cuid())
-  text          String      @db.Text
-  complaintId   String
-  complaint     Complaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
-  userId        String
-  user          User        @relation(fields: [userId], references: [id])
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  isInternal    Boolean     @default(false)  // True for agent/admin-only comments
-  
+  id          String   @id @default(cuid())
+  text        String   @db.Text
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isInternal  Boolean  @default(false) // True for agent/admin-only comments
+
   @@index([complaintId])
   @@index([userId])
   @@index([isInternal])
 }
 
 model Attachment {
-  id            String      @id @default(cuid())
-  fileName      String
-  fileUrl       String
-  fileType      String
-  complaintId   String
-  complaint     Complaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
-  uploadedAt    DateTime    @default(now())
-  
+  id          String   @id @default(cuid())
+  fileName    String
+  fileUrl     String
+  fileType    String
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  uploadedAt  DateTime @default(now())
+
   @@index([complaintId])
 }
+
+// --- Log Entry Models (Corrected and Consolidated) ---
+enum LogActionType {
+  ACTIVATION // Za beleženje aktivacije
+  DEACTIVATION // Za beleženje deaktivacije
+  STATUS_CHANGE // Opštiji tip za promene statusa (ako ne koristite ACTIVATION/DEACTIVATION direktno)
+  NOTE // Za opšte beleške koje nisu vezane za status
+  // Dodajte druge tipove akcija po potrebi
+}
+
+enum LogStatus {
+  IN_PROGRESS // Log je kreiran, ali akcija još nije završena
+  FINISHED // Akcija vezana za log je završena
+  // Dodajte druge statuse po potreba (npr. FAILED, CANCELLED)
+}
+
+enum LogEntityType {
+  PROVIDER
+  PARKING_SERVICE
+  BULK_SERVICE
+  // Dodajte druge tipove entiteta po potreba
+}
+
+// Manual Log Entry model
+model LogEntry {
+  id                String          @id @default(cuid())
+  entityType        LogEntityType // Tip entiteta na koji se log odnosi
+  entityId          String // ID entiteta (Provider, ParkingService, BulkService, itd.) - čuva se ovde radi lakšeg indeksiranja/pretrage
+
+  action            LogActionType // Tip akcije (Aktivacija, Deaktivacija, Beleška, itd.)
+  subject           String // Obavezan naslov log zapisa
+  description       String?         @db.Text // Opcioni detaljniji opis
+
+  status            LogStatus       @default(IN_PROGRESS) // Status log zapisa (U radu, Završen, itd.)
+  sendEmail         Boolean         @default(false) // Da li je trebalo poslati email
+
+  // Opcioni strani ključevi za različite tipove entiteta
+  // Samo jedan od ovih treba da bude popunjen za dati log zapis
+  providerId        String?
+  provider          Provider?       @relation(fields: [providerId], references: [id])
+
+  parkingServiceId  String?
+  parkingService    ParkingService? @relation(fields: [parkingServiceId], references: [id])
+
+  bulkServiceId     String?
+  bulkService       BulkService?    @relation(fields: [bulkServiceId], references: [id])
+
+  // Audit polja
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  createdById       String // ID korisnika koji je kreirao log
+  createdBy         User            @relation("LogCreator", fields: [createdById], references: [id]) // Use the relation name
+  updatedById       String?
+  updatedBy         User?           @relation("LogUpdater", fields: [updatedById], references: [id])
+
+  // Indeksi za bržu pretragu
+  @@index([entityType, entityId]) // Indeks za pretragu logova po tipu i ID-u entiteta
+  @@index([providerId])
+  @@index([parkingServiceId])
+  @@index([bulkServiceId])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
 
 // Analytics and Security models
 enum LogSeverity {
@@ -592,7 +673,7 @@ model ActivityLog {
   userId      String
   user        User        @relation(fields: [userId], references: [id])
   createdAt   DateTime    @default(now())
-  
+
   @@index([action])
   @@index([entityType])
   @@index([entityId])
@@ -612,17 +693,17 @@ enum NotificationType {
 }
 
 model Notification {
-  id          String            @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
-  message     String            @db.Text
+  message     String         @db.Text
   type        NotificationType
-  isRead      Boolean           @default(false)
+  isRead      Boolean        @default(false)
   userId      String
-  user        User              @relation(fields: [userId], references: [id])
-  entityType  String?           // "contract", "complaint", "renewal", etc.
+  user        User           @relation(fields: [userId], references: [id])
+  entityType  String?        // "contract", "complaint", "renewal", etc.
   entityId    String?
-  createdAt   DateTime          @default(now())
-  
+  createdAt   DateTime       @default(now())
+
   @@index([userId])
   @@index([isRead])
   @@index([type])
@@ -640,18 +721,18 @@ enum ReportFrequency {
 }
 
 model ScheduledReport {
-  id          String          @id @default(cuid())
-  name        String
-  description String?         @db.Text
-  reportType  String          // "financial", "complaints", "contracts", etc.
-  frequency   ReportFrequency
-  lastRun     DateTime?
-  nextRun     DateTime?
-  parameters  Json?
-  isActive    Boolean         @default(true)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  
+  id            String          @id @default(cuid())
+  name          String
+  description   String?         @db.Text
+  reportType    String          // "financial", "complaints", "contracts", etc.
+  frequency     ReportFrequency
+  lastRun       DateTime?
+  nextRun       DateTime?
+  parameters    Json?
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
   @@index([reportType])
   @@index([frequency])
   @@index([nextRun])
@@ -659,30 +740,30 @@ model ScheduledReport {
 }
 
 model GeneratedReport {
-  id              String    @id @default(cuid())
-  name            String
-  reportType      String
-  fileUrl         String
-  generatedAt     DateTime  @default(now())
+  id                String   @id @default(cuid())
+  name              String
+  reportType        String
+  fileUrl           String
+  generatedAt       DateTime @default(now())
   scheduledReportId String?
-  
+
   @@index([reportType])
   @@index([generatedAt])
   @@index([scheduledReportId])
 }
 
 model NotificationPreference {
-  id          String    @id @default(cuid())
-  userId      String    @unique // Svaki korisnik ima samo jedan set podešavanja
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  userId      String   @unique // Svaki korisnik ima samo jedan set podešavanja
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Koristimo JSON polje za čuvanje ugnježdenih preferenci
-  // Struktura unutar ovog JSON polja treba da odgovara NotificationPreferences interfejsu (bez userId)
-  // npr. { contractExpiring: { inApp: true, email: false }, ... }
-  preferences Json
+  // Koristimo JSON polje za čuvanje ugnježdenih preferenci
+  // Struktura unutar ovog JSON polja treba da odgovara NotificationPreferences interfejsu (bez userId)
+  // npr. { contractExpiring: { inApp: true, email: false }, ... }
+  preferences Json
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@index([userId]) // Indexiranje po userId za brže pretrage
+  @@index([userId]) // Indexiranje po userId za brže pretrage
 }

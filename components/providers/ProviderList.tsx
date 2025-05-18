@@ -1,3 +1,5 @@
+//components/providers/ProviderList.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -6,14 +8,16 @@ import { ProviderCard } from "@/components/providers/ProviderCard";
 import { ProviderFilters } from "@/components/providers/ProviderFilters";
 import { useProviders } from "@/hooks/use-providers";
 import { toast } from "sonner";
+import ProviderLogList from "@/components/providers/ProviderLogList";
+
 
 export function ProviderList() {
-  const { 
-    providers, 
-    total, 
-    pagination, 
-    loading, 
-    error, 
+  const {
+    providers,
+    total,
+    pagination,
+    loading,
+    error,
     setPagination,
     filters,
     setFilters,
@@ -21,13 +25,13 @@ export function ProviderList() {
   } = useProviders();
 
   const [actionLoading, setActionLoading] = useState(false);
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
 
   const handleFilterChange = (newFilters) => {
-    // Reset to page 1 when filters change
     setPagination(prev => ({ ...prev, page: 1 }));
     setFilters(newFilters);
   };
@@ -35,7 +39,6 @@ export function ProviderList() {
   const handleStatusChange = async (id: string, isActive: boolean) => {
     setActionLoading(true);
     try {
-      // You'll need to implement this API call
       const response = await fetch(`/api/providers/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -59,7 +62,6 @@ export function ProviderList() {
   const handleRenewContract = async (id: string) => {
     setActionLoading(true);
     try {
-      // You'll need to implement this API call
       const response = await fetch(`/api/providers/${id}/renew-contract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
@@ -79,6 +81,12 @@ export function ProviderList() {
     }
   };
 
+  const triggerLogRefresh = () => {
+      console.log("Triggering log refresh...");
+      setLogRefreshKey(prevKey => prevKey + 1);
+  };
+
+
   if (loading && providers.length === 0) {
     return <div className="text-center py-4">Loading providers...</div>;
   }
@@ -89,11 +97,11 @@ export function ProviderList() {
 
   return (
     <div className="space-y-4">
-      <ProviderFilters 
-        initialFilters={filters} 
-        onFilterChange={handleFilterChange} 
+      <ProviderFilters
+        initialFilters={filters}
+        onFilterChange={handleFilterChange}
       />
-      
+
       {providers.length === 0 ? (
         <div className="text-center py-8 bg-white rounded-md border">
           <p className="text-gray-500">No providers found matching your criteria.</p>
@@ -101,11 +109,12 @@ export function ProviderList() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {providers.map(provider => (
-            <ProviderCard 
-              key={provider.id} 
-              provider={provider} 
+            <ProviderCard
+              key={provider.id}
+              provider={provider}
               onStatusChange={handleStatusChange}
               onRenewContract={handleRenewContract}
+              triggerLogRefresh={triggerLogRefresh}
             />
           ))}
         </div>
@@ -115,7 +124,7 @@ export function ProviderList() {
         <Pagination className="mt-6">
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious 
+              <PaginationPrevious
                 onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
                 disabled={pagination.page === 1 || loading || actionLoading}
               />
@@ -140,6 +149,11 @@ export function ProviderList() {
           </PaginationContent>
         </Pagination>
       )}
+
+      <div className="mt-8">
+          <ProviderLogList logRefreshKey={logRefreshKey} />
+      </div>
+
     </div>
   );
 }
