@@ -1,5 +1,6 @@
 // /app/(protected)/humanitarian-orgs/[id]/page.tsx
 
+
 import { Suspense } from "react";
 import { Metadata } from "next";
 import { notFound } from 'next/navigation';
@@ -12,6 +13,7 @@ import { HumanitarianOrgContracts } from "@/components/humanitarian-orgs/Humanit
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import DetailSkeleton from "@/components/skeletons/DetailSkeleton";
 
 
 interface HumanitarianOrgDetailsPageProps {
@@ -25,42 +27,19 @@ async function getHumanitarianOrgDetails(orgId: string): Promise<HumanitarianOrg
         const organization = await db.humanitarianOrg.findUnique({
             where: { id: orgId },
             include: {
-                contracts: {
-                    select: {
-                        id: true,
-                        name: true,
-                        contractNumber: true,
-                        status: true,
-                        startDate: true,
-                        endDate: true,
-                        type: true,
-                        revenuePercentage: true,
-                        // Ova relacija je na Contract modelu, i zove se 'humanitarianRenewals'
-                        humanitarianRenewals: {
-                            select: {
-                                id: true,
-                                subStatus: true,
-                                renewalStartDate: true,
-                                proposedStartDate: true,
-                                createdAt: true,
-                            },
-                            orderBy: { createdAt: 'desc' },
-                            take: 1,
-                        },
-                    },
-                    orderBy: { endDate: 'desc' },
-                },
                 complaints: {
                     select: { id: true, title: true, status: true, createdAt: true },
                 },
-                // ISPRAVKA: Uključivanje relacije 'renewals' na HumanitarianOrg modelu
                 renewals: true,
                 _count: {
-                    // ISPRAVKA: _count za 'renewals'
                     select: { contracts: true, complaints: true, renewals: true }
                 }
             }
         });
+
+        if (organization && !organization._count) {
+             organization._count = { contracts: 0, complaints: 0, renewals: 0 };
+        }
 
         return organization as HumanitarianOrgWithDetails | null;
 
@@ -72,7 +51,10 @@ async function getHumanitarianOrgDetails(orgId: string): Promise<HumanitarianOrg
 
 export async function generateMetadata({ params }: HumanitarianOrgDetailsPageProps): Promise<Metadata> {
      const { id } = await params;
-     const organization = await getHumanitarianOrgDetails(id);
+     const organization = await db.humanitarianOrg.findUnique({
+         where: { id },
+         select: { name: true }
+     });
 
      return {
          title: organization ? `${organization.name} | Organization Details` : 'Organization Not Found',
@@ -89,10 +71,8 @@ export default async function HumanitarianOrgDetailsPage({ params }: Humanitaria
         notFound();
     }
 
-    const associatedContracts = organization.contracts || [];
-
     return (
-        <div className="p-6 space-y-6">
+        <div className="container mx-auto py-6 space-y-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">{organization.name}</h1>
@@ -112,12 +92,12 @@ export default async function HumanitarianOrgDetailsPage({ params }: Humanitaria
                         </Link>
                     </Button>
                     <Button asChild>
-                        <Link href={`/humanitarian-orgs/${organization.id}/contracts/new`}>
+                        <Link href={`/contracts/new?orgId=${organization.id}&orgName=${encodeURIComponent(organization.name)}`}>
                             Create New Contract
                         </Link>
                     </Button>
                     <Button asChild variant="secondary">
-                        <Link href={`/humanitarian-orgs/${organization.id}/complaints/new`}>
+                        <Link href={`/complaints/new?orgId=${organization.id}&orgName=${encodeURIComponent(organization.name)}`}>
                             Submit Complaint
                         </Link>
                     </Button>
@@ -130,16 +110,18 @@ export default async function HumanitarianOrgDetailsPage({ params }: Humanitaria
                     <TabsTrigger value="contracts">Contracts ({organization._count.contracts})</TabsTrigger>
                     <TabsTrigger value="complaints">Complaints ({organization._count.complaints})</TabsTrigger>
                 </TabsList>
-
-                <Suspense fallback={<div>Loading organization details...</div>}>
-                    <TabsContent value="details" className="mt-4">
-                        <HumanitarianOrgDetails organization={organization} />
-                    </TabsContent>
-                </Suspense>
-
-                <Suspense fallback={<div>Loading contracts...</div>}>
-                    <TabsContent value="contracts" className="mt-4">
-                        <HumanitarianOrgContracts contracts={associatedContracts} />
+                <TabsContent value="details" className="mt-4">
+                    <HumanitarianOrgDetails organization={organization} />
+                </TabsContent>
+                <TabsContent value="contracts" className="mt-4">
+                    <div>
+                        <Card>
+                            <CardContent className="pt-6">
+                                <Suspense fallback={<DetailSkeleton />}>
+                                    <HumanitarianOrgContracts organizationId={organization.id} organizationName={organization.name} />
+                                </Suspense>
+                            </CardContent>
+                        </Card>
                         {organization._count.contracts > 0 && (
                             <div className="mt-4 text-right">
                                 <Button asChild variant="outline">
@@ -149,31 +131,36 @@ export default async function HumanitarianOrgDetailsPage({ params }: Humanitaria
                                 </Button>
                             </div>
                         )}
-                    </TabsContent>
-                </Suspense>
-
-                <Suspense fallback={<div>Loading complaints...</div>}>
-                    <TabsContent value="complaints" className="mt-4">
+                    </div>
+                </TabsContent>
+                <TabsContent value="complaints" className="mt-4">
+                    <div>
                         <Card>
                             <CardHeader>
                                 <CardTitle>Complaints Associated with {organization.name}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p>There are {organization._count.complaints} complaints associated with this organization.</p>
-                                {organization._count.complaints > 0 && (
-                                    <Button asChild className="mt-4">
-                                        <Link href={`/humanitarian-orgs/${organization.id}/complaints`}>
-                                            View All Complaints
+                                <div className="flex items-center gap-2 mt-2">
+                                    <Button asChild variant="secondary" size="sm">
+                                        <Link href={`/complaints/new?orgId=${organization.id}&orgName=${encodeURIComponent(organization.name)}`}>
+                                            Submit New Complaint
                                         </Link>
                                     </Button>
+                                </div>
+                                {organization._count.complaints > 0 && (
+                                    <div className="mt-4 text-right">
+                                        <Button asChild variant="outline">
+                                            <Link href={`/humanitarian-orgs/${organization.id}/complaints`}>
+                                                View All Complaints
+                                            </Link>
+                                        </Button>
+                                    </div>
                                 )}
-                                {organization._count.complaints === 0 && (
-                                    <p className="text-sm text-gray-500 mt-2">No complaints recorded yet for this organization.</p>
-                                )}
+                            </CardHeader>
+                            <CardContent>
+                                <p>Placeholder for Complaints List Component.</p>
                             </CardContent>
                         </Card>
-                    </TabsContent>
-                </Suspense>
+                    </div>
+                </TabsContent>
             </Tabs>
         </div>
     );

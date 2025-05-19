@@ -23,7 +23,6 @@ export function HumanitarianOrgDetails({ organization }: HumanitarianOrgDetailsP
                     <div>
                         <strong>Name:</strong> {organization.name}
                     </div>
-                    {/* ISPRAVKA: Koristiti 'contactName' umesto 'contactPerson' prema Prisma šemi */}
                     <div>
                         <strong>Contact Person:</strong> {organization.contactName || 'N/A'}
                     </div>
@@ -50,7 +49,6 @@ export function HumanitarianOrgDetails({ organization }: HumanitarianOrgDetailsP
                     </div>
                 </CardContent>
             </Card>
-
             {organization._count && (
                 <Card>
                     <CardHeader>
@@ -63,7 +61,6 @@ export function HumanitarianOrgDetails({ organization }: HumanitarianOrgDetailsP
                         <div>
                             <strong>Complaints:</strong> {organization._count.complaints}
                         </div>
-                        {/* ISPRAVKA: Koristiti 'renewals' umesto 'humanitarianRenewals' za _count */}
                         {organization._count.renewals !== undefined && (
                             <div>
                                 <strong>Renewals:</strong> {organization._count.renewals}
