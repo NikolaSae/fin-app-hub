@@ -3,7 +3,7 @@
 import { Metadata } from "next";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
-import BulkServiceForm from "@/components/bulk-services/BulkServiceForm";
+import { BulkServiceForm } from "@/components/bulk-services/BulkServiceForm";
 import { getAllServices } from "@/actions/services/getAllServices";
 import { getAllProviders } from "@/actions/providers/getAllProviders";
 

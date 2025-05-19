@@ -178,14 +178,14 @@ export function ProviderCard({ provider, onStatusChange, onRenewContract, trigge
             // Promenite '5deg' na željeni ugao rotacije
             // transform: 'rotate(30deg)', // Primer: 0 stepeni rotacije (promenite ovo)
             // transform: `rotate(${rotationDegrees}deg)`, // Ako koristite prop
-            transition: 'transform 0.3s ease-in-out', 
+            transition: 'transform 0.5s ease-in-out', 
             // Dodajte minimalnu visinu ako je potrebno da slika bude vidljiva i bez sadržaja
             // minHeight: '150px',
         }}
     >
         {/* Opciono: Preklop (overlay) za bolju čitljivost teksta preko slike */}
         {provider.imageUrl && (
-            <div className="absolute inset-0 bg-white opacity-65"></div> // Podesite boju i opacity po želji
+            <div className="absolute inset-0 bg-white opacity-20"></div> // Podesite boju i opacity po želji
         )}
 
         {/* Postavite sadržaj kartice iznad pozadine/overlaya */}

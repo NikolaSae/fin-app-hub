@@ -1,4 +1,5 @@
 // Path: /app/(protected)/_components/navbar.tsx
+
 "use client";
 
 import * as React from "react";
@@ -60,7 +61,7 @@ export const Navbar = () => {
       <div className="flex-grow overflow-x-auto pb-2">
         <NavigationMenu>
           <NavigationMenuList>
-            {/* Link: Humanitarci - IZMENJENO */}
+            {/* Link: Humanitarci */}
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
                 <Link
@@ -72,7 +73,7 @@ export const Navbar = () => {
               </NavigationMenuLink>
             </NavigationMenuItem>
 
-            {/* Link: Provajderi - IZMENJENO */}
+            {/* Link: Provajderi */}
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
                 <Link
@@ -84,7 +85,31 @@ export const Navbar = () => {
               </NavigationMenuLink>
             </NavigationMenuItem>
 
-            {/* Link: Parking - IZMENJENO */}
+            {/* Link: Operateri - DODATO */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/operators"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/operators") && "bg-accent text-accent-foreground")}
+                >
+                  Operateri
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+
+            {/* Link: Bulk Servisi - DODATO */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/bulk-services"
+                  className={cn(navigationMenuTriggerStyle(), isActivePath("/bulk-services") && "bg-accent text-accent-foreground")}
+                >
+                  Bulk Servisi
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+
+            {/* Link: Parking */}
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
                 <Link
@@ -96,7 +121,7 @@ export const Navbar = () => {
               </NavigationMenuLink>
             </NavigationMenuItem>
 
-            {/* Reklamacije dropdown (Trigger ostaje isti, ListItem unutar njega je već dobar) */}
+            {/* Reklamacije dropdown */}
             <NavigationMenuItem>
               <NavigationMenuTrigger className={cn(isTriggerActive(reklamacijePaths) && "bg-accent text-accent-foreground")}>
                 Reklamacije
@@ -109,7 +134,7 @@ export const Navbar = () => {
               </NavigationMenuContent>
             </NavigationMenuItem>
 
-            {/* Link: Ugovori - IZMENJENO */}
+            {/* Link: Ugovori */}
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
                 <Link
@@ -121,7 +146,7 @@ export const Navbar = () => {
               </NavigationMenuLink>
             </NavigationMenuItem>
 
-            {/* Link: Servisi - IZMENJENO */}
+            {/* Link: Servisi */}
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
                 <Link
@@ -133,7 +158,7 @@ export const Navbar = () => {
               </NavigationMenuLink>
             </NavigationMenuItem>
 
-            {/* Analytics dropdown (Trigger ostaje isti, ListItem unutar njega je već dobar) */}
+            {/* Analytics dropdown */}
             <NavigationMenuItem>
               <NavigationMenuTrigger className={cn(isTriggerActive(analyticsPaths) && "bg-accent text-accent-foreground")}>
                 Analytics
@@ -146,7 +171,7 @@ export const Navbar = () => {
               </NavigationMenuContent>
             </NavigationMenuItem>
 
-            {/* Link: Reports - IZMENJENO */}
+            {/* Link: Reports */}
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
                 <Link

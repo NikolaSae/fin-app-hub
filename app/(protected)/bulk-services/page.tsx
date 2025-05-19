@@ -1,44 +1,25 @@
 //app/(protected)/bulk-services/page.tsx
 
-import { Metadata } from "next";
-import BulkServiceList from "@/components/bulk-services/BulkServiceList";
-import { Heading } from "@/components/ui/heading";
+"use client";
+
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import Link from "next/link";
-import BulkServiceFilters from "@/components/bulk-services/BulkServiceFilters";
+import { BulkServiceFilters } from "@/components/bulk-services/BulkServiceFilters";
+import BulkServiceList from "@/components/bulk-services/BulkServiceList";
+import { useState } from "react";
 
-export const metadata: Metadata = {
-  title: "Bulk Services",
-  description: "Manage bulk services and SMS agreements",
-};
+export default function BulkServicesPage() {
+  // Define empty arrays for the required props
+  const [providers, setProviders] = useState([]);
+  const [services, setServices] = useState([]);
 
-export default async function BulkServicesPage() {
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <Heading
-          title="Bulk Services"
-          description="Manage your bulk SMS services and agreements"
-        />
-        <div className="flex space-x-2">
-          <Button asChild>
-            <Link href="/bulk-services/import">
-              <Plus className="mr-2 h-4 w-4" />
-              Import CSV
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/bulk-services/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add New
-            </Link>
-          </Button>
-        </div>
+    <div className="container py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Bulk Services</h1>
+        {/* Add any action buttons here if needed */}
       </div>
       <Separator />
-      <BulkServiceFilters />
+      <BulkServiceFilters providers={providers} services={services} />
       <BulkServiceList />
     </div>
   );
