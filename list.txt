@@ -536,7 +536,7 @@ treba da zavrsimo izradu fajlova za Operatora, ovo je spisak svih fajlova
 11. Parking Services Structure
 11.1 App Routes
 /app/(protected)/parking-services/page.tsx - Main parking services listing page  
-/app/(protected)/parking-services/new/page.tsx - Create new parking service page  
+/app/(protected)/parking-services/new/page.tsx - Create new parking service page 
 /app/(protected)/parking-services/[id]/page.tsx - Individual parking service details view  
 /app/(protected)/parking-services/[id]/edit/page.tsx - Edit parking service page  
 11.2 Components
@@ -578,32 +578,32 @@ Now for the Bulk Services section:
 /components/bulk-services/BulkServiceForm.tsx - Form for creating/editing bulk services - kreirao
 /components/bulk-services/BulkServiceDetails.tsx - Bulk service details display - kreirao
 /components/bulk-services/BulkServiceFilters.tsx - Filter controls for bulk services - kreirao
-/components/bulk-services/BulkServiceCard.tsx - Card component for bulk service display
-/components/bulk-services/BulkServiceStats.tsx - Statistics for bulk services
-/components/bulk-services/ImportForm.tsx - CSV import form for bulk services
+/components/bulk-services/BulkServiceCard.tsx - Card component for bulk service display - kreirao
+/components/bulk-services/BulkServiceStats.tsx - Statistics for bulk services - kreirao
+/components/bulk-services/ImportForm.tsx - CSV import form for bulk services - kreirao
 12.3 Actions & API Routes
-/actions/bulk-services/index.ts - Export all bulk service actions
-/actions/bulk-services/getAllBulkServices.ts - Get all bulk services
-/actions/bulk-services/getBulkServiceById.ts - Get bulk service by ID
-/actions/bulk-services/getBulkServices.ts - Get bulk services with filtering
-/actions/bulk-services/getBulkServicesByProviderId.ts - Get bulk services by provider ID
-/actions/bulk-services/create.ts - Create new bulk service
-/actions/bulk-services/update.ts - Update existing bulk service
-/actions/bulk-services/delete.ts - Delete bulk service
-/actions/bulk-services/import.ts - Import bulk services from CSV
-/actions/bulk-services/export.ts - Export bulk services to CSV
-/app/api/bulk-services/route.ts - Bulk services CRUD API
-/app/api/bulk-services/[id]/route.ts - Individual bulk service API
-/app/api/bulk-services/import/route.ts - CSV import endpoint
-/app/api/bulk-services/export/route.ts - CSV export endpoint
+/actions/bulk-services/index.ts - Export all bulk service actions - kreirao
+/actions/bulk-services/getAllBulkServices.ts - Get all bulk services - kreirao
+/actions/bulk-services/getBulkServiceById.ts - Get bulk service by ID - kreirao
+/actions/bulk-services/getBulkServices.ts - Get bulk services with filtering - kreirao
+/actions/bulk-services/getBulkServicesByProviderId.ts - Get bulk services by provider ID - kreirao
+/actions/bulk-services/create.ts - Create new bulk service - kreirao
+/actions/bulk-services/update.ts - Update existing bulk service - kreirao
+/actions/bulk-services/delete.ts - Delete bulk service - kreirao
+/actions/bulk-services/import.ts - Import bulk services from CSV - kreirao
+/actions/bulk-services/export.ts - Export bulk services to CSV - kreirao
+/app/api/bulk-services/route.ts - Bulk services CRUD API - kreirao
+/app/api/bulk-services/[id]/route.ts - Individual bulk service API - kreirao
+/app/api/bulk-services/import/route.ts - CSV import endpoint - kreirao
+/app/api/bulk-services/export/route.ts - CSV export endpoint - kreirao
 12.4 Hooks & Utils
-/hooks/use-bulk-services.ts - Custom hook for bulk service data
-/lib/bulk-services/validators.ts - Bulk service validation utilities
-/lib/bulk-services/csv-processor.ts - CSV processing for bulk services
-/lib/bulk-services/statistics.ts - Statistical calculations for bulk services
+/hooks/use-bulk-services.ts - Custom hook for bulk service data - kreirao
+/lib/bulk-services/validators.ts - Bulk service validation utilities - kreirao
+/lib/bulk-services/csv-processor.ts - CSV processing for bulk services - kreirao
+/lib/bulk-services/statistics.ts - Statistical calculations for bulk services - kreirao
 12.5 Types & Schemas
-/schemas/bulk-service.ts - Zod validation schema for bulk services
-/lib/types/bulk-service-types.ts - TypeScript types for bulk services
+/schemas/bulk-service.ts - Zod validation schema for bulk services - kreirao
+/lib/types/bulk-service-types.ts - TypeScript types for bulk services - kreirao
 
 
 
