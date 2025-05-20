@@ -1,143 +1,137 @@
 // Path: components/complaints/ServiceSelection.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormControl } from '@/components/ui/form'; // Uvezite FormControl ako se koristi unutar komponente
-// Uvezite ispravnu akciju sa ispravne putanje
-import { getServicesByProvider } from "@/actions/complaints/getServicesByProvider"; // <-- Ispravljena putanja i ime funkcije
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Definirajte tip za servis opcije (mora odgovarati onome što vraća akcija)
-interface ServiceOption {
-    id: string;
-    name: string;
-    type: string; // Dodajte i tip servisa ako je relevantno
+interface Service {
+  id: string;
+  name: string;
 }
 
 interface ServiceSelectionProps {
-    providerId: string | null | undefined; // ID izabranog provajdera
-    selectedServiceId: string | undefined; // Trenutno izabrani Service ID (iz react-hook-form) - može biti string ili undefined
-    onServiceSelect: (serviceId: string) => void; // Callback kada se servis izabere
-    disabled?: boolean; // Da li je polje onemogućeno (npr. tokom submitovanja)
+  entityId: string;
+  entityType: string;
+  selectedServiceId: string;
+  onServiceSelect: (id: string) => void;
+  providerCategory?: 'VAS' | 'BULK'; // Novi prop za tip provajdera
 }
 
 export function ServiceSelection({
-    providerId,
-    selectedServiceId,
-    onServiceSelect,
-    disabled = false,
+  entityId,
+  entityType,
+  selectedServiceId,
+  onServiceSelect,
+  providerCategory, // Prihvatamo novi prop
 }: ServiceSelectionProps) {
-    const [services, setServices] = useState<ServiceOption[]>([]); // Koristimo ServiceOption[] tip
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null); // Dodatni state za debug
 
-    // Efekat koji se pokreće kada se providerId promeni
-    useEffect(() => {
-        // Resetujte listu servisa i izabrani servis kada se provajder promeni
-        setServices([]);
-        // onServiceSelect(''); // Ne resetujte selectedServiceId ovde, to radi roditeljska komponenta (ComplaintForm)
-        setError(null);
+  useEffect(() => {
+    setServices([]);
+    setError(null);
+    setCurrentEndpoint(null); // Resetuj endpoint
 
-        // Ako nema izabranog provajdera, nema potrebe da se dohvaćaju servisi
-        if (!providerId) {
-            console.log("No providerId provided to fetch services.");
-            return;
+    if (!entityId) return;
+
+    const fetchServices = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        let endpoint = '';
+
+        if (entityType === "PROVIDER") {
+          // Koristimo providerCategory prop umesto hardkodovane funkcije
+          if (providerCategory === 'VAS') {
+            endpoint = `/api/providers/${entityId}/vas-services`;
+          } else if (providerCategory === 'BULK') {
+            endpoint = `/api/providers/${entityId}/bulk-services`;
+          } else {
+            // Ako providerCategory nije definisan, ili je null/undefined
+            // Možda treba da se odlučiš za podrazumevani tip (npr. VAS), ili da prikažeš grešku
+            console.warn("Provider category not explicitly defined for PROVIDER type. Defaulting to VAS services.");
+            endpoint = `/api/providers/${entityId}/vas-services`; // Podrazumevano na VAS ako tip nije jasan
+          }
+        } else if (entityType === "HUMANITARIAN") {
+          endpoint = `/api/humanitarian-orgs/${entityId}/services`;
+        } else if (entityType === "PARKING") {
+          endpoint = `/api/parking-services/${entityId}/services`;
+        } else if (entityType === "BULK") {
+          // Ako je sam Service Type 'BULK' (iz radio dugmeta), uvek dohvaćamo BULK servise
+          endpoint = `/api/providers/${entityId}/bulk-services`;
         }
 
-        const fetchServices = async () => {
-            setIsLoading(true);
-            try {
-                // Pozovite ispravnu Server Action funkciju
-                const result = await getServicesByProvider(providerId); // <-- Poziv ispravne funkcije
+        setCurrentEndpoint(endpoint); // Postavi endpoint za debug
 
-                if (result.error) {
-                    setError(result.error);
-                    setServices([]);
-                } else {
-                    // Filtrirajte servise sa praznim ID-em ako je potrebno, mada akcija ne bi trebalo da ih vraća
-                    const validServices = result.data.filter(service => service.id !== '');
-                    setServices(validServices); // Postavite listu dohvaćenih servisa
-                    setError(null);
-                }
-
-            } catch (err: any) {
-                console.error("Error fetching services:", err);
-                setError("Failed to load services");
-                setServices([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchServices();
-
-        // Cleanup funkcija ako je potrebno
-        // return () => { ... };
-
-    }, [providerId]); // Zavisnost samo od providerId (onServiceSelect je stabilan callback)
-
-    // Efekat za resetovanje izabranog servisa ako se promeni lista servisa ili providerId
-    useEffect(() => {
-        // Ako je izabran servis, a taj servis nije u novodohvaćenoj listi, resetujte ga
-        if (selectedServiceId && services.length > 0 && !services.find(s => s.id === selectedServiceId)) {
-            console.log(`Selected service ${selectedServiceId} not found in new list, resetting.`);
-            onServiceSelect('');
+        if (!endpoint) {
+          throw new Error("Invalid entity type or provider category not determined.");
         }
-        // Ako je providerId poništen, a selectedServiceId i dalje postoji, resetujte selectedServiceId
-        if (!providerId && selectedServiceId) {
-            console.log("Provider cleared, resetting selected service.");
-             onServiceSelect('');
+
+        const response = await fetch(endpoint);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to load services: ${errorText || response.statusText}`);
         }
-    }, [services, selectedServiceId, onServiceSelect, providerId]); // Zavisnosti od stanja i propova
 
-    // Hendler za promenu izabranog servisa u Select komponenti
-    const handleSelectChange = useCallback((value: string) => {
-        onServiceSelect(value); // Pozovite callback roditeljske komponente sa izabranim ID-em
-    }, [onServiceSelect]); // Zavisnost od onServiceSelect callbacka
+        const data = await response.json();
+        setServices(data);
+      } catch (err) {
+        console.error("Error fetching services:", err);
+        setError(err instanceof Error ? err.message : "Failed to load services");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    // Odredite placeholder tekst na osnovu stanja
-    let placeholderText = "Select a provider first";
-    if (providerId) {
-        placeholderText = isLoading ? "Loading services..." : "Select service";
-    }
-    if (error) {
-        placeholderText = error;
-    }
-    if (!isLoading && !error && providerId && services.length === 0) {
-        placeholderText = "No services found for this provider";
-    }
+    fetchServices();
+  }, [entityId, entityType, providerCategory]); // Dodaj providerCategory u zavisnosti hook-a
 
+  return (
+    <div>
+      <Select
+        value={selectedServiceId}
+        onValueChange={onServiceSelect}
+        disabled={isLoading || services.length === 0 || !!error}
+      >
+        <SelectTrigger>
+          {isLoading ? (
+            <Skeleton className="h-4 w-full" />
+          ) : (
+            <SelectValue placeholder={
+              services.length === 0
+                ? `No services available for this ${entityType.toLowerCase()}`
+                : "Select a service"
+            } />
+          )}
+        </SelectTrigger>
+        <SelectContent>
+          {services.map((service) => (
+            <SelectItem key={service.id} value={service.id}>
+              {service.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-    return (
-        // Select komponenta
-        <Select
-            onValueChange={handleSelectChange} // Koristite lokalni hendler
-            value={selectedServiceId || ""} // Vrednost se vezuje za selectedServiceId prop (koristite "" za null/undefined)
-            disabled={disabled || !providerId || isLoading || services.length === 0 || !!error} // Onemogući ako se učitava, nema izabranog provajdera, ima greške, nema servisa ili je prosleđen disabled prop
-        >
-            <SelectTrigger>
-                <SelectValue placeholder={placeholderText} /> {/* Prikaz placeholder teksta */}
-            </SelectTrigger>
-            <SelectContent>
-                {/* Uklonjen eksplicitni SelectItem sa value="" */}
-                {/* Lista servisa se prikazuje samo ako su dohvaćeni i nema grešaka */}
-                {!isLoading && !error && services.length > 0 && (
-                     services.map((service) => (
-                         <SelectItem key={service.id} value={service.id}>
-                             {service.name} ({service.type}) {/* Prikaz imena i tipa servisa */}
-                         </SelectItem>
-                     ))
-                 )}
-                 {/* Opciono: Prikazati poruku u SelectContent ako nema servisa, ali bez SelectItem sa praznim value */}
-                 {/* Ovo može zahtevati prilagođavanje SelectContent stila */}
-                 {/*
-                 {!isLoading && !error && providerId && services.length === 0 && (
-                     <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                         {placeholderText}
-                     </div>
-                 )}
-                 */}
-            </SelectContent>
-        </Select>
-    );
+      {error && (
+        <div className="text-red-500 text-sm mt-2">
+          Error: {error}. Please try again or contact support.
+        </div>
+      )}
+
+      {/* Debug section */}
+      <div className="mt-2 text-xs text-gray-500">
+        <p>Selected entity ID: {entityId}</p>
+        <p>Entity type: {entityType}</p>
+        <p>Services loaded: {services.length}</p>
+        <p>Provider category: {providerCategory || 'N/A'}</p> {/* Prikazujemo novi prop */}
+        <p>API endpoint: {currentEndpoint || 'N/A'}</p>
+      </div>
+    </div>
+  );
 }
