@@ -11,6 +11,9 @@ import { Progress } from "@/components/ui/progress";
 import { importBulkServicesFromCsv } from "@/actions/bulk-services/import";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BulkServiceImportResult } from "@/lib/types/bulk-service-types";
+import { Badge } from "@/components/ui/badge";
+import { TableCell, TableRow } from "@/components/ui/table"; // Dodajte ove import-e ako nedostaju
 
 interface ImportFormProps {
   onSuccess?: (count: number) => void;
@@ -24,9 +27,15 @@ export function ImportForm({ onSuccess, onCancel }: ImportFormProps) {
   const [previewData, setPreviewData] = useState<string[][]>([]);
   const [error, setError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
-  const [importStats, setImportStats] = useState({ imported: 0, skipped: 0, errors: 0 });
+  const [importStats, setImportStats] = useState({ 
+    imported: 0, 
+    failed: 0, 
+    errors: 0, 
+    errorDetails: [] as BulkServiceImportResult['invalidRows'],
+    createdServices: [] as { id: string; name: string }[],
+    // createdProviders: [] as { id: string; name: string }[] // UKLONJENO: Nema više stanja za provajdere
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -36,7 +45,8 @@ export function ImportForm({ onSuccess, onCancel }: ImportFormProps) {
     setError(null);
     setImportSuccess(false);
     setPreviewData([]);
-        
+    setImportStats({ imported: 0, failed: 0, errors: 0, errorDetails: [], createdServices: [] /*, createdProviders: []*/ }); // Resetuj
+    
     // Check file type
     if (selectedFile.type !== "text/csv" && !selectedFile.name.endsWith('.csv')) {
       setError("Please upload a valid CSV file");
@@ -53,6 +63,10 @@ export function ImportForm({ onSuccess, onCancel }: ImportFormProps) {
         const lines = csvText.split('\n').filter(line => line.trim());
         
         // Extract header and a few rows for preview
+        if (lines.length === 0) {
+            setError("CSV file is empty.");
+            return;
+        }
         const headers = lines[0].split(',').map(h => h.trim());
         const previewRows = lines.slice(1, 6).map(line => 
           line.split(',').map(cell => cell.trim())
@@ -92,9 +106,12 @@ export function ImportForm({ onSuccess, onCancel }: ImportFormProps) {
     
     setIsUploading(true);
     setProgress(0);
+    setError(null);
+    setImportStats({ imported: 0, failed: 0, errors: 0, errorDetails: [], createdServices: [] /*, createdProviders: []*/ }); // Resetuj
     
     try {
-      // Simulate progress while processing
+      const csvContent = await file.text();
+
       const progressInterval = setInterval(() => {
         setProgress(prev => {
           const newProgress = prev + Math.random() * 10;
@@ -102,37 +119,41 @@ export function ImportForm({ onSuccess, onCancel }: ImportFormProps) {
         });
       }, 300);
       
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // Call the import action
-      const result = await importBulkServicesFromCsv(formData);
+      const result: BulkServiceImportResult = await importBulkServicesFromCsv(csvContent);
       
       clearInterval(progressInterval);
       setProgress(100);
       
       if (result.error) {
         setError(result.error);
+        setImportStats({
+          imported: result.createdCount || 0,
+          failed: result.invalidRows.length || 0,
+          errors: (result.invalidRows.length || 0) + (result.importErrors.length || 0),
+          errorDetails: result.invalidRows,
+          createdServices: result.createdServices || [],
+          // createdProviders: result.createdProviders || [] // UKLONJENO
+        });
       } else {
         setImportSuccess(true);
         setImportStats({
-          imported: result.imported || 0,
-          skipped: result.skipped || 0,
-          errors: result.errors || 0
+          imported: result.createdCount || 0,
+          failed: result.invalidRows.length || 0,
+          errors: (result.invalidRows.length || 0) + (result.importErrors.length || 0),
+          errorDetails: result.invalidRows,
+          createdServices: result.createdServices || [],
+          // createdProviders: result.createdProviders || [] // UKLONJENO
         });
         
         if (onSuccess) {
-          onSuccess(result.imported || 0);
+          onSuccess(result.createdCount || 0);
         }
         
-        toast({
-          title: "Import completed",
-          description: `Successfully imported ${result.imported} bulk services`,
-        });
+        toast.success(`Import completed! Imported: ${result.createdCount}, Failed: ${result.invalidRows.length}, New Services: ${result.createdServices?.length || 0}`); // Prilagođena poruka
       }
     } catch (err) {
       setError(`Error importing data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error("Upload error:", err);
     } finally {
       setIsUploading(false);
     }
@@ -144,6 +165,7 @@ export function ImportForm({ onSuccess, onCancel }: ImportFormProps) {
     setPreviewData([]);
     setImportSuccess(false);
     setProgress(0);
+    setImportStats({ imported: 0, failed: 0, errors: 0, errorDetails: [], createdServices: [] /*, createdProviders: []*/ }); // Resetuj
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -166,15 +188,17 @@ export function ImportForm({ onSuccess, onCancel }: ImportFormProps) {
           </Alert>
         )}
         
-        {importSuccess ? (
+        {importSuccess || (error && importStats.errors > 0) ? (
           <div className="space-y-4">
-            <Alert variant="default" className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertTitle>Import successful</AlertTitle>
-              <AlertDescription>
-                Successfully imported bulk services data into the system.
-              </AlertDescription>
-            </Alert>
+            {importSuccess && (
+              <Alert variant="default" className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <AlertTitle>Import completed</AlertTitle>
+                <AlertDescription>
+                  Successfully imported bulk services data into the system.
+                </AlertDescription>
+              </Alert>
+            )}
             
             <div className="grid grid-cols-3 gap-4">
               <Card>
@@ -187,21 +211,77 @@ export function ImportForm({ onSuccess, onCancel }: ImportFormProps) {
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Skipped</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Failed</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-amber-600">{importStats.skipped}</div>
+                  <div className="text-2xl font-bold text-amber-600">{importStats.failed}</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Errors</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Errors</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-600">{importStats.errors}</div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* UKLONJENO: Nema više prikaza novokreiranih provajdera
+            {importStats.createdProviders && importStats.createdProviders.length > 0 && (
+                <div className="mt-4">
+                    <h4 className="text-lg font-semibold mb-2">New Providers Created:</h4>
+                    <div className="flex flex-wrap gap-2">
+                        {importStats.createdProviders.map((provider) => (
+                            <Badge key={provider.id} variant="outline" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                {provider.name}
+                            </Badge>
+                        ))}
+                    </div>
+                </div>
+            )}
+            */}
+
+            {importStats.createdServices && importStats.createdServices.length > 0 && (
+                <div className="mt-4">
+                    <h4 className="text-lg font-semibold mb-2">New Services Created:</h4>
+                    <div className="flex flex-wrap gap-2">
+                        {importStats.createdServices.map((service) => (
+                            <Badge key={service.id} variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                {service.name}
+                            </Badge>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {importStats.errorDetails && importStats.errorDetails.length > 0 && (
+                <div className="mt-4">
+                    <h4 className="text-lg font-semibold mb-2">Error Details:</h4>
+                    <div className="border rounded-md max-h-60 overflow-y-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-red-50 dark:bg-red-900/20">
+                                    <th className="text-left p-2 font-medium">Row</th>
+                                    <th className="text-left p-2 font-medium">Error</th>
+                                    <th className="text-left p-2 font-medium">Original Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {importStats.errorDetails.map((detail, index) => (
+                                    <TableRow key={index} className="border-t hover:bg-red-50 dark:hover:bg-red-900/10">
+                                        <TableCell className="p-2">{detail.rowIndex === -1 ? 'N/A' : detail.rowIndex + 2}</TableCell>
+                                        <TableCell className="p-2 text-red-700 dark:text-red-300">{detail.errors.join('; ')}</TableCell>
+                                        <TableCell className="p-2 text-xs text-muted-foreground">
+                                            {detail.originalRow ? JSON.stringify(detail.originalRow) : 'N/A'}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
             
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={resetForm}>

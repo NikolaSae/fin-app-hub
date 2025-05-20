@@ -1,200 +1,159 @@
 ///lib/bulk-services/csv-processor.ts
+// lib/bulk-services/csv-processor.ts
 
-
-import { z } from "zod";
-import { bulkServiceCSVRowSchema } from "@/schemas/bulk-service";
-import { BulkServiceCSVData, BulkServiceImportResult } from "@/lib/types/bulk-service-types";
-import Papa from "papaparse";
+import Papa from 'papaparse';
+import { BulkServiceValidationError, BulkServiceData } from '@/lib/types/bulk-service-types';
 
 /**
- * Parse a CSV file containing bulk service data
- * @param file The CSV file to parse
- * @returns Promise with the parsed data and validation results
+ * Parse the CSV content for bulk service imports
  */
-export async function parseBulkServiceCSV(file: File): Promise<{
-  data: BulkServiceCSVData[];
-  errors: { row: number; error: string; data?: Record<string, any> }[];
-}> {
-  return new Promise((resolve, reject) => {
-    // The results array will hold our validated data
-    const validData: BulkServiceCSVData[] = [];
-    const errorRows: { row: number; error: string; data?: Record<string, any> }[] = [];
-    
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      dynamicTyping: false, // Keep as strings for validation
-      transformHeader: (header) => {
-        // Normalize headers by trimming whitespace and converting to lowercase
-        return header.trim().toLowerCase();
-      },
-      step: (results, parser) => {
-        // Process each row as it's parsed
-        const rowIndex = results.meta.cursor;
-        
-        try {
-          // Attempt to validate the row using our schema
-          const validatedRow = bulkServiceCSVRowSchema.parse(results.data);
-          validData.push(validatedRow);
-        } catch (error) {
-          // If validation fails, record the error
-          if (error instanceof z.ZodError) {
-            // Format the error message
-            const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
-            errorRows.push({
-              row: rowIndex,
-              error: errorMessage,
-              data: results.data as Record<string, any>
-            });
-          } else {
-            // Unknown error
-            errorRows.push({
-              row: rowIndex,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              data: results.data as Record<string, any>
-            });
-          }
-        }
-      },
-      complete: () => {
-        resolve({
-          data: validData,
-          errors: errorRows
-        });
-      },
-      error: (error) => {
-        reject(new Error(`CSV parsing error: ${error.message}`));
-      }
-    });
-  });
-}
+export async function parseBulkServiceCSV(csvContent: string) {
+  const data: BulkServiceData[] = [];
+  const errors: BulkServiceValidationError[] = [];
 
-/**
- * Format bulk service data for CSV export
- * @param data The bulk service data to format
- * @returns CSV string
- */
-export function formatBulkServiceCSV(data: BulkServiceCSVData[]): string {
-  return Papa.unparse(data, {
+  // Use Papa.parse to parse the CSV content
+  const parseResult = Papa.parse(csvContent, {
     header: true,
-    delimiter: ",",
-    newline: "\r\n"
-  });
-}
-
-/**
- * Map bulk service data to database format
- * @param data The CSV data to map
- * @param providerMap Map of provider names to IDs
- * @param serviceMap Map of service names to IDs
- * @returns Mapped data ready for database insertion
- */
-export function mapBulkServiceData(
-  data: BulkServiceCSVData[],
-  providerMap: Map<string, string>,
-  serviceMap: Map<string, string>
-): { data: any[]; unmappedProviders: Set<string>; unmappedServices: Set<string> } {
-  const unmappedProviders = new Set<string>();
-  const unmappedServices = new Set<string>();
-  
-  const mappedData = data.map(row => {
-    // Look up provider ID
-    const providerId = providerMap.get(row.provider_name.toLowerCase());
-    if (!providerId) {
-      unmappedProviders.add(row.provider_name);
-    }
-    
-    // Look up service ID (based on service_name)
-    const serviceId = serviceMap.get(row.service_name.toLowerCase());
-    if (!serviceId) {
-      unmappedServices.add(row.service_name);
-    }
-    
-    return {
-      provider_name: row.provider_name,
-      agreement_name: row.agreement_name,
-      service_name: row.service_name,
-      step_name: row.step_name,
-      sender_name: row.sender_name,
-      requests: row.requests,
-      message_parts: row.message_parts,
-      providerId: providerId || "",
-      serviceId: serviceId || ""
-    };
-  });
-  
-  return {
-    data: mappedData.filter(item => item.providerId && item.serviceId),
-    unmappedProviders,
-    unmappedServices
-  };
-}
-
-/**
- * Process bulk service import and return results
- * @param file The CSV file to import
- * @param providerMap Map of provider names to IDs
- * @param serviceMap Map of service names to IDs
- * @returns Import results
- */
-export async function processBulkServiceImport(
-  file: File,
-  providerMap: Map<string, string>,
-  serviceMap: Map<string, string>
-): Promise<BulkServiceImportResult> {
-  try {
-    // Parse the CSV file
-    const { data, errors: parseErrors } = await parseBulkServiceCSV(file);
-    
-    // Map the data to database format
-    const { data: mappedData, unmappedProviders, unmappedServices } = mapBulkServiceData(
-      data,
-      providerMap,
-      serviceMap
-    );
-    
-    // Generate error details for unmapped entities
-    const mappingErrors = [];
-    
-    for (const provider of unmappedProviders) {
-      mappingErrors.push({
-        row: -1, // No specific row
-        error: `Provider not found: ${provider}`
+    skipEmptyLines: true,
+    transformHeader: header => header.trim(), // Trim whitespace from headers
+    // Optional: Add error handling for Papa.parse
+    error: (err) => {
+      errors.push({
+        rowIndex: -1,
+        errors: [`CSV parsing error: ${err.message}`],
+        originalRow: {}
       });
     }
-    
-    for (const service of unmappedServices) {
-      mappingErrors.push({
-        row: -1, // No specific row
-        error: `Service not found: ${service}`
+  });
+
+  if (parseResult.errors && parseResult.errors.length > 0) {
+    parseResult.errors.forEach(err => {
+      errors.push({
+        rowIndex: err.row || -1,
+        errors: [`Parse error at row ${err.row}: ${err.message}`],
+        originalRow: err.row !== undefined ? parseResult.data[err.row] : {}
       });
-    }
-    
-    // Combine all errors
-    const allErrors = [...parseErrors, ...mappingErrors];
-    
-    return {
-      imported: mappedData.length,
-      errors: allErrors.length,
-      errorDetails: allErrors.length > 0 ? allErrors : undefined
-    };
-  } catch (error) {
-    return {
-      imported: 0,
-      errors: 1,
-      errorDetails: [{
-        row: -1,
-        error: error instanceof Error ? error.message : "Unknown error occurred during import"
-      }]
-    };
+    });
   }
+
+  // Process each row of parsed data
+  parseResult.data.forEach((row: any, index: number) => {
+    const rowErrors = [];
+
+    // Required fields validation
+    const requiredFields = ['provider_name', 'agreement_name', 'service_name', 'step_name', 'sender_name', 'requests', 'message_parts'];
+    
+    for (const field of requiredFields) {
+      if (!row[field] || row[field].trim() === '') {
+        rowErrors.push(`Missing required field: ${field}`);
+      }
+    }
+
+    // Check if requests and message_parts are valid integers
+    if (row.requests && isNaN(parseInt(row.requests))) {
+      rowErrors.push('Requests must be a valid number');
+    }
+
+    if (row.message_parts && isNaN(parseInt(row.message_parts))) {
+      rowErrors.push('Message parts must be a valid number');
+    }
+
+    if (rowErrors.length > 0) {
+      errors.push({
+        rowIndex: index,
+        errors: rowErrors,
+        originalRow: row
+      });
+    } else {
+      // Clean and transform the data
+      data.push({
+        provider_name: row.provider_name.trim(),
+        agreement_name: row.agreement_name.trim(),
+        service_name: row.service_name.trim(),
+        step_name: row.step_name.trim(),
+        sender_name: row.sender_name.trim(),
+        requests: parseInt(row.requests),
+        message_parts: parseInt(row.message_parts),
+        // These will be populated during processing
+        providerId: null,
+        serviceId: null
+      });
+    }
+  });
+
+  return { data, errors };
 }
 
 /**
- * Validate a single bulk service row
- * @param data The data to validate
- * @returns Validated data or throws an error
+ * Process the parsed CSV data - map provider and service names to IDs
  */
-export function validateBulkServiceRow(data: unknown): BulkServiceCSVData {
-  return bulkServiceCSVRowSchema.parse(data);
+export function processBulkServiceCsv(
+  data: BulkServiceData[],
+  providerMap: Map<string, string>,
+  serviceMap: Map<string, string>
+) {
+  const validRows: BulkServiceData[] = [];
+  const invalidRows: BulkServiceValidationError[] = [];
+  const importErrors: string[] = [];
+  
+  // Debug info
+  let processedCount = 0;
+  let providerNotFoundCount = 0;
+  let serviceNotFoundCount = 0;
+
+  // Process each row
+  data.forEach((row, index) => {
+    processedCount++;
+    const rowErrors = [];
+    const originalRow = { ...row };
+    
+    // Convert to lowercase for lookup
+    const providerNameLower = row.provider_name.toLowerCase();
+    
+    // Generate composite service name (same as in the import function)
+    const compositeServiceName = `${row.provider_name}-${row.agreement_name}-${row.service_name}-${row.step_name}-${row.sender_name}`;
+    const compositeServiceNameLower = compositeServiceName.toLowerCase();
+
+    // Find provider ID
+    const providerId = providerMap.get(providerNameLower);
+    if (!providerId) {
+      rowErrors.push(`Provider "${row.provider_name}" not found in system.`);
+      providerNotFoundCount++;
+    } else {
+      row.providerId = providerId;
+    }
+
+    // Find service ID using the composite service name 
+    const serviceId = serviceMap.get(compositeServiceNameLower);
+    if (!serviceId) {
+      rowErrors.push(`Service with composite name "${compositeServiceName}" not found in system.`);
+      serviceNotFoundCount++;
+      
+      // Additional debug info
+      if (processedCount <= 5 || index % 100 === 0) {
+        console.log(`Service lookup failed for "${compositeServiceNameLower}", available: ${Array.from(serviceMap.keys()).slice(0, 3)}...`);
+      }
+    } else {
+      row.serviceId = serviceId;
+    }
+
+    // Add to appropriate result array
+    if (rowErrors.length > 0) {
+      invalidRows.push({
+        rowIndex: index,
+        errors: rowErrors,
+        originalRow
+      });
+    } else {
+      validRows.push(row);
+    }
+  });
+
+  // Log summary for debugging
+  if (providerNotFoundCount > 0 || serviceNotFoundCount > 0) {
+    console.log(`CSV Processing Summary: Processed ${processedCount} rows, Provider not found: ${providerNotFoundCount}, Service not found: ${serviceNotFoundCount}`);
+    importErrors.push(`Provider mapping failures: ${providerNotFoundCount}, Service mapping failures: ${serviceNotFoundCount}`);
+  }
+
+  return { validRows, invalidRows, importErrors };
 }

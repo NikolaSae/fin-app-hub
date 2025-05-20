@@ -6,17 +6,24 @@ import { auth } from "@/auth";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ComplaintStatus } from "@prisma/client";
+import { ComplaintStatus, ComplaintEntityType, UserRole } from "@prisma/client"; // Import UserRole
+import { ComplaintFormData } from "@/lib/types/complaint-types";
 
 const updateComplaintSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(5, "Title must be at least 5 characters").max(100, "Title cannot exceed 100 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
+  
+  entityType: z.nativeEnum(ComplaintEntityType).optional(), // Optional for update, as it might not be changed by restricted users
   serviceId: z.string().optional().nullable(),
   productId: z.string().optional().nullable(),
   providerId: z.string().optional().nullable(),
-  priority: z.number().min(1).max(5),
-  financialImpact: z.number().optional().nullable(),
+  humanitarianOrgId: z.string().optional().nullable(),
+  parkingServiceId: z.string().optional().nullable(),
+  bulkServiceId: z.string().optional().nullable(),
+
+  priority: z.number().min(1).max(5), // Always allow priority to be updated
+  financialImpact: z.number().optional().nullable(), // Always allow financialImpact to be updated
   status: z.nativeEnum(ComplaintStatus).optional(),
   assignedAgentId: z.string().optional().nullable(),
 });
@@ -34,7 +41,6 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
 
     const validatedData = updateComplaintSchema.parse(data);
 
-    // Fetch the existing complaint
     const existingComplaint = await db.complaint.findUnique({
       where: { id: validatedData.id },
     });
@@ -45,14 +51,13 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
       };
     }
 
-    // Check if user has permission to update this complaint
     const user = await db.user.findUnique({
       where: { id: session.user.id },
     });
 
     const isSubmitter = existingComplaint.submittedById === session.user.id;
     const isAssigned = existingComplaint.assignedAgentId === session.user.id;
-    const canUpdate = ["ADMIN", "MANAGER"].includes(user?.role || "") || isSubmitter || isAssigned;
+    const canUpdate = [UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT].includes(user?.role as UserRole) || isSubmitter || isAssigned;
 
     if (!canUpdate) {
       return {
@@ -60,26 +65,55 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
       };
     }
 
-    // Regular users can only update title and description
     let updateData: any = {};
     
-    if (["ADMIN", "MANAGER", "AGENT"].includes(user?.role || "")) {
-      // Staff can update all fields
-      updateData = {
-        title: validatedData.title,
-        description: validatedData.description,
-        serviceId: validatedData.serviceId,
-        productId: validatedData.productId,
-        providerId: validatedData.providerId,
-        priority: validatedData.priority,
-        financialImpact: validatedData.financialImpact,
-      };
+    // Always allow these fields to be updated by any permitted user
+    updateData.title = validatedData.title;
+    updateData.description = validatedData.description;
+    updateData.priority = validatedData.priority;
+    updateData.financialImpact = validatedData.financialImpact;
+
+    // Only staff roles (ADMIN, MANAGER, AGENT) can update entityType and associated IDs, status, and assignment
+    if ([UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT].includes(user?.role as UserRole)) {
+      // Update entityType and associated IDs
+      updateData.entityType = validatedData.entityType;
       
-      // Only staff can update status and assignment
+      // Reset all related IDs to null before setting the correct one
+      updateData.serviceId = null;
+      updateData.productId = null;
+      updateData.providerId = null;
+      updateData.humanitarianOrgId = null;
+      updateData.parkingServiceId = null;
+      updateData.bulkServiceId = null;
+
+      // Set the correct ID based on entityType
+      switch (validatedData.entityType) {
+        case ComplaintEntityType.PROVIDER:
+          updateData.providerId = validatedData.providerId;
+          break;
+        case ComplaintEntityType.HUMANITARIAN_ORG:
+          updateData.humanitarianOrgId = validatedData.humanitarianOrgId;
+          break;
+        case ComplaintEntityType.PARKING_SERVICE:
+          updateData.parkingServiceId = validatedData.parkingServiceId;
+          break;
+        case ComplaintEntityType.BULK_SERVICE:
+          updateData.bulkServiceId = validatedData.bulkServiceId;
+          break;
+        case ComplaintEntityType.SERVICE:
+          updateData.serviceId = validatedData.serviceId;
+          break;
+        case ComplaintEntityType.PRODUCT:
+          updateData.productId = validatedData.productId;
+          break;
+        default:
+          break;
+      }
+      
+      // Handle status changes
       if (validatedData.status && validatedData.status !== existingComplaint.status) {
         updateData.status = validatedData.status;
         
-        // Handle special status changes
         if (validatedData.status === "RESOLVED" && !existingComplaint.resolvedAt) {
           updateData.resolvedAt = new Date();
         }
@@ -88,7 +122,6 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
           updateData.closedAt = new Date();
         }
         
-        // Record status history
         await db.complaintStatusHistory.create({
           data: {
             complaintId: existingComplaint.id,
@@ -107,7 +140,6 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
           updateData.assignedAt = new Date();
           updateData.status = "ASSIGNED";
           
-          // Record status change for new assignment
           if (existingComplaint.status !== "ASSIGNED") {
             await db.complaintStatusHistory.create({
               data: {
@@ -119,7 +151,6 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
             });
           }
           
-          // Notify the newly assigned agent
           await db.notification.create({
             data: {
               title: "Complaint Assigned",
@@ -132,21 +163,13 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
           });
         }
       }
-    } else {
-      // Regular users can only update title and description
-      updateData = {
-        title: validatedData.title,
-        description: validatedData.description,
-      };
     }
 
-    // Update the complaint
     const updatedComplaint = await db.complaint.update({
       where: { id: validatedData.id },
       data: updateData,
     });
 
-    // Log the activity
     await db.activityLog.create({
       data: {
         action: "COMPLAINT_UPDATED",
@@ -157,7 +180,6 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
       },
     });
 
-    // Notify relevant parties about the update
     if (existingComplaint.submittedById !== session.user.id) {
       await db.notification.create({
         data: {
@@ -174,7 +196,7 @@ export async function updateComplaint(data: UpdateComplaintFormData) {
     if (
       existingComplaint.assignedAgentId &&
       existingComplaint.assignedAgentId !== session.user.id &&
-      existingComplaint.assignedAgentId === updateData.assignedAgentId // Only notify if still assigned
+      existingComplaint.assignedAgentId === updateData.assignedAgentId
     ) {
       await db.notification.create({
         data: {

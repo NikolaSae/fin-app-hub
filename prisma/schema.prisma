@@ -208,6 +208,7 @@ enum ContractType {
   PROVIDER
   HUMANITARIAN
   PARKING
+  BULK
 }
 
 model Contract {
@@ -466,7 +467,7 @@ model BulkService {
    // Added the inverse relation to LogEntry
   logEntries    LogEntry[]
 
-  @@unique([provider_name, agreement_name, service_name, sender_name, requests, message_parts])
+  @@unique([provider_name, agreement_name, service_name, sender_name])
   @@index([serviceId])
   @@index([providerId])
 }
@@ -535,7 +536,8 @@ model Complaint {
   attachments       Attachment[]
   humanitarianOrgId String?
   humanitarianOrg   HumanitarianOrg?       @relation(fields: [humanitarianOrgId], references: [id])
-
+  parkingServiceId  String?
+  parkingService    ParkingService?       @relation(fields: [parkingServiceId], references: [id])
   // Activity tracking
   statusHistory     ComplaintStatusHistory[]
 

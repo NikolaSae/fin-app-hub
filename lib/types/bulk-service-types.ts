@@ -1,5 +1,4 @@
 //lib/types/bulk-service-types.ts
-
 import { BulkService, Provider, Service } from "@prisma/client";
 
 // Enhanced types with relations
@@ -44,17 +43,6 @@ export interface BulkServiceStats {
   }[];
 }
 
-// Data structure for CSV import results
-export interface BulkServiceImportResult {
-  imported: number;
-  errors: number;
-  errorDetails?: Array<{
-    row: number;
-    error: string;
-    data?: Record<string, any>;
-  }>;
-}
-
 // Structure for bulk service CSV row
 export interface BulkServiceCSVData {
   provider_name: string;
@@ -64,6 +52,29 @@ export interface BulkServiceCSVData {
   sender_name: string;
   requests: number;
   message_parts: number;
+  providerId: string | null; // providerId can still be null if not found
+  serviceId: string | null; // serviceId can still be null during mapping if not found, but will be filtered out
+}
+
+// Result for a single CSV row validation
+export interface CsvRowValidationResult<T> {
+  data: T; // Validated data or original data if validation failed
+  errors: string[]; // List of error messages for this row
+  isValid: boolean; // True if the row passed validation
+  rowIndex: number; // Original 0-based index of the row in the CSV
+  originalRow: Record<string, any>; // The original parsed row data
+}
+
+// Data structure for detailed CSV import results
+export interface BulkServiceImportResult {
+  totalRows: number;
+  validRows: BulkServiceCSVData[]; // Validated and mapped data ready for DB insertion
+  invalidRows: CsvRowValidationResult<BulkServiceCSVData>[]; // Rows that failed validation or mapping
+  importErrors: string[]; // Errors at the file parsing level (e.g., malformed CSV)
+  error?: string | null; // Overall error message for the import process
+  createdCount?: number; // Number of records actually created in the database
+  createdServices?: { id: string; name: string }[]; // Polje za novokreirane servise
+  // createdProviders?: { id: string; name: string }[]; // UKLONJENO: Polje za novokreirane provajdere
 }
 
 // Response structure for paginated bulk services
@@ -84,7 +95,7 @@ export interface BulkServiceFormValues {
   sender_name: string;
   requests: number;
   message_parts: number;
-  serviceId: string;
+  serviceId: string; // Now mandatory
   providerId: string;
 }
 
