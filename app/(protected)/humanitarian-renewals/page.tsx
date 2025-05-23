@@ -309,10 +309,8 @@ const HumanitarianRenewalsPage: React.FC = () => {
   const [selectedRenewal, setSelectedRenewal] = useState<HumanitarianRenewalWithRelations | null>(null);
 
   useEffect(() => {
-    fetchStatistics();
-    // Dodajte 'renewals' u dependency array ako se statistike menjaju sa promenom renewals
-    // Ili, ako fetchStatistics zavisi samo od 'renewals' i treba da se pozove kad god se oni promene:
-  }, [fetchStatistics, renewals]); // Dodato 'renewals'
+  fetchStatistics();
+}, []);
 
   const getProgressPercentage = (renewal: HumanitarianRenewalWithRelations) => {
     const steps = [
@@ -333,10 +331,11 @@ const HumanitarianRenewalsPage: React.FC = () => {
       humanitarianOrgId: formData.humanitarianOrgId === '' ? undefined : formData.humanitarianOrgId,
     } as CreateHumanitarianRenewalInput;
     const result = await createRenewal(payload);
-    if (result.success) {
-      setIsCreateDialogOpen(false);
-    }
-  };
+  if (result.success) {
+    setIsCreateDialogOpen(false);
+    fetchStatistics();
+  }
+};
 
   const handleEditRenewal = async (formData: Partial<UpdateHumanitarianRenewalInput>) => {
     if (!selectedRenewal) return;
@@ -354,10 +353,13 @@ const HumanitarianRenewalsPage: React.FC = () => {
   };
 
   const handleDeleteRenewal = async (id: string) => {
-    if (window.confirm('Da li ste sigurni da želite da obrišete ovu obnovu?')) {
-      await deleteRenewal(id);
+  if (window.confirm('Da li ste sigurni da želite da obrišete ovu obnovu?')) {
+    const result = await deleteRenewal(id);
+    if (result.success) {
+      fetchStatistics(); // ✅ Pozovi ovde umesto u useEffect
     }
-  };
+  }
+};
 
   const handleFilterChange = (filterName: string, value: string) => {
     applyFilters({ ...filters, [filterName]: value === 'all' ? undefined : value });

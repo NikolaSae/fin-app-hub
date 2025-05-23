@@ -1,6 +1,5 @@
 // hooks/use-contracts.ts
 
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -68,12 +67,18 @@ interface UseContractsOptions {
   limit?: number;
 }
 
+interface UpdateContractStatusData {
+  status: ContractStatus;
+  notes?: string;
+}
+
 interface UseContractsResult {
   contracts: Contract[];
   loading: boolean;
   error: Error | null;
   fetchContracts: (filters?: FilterOptions) => Promise<void>;
   refreshContracts: () => Promise<void>;
+  updateContractStatus: (contractId: string, data: UpdateContractStatusData) => Promise<{ success: boolean; error?: string; renewalId?: string }>;
   totalCount: number;
   filterContracts: (filters: FilterOptions) => void;
   filteredContracts: Contract[];
@@ -138,6 +143,54 @@ export function useContracts({
   const refreshContracts = useCallback(() => {
     return fetchContracts(activeFilters);
   }, [fetchContracts, activeFilters]);
+
+  // Nova funkcija za ažuriranje statusa ugovora
+  const updateContractStatus = useCallback(async (contractId: string, data: UpdateContractStatusData) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/contracts/${contractId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update contract status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Ažuriraj lokalno stanje
+      setContracts(prev => prev.map(contract => 
+        contract.id === contractId 
+          ? { ...contract, status: data.status, updatedAt: new Date() }
+          : contract
+      ));
+      
+      setFilteredContracts(prev => prev.map(contract => 
+        contract.id === contractId 
+          ? { ...contract, status: data.status, updatedAt: new Date() }
+          : contract
+      ));
+
+      return { 
+        success: true, 
+        renewalId: result.renewalId // Vraćamo ID kreiranog renewal-a ako postoji
+      };
+    } catch (err) {
+      console.error("Error updating contract status:", err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update contract status';
+      setError(new Error(errorMessage));
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Client-side filtering function
   const filterContracts = useCallback((filters: FilterOptions) => {
@@ -210,6 +263,7 @@ export function useContracts({
     error,
     fetchContracts,
     refreshContracts,
+    updateContractStatus, // Nova funkcija
     totalCount,
     filterContracts,
     filteredContracts,
