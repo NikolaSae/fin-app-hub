@@ -172,6 +172,23 @@ model HumanitarianOrg {
   @@index([name])
 }
 
+model ParkingTransaction {
+  id               String         @id @default(cuid())
+  parkingServiceId String
+  date             DateTime
+  group            String
+  serviceName      String
+  price            Float
+  quantity         Float
+  amount           Float
+  createdAt        DateTime       @default(now())
+
+  parkingService   ParkingService @relation(fields: [parkingServiceId], references: [id])
+
+  @@index([parkingServiceId, date, serviceName])
+  @@unique([parkingServiceId, date, serviceName, group])
+}
+
 // Parking Service model
 model ParkingService {
   id          String    @id @default(cuid())
@@ -184,7 +201,7 @@ model ParkingService {
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
+  transactions ParkingTransaction[]
   // Relations
   contracts   Contract[]
 

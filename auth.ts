@@ -8,6 +8,9 @@ import { getTwoFactorConfoirmationByUserId } from "@/data/two-factor-confirmatio
 import { getAccountByUserId } from "./data/account";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
+  basePath: "/api/auth", // Eksplicitno definišite basePath
+  host: process.env.NEXTAUTH_URL,
   pages: {
     signIn: "/auth/login",
     error: "/auth/error",
