@@ -11,23 +11,33 @@ from datetime import datetime
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    stream=sys.stdout
+)
 
-# Supabase DB parameters for PostgreSQL connection
-DB_PARAMS = {
-    "host": "aws-0-eu-central-1.pooler.supabase.com",
-    "port": "6543",
-    "dbname": "postgres",
-    "user": "postgres.srrdkqjfynsdoqlxsohi",
-    "password": os.getenv("SUPABASE_PASSWORD"),
-}
+
+def get_db_params():
+    """Get database parameters with environment variable read at runtime"""
+    password = os.getenv("SUPABASE_PASSWORD")
+    if not password:
+        raise ValueError("SUPABASE_PASSWORD environment variable is not set")
+    
+    return {
+        "host": "aws-0-eu-central-1.pooler.supabase.com",
+        "port": "6543",
+        "dbname": "postgres",
+        "user": "postgres.srrdkqjfynsdoqlxsohi",
+        "password": password,
+    }
 
 # GitHub Codespace folder paths
 PROJECT_ROOT = os.getcwd()
-FOLDER_PATH = os.path.join(PROJECT_ROOT, "input/")
-PROCESSED_FOLDER = os.path.join(PROJECT_ROOT, "processed/")
-ERROR_FOLDER = os.path.join(PROJECT_ROOT, "errors/")
-OUTPUT_FILE = os.path.join(PROJECT_ROOT, "data/parking_output.csv")
+FOLDER_PATH = os.path.join(PROJECT_ROOT, "scripts/input/")
+PROCESSED_FOLDER = os.path.join(PROJECT_ROOT, "scripts/processed/")
+ERROR_FOLDER = os.path.join(PROJECT_ROOT, "scripts/errors/")
+OUTPUT_FILE = os.path.join(PROJECT_ROOT, "scripts/data/parking_output.csv")
 
 # Create folders if they don't exist
 os.makedirs(FOLDER_PATH, exist_ok=True)
@@ -35,11 +45,29 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 os.makedirs(ERROR_FOLDER, exist_ok=True)
 os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 
+def extract_service_code(service_name):
+    """Extract first four digits from serviceName - finds ANY 4 consecutive digits"""
+    if not service_name:
+        return service_name
+    
+    # Pattern to find any 4 consecutive digits
+    pattern = r'\d{4}'
+    match = re.search(pattern, str(service_name))
+    
+    if match:
+        extracted_code = match.group()
+        logging.debug(f"Extracted service code '{extracted_code}' from '{service_name}'")
+        return extracted_code
+    else:
+        logging.warning(f"Could not extract 4-digit code from: {service_name}")
+        return str(service_name)  # Return original if no 4 digits found
+
 def test_database_connection():
     """Test connection to Supabase database"""
     try:
         logging.info("Testing database connection...")
-        conn = psycopg2.connect(**DB_PARAMS)
+        db_params = get_db_params()
+        conn = psycopg2.connect(**db_params)
         cur = conn.cursor()
         cur.execute("SELECT version();")
         version = cur.fetchone()
@@ -47,21 +75,72 @@ def test_database_connection():
         cur.close()
         conn.close()
         return True
+    except ValueError as e:
+        logging.error(f"Configuration error: {e}")
+        return False
     except Exception as e:
         logging.error(f"Database connection failed: {e}")
         logging.error("Please check your SUPABASE_PASSWORD environment variable")
         return False
+
+def get_current_user():
+    """Dobavi user ID iz argumenata komandne linije ili sistema"""
+    if len(sys.argv) > 1:
+        user_id = sys.argv[1]
+        logging.info(f"Using authenticated user ID: {user_id}")
+        return user_id
+    
+    logging.warning("No user ID provided, falling back to system user")
+    return get_or_create_system_user()
+
+def get_or_create_system_user():
+    """Get or create system user for logging purposes - fallback only"""
+    try:
+        db_params = get_db_params()
+        conn = psycopg2.connect(**db_params)
+        cur = conn.cursor()
+        
+        # Try to find existing system user
+        cur.execute('SELECT "id" FROM "User" WHERE "email" = %s', ('system@internal.app',))
+        result = cur.fetchone()
+        
+        if result:
+            user_id = result[0]
+            logging.debug(f"Found existing system user: {user_id}")
+            cur.close()
+            conn.close()
+            return user_id
+        
+        # Create system user if it doesn't exist
+        cur.execute('''
+            INSERT INTO "User" ("id", "name", "email", "role", "isActive", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid(), 'System User', 'system@internal.app', 'ADMIN', true, %s, %s)
+            RETURNING "id"
+        ''', (datetime.now(), datetime.now()))
+        
+        user_id = cur.fetchone()[0]
+        conn.commit()
+        logging.info(f"Created system user: {user_id}")
+        cur.close()
+        conn.close()
+        return user_id
+        
+    except Exception as e:
+        logging.error(f"Error getting/creating system user: {e}")
+        return None
 
 def log_to_database(conn, entity_type, entity_id, action, subject, description=None, status='IN_PROGRESS', user_id=None):
     """Log actions to the database LogEntry table with proper error handling"""
     try:
         cur = conn.cursor()
         
-        # If no user_id provided, use a default system user
+        # Get current user if not provided
         if not user_id:
-            user_id = "system_user_id"
+            user_id = get_current_user()
+            if not user_id:
+                logging.error("Cannot create log entry without valid user ID")
+                return
         
-        # **FIX 1: Dodaj gen_random_uuid() za ID generaciju**
         log_sql = """
         INSERT INTO "LogEntry" (
             "id", "entityType", "entityId", "action", "subject", "description", 
@@ -75,21 +154,186 @@ def log_to_database(conn, entity_type, entity_id, action, subject, description=N
             status, user_id, now, now
         ))
         
-        # **FIX 2: Separate commit za log entry**
         conn.commit()
         cur.close()
         logging.info(f"Log entry created: {subject}")
         
     except Exception as e:
         logging.error(f"Failed to create log entry: {e}")
-        # **FIX 3: Rollback transaction ako je greška**
         try:
             conn.rollback()
         except:
             pass
 
+def get_or_create_service(conn, service_code, service_type='PARKING', billing_type='PREPAID'):
+    """Find or create Service based on extracted 4-digit code with proper billing type"""
+    try:
+        cur = conn.cursor()
+        
+        # Try to find existing service by name (4-digit code)
+        cur.execute('SELECT "id" FROM "Service" WHERE "name" = %s', (service_code,))
+        result = cur.fetchone()
+        
+        if result:
+            service_id = result[0]
+            logging.info(f"Found existing service: {service_code} (ID: {service_id})")
+            cur.close()
+            return service_id
+        
+        # Create new service with proper billing type
+        cur.execute('''
+            INSERT INTO "Service" ("id", "name", "type", "billingType", "description", "isActive", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid(), %s, %s, %s, %s, true, %s, %s)
+            RETURNING "id"
+        ''', (service_code, service_type, billing_type, f'Auto-created parking service: {service_code}', datetime.now(), datetime.now()))
+        
+        service_id = cur.fetchone()[0]
+        conn.commit()
+        logging.info(f"Created new service: {service_code} (ID: {service_id}) with billing type: {billing_type}")
+        cur.close()
+        
+        return service_id
+        
+    except Exception as e:
+        logging.error(f"Error getting/creating service {service_code}: {e}")
+        try:
+            conn.rollback()
+        except:
+            pass
+        return None
+
+def get_or_create_parking_service(conn, provider_name):
+    """Find or create ParkingService based on provider name"""
+    try:
+        cur = conn.cursor()
+        
+        # Try to find existing parking service
+        cur.execute('SELECT "id" FROM "ParkingService" WHERE "name" = %s', (provider_name,))
+        result = cur.fetchone()
+        
+        if result:
+            parking_service_id = result[0]
+            logging.info(f"Found existing parking service: {provider_name} (ID: {parking_service_id})")
+            cur.close()
+            return parking_service_id
+        
+        # Create new parking service
+        cur.execute('''
+            INSERT INTO "ParkingService" ("id", "name", "isActive", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid(), %s, true, %s, %s)
+            RETURNING "id"
+        ''', (provider_name, datetime.now(), datetime.now()))
+        
+        parking_service_id = cur.fetchone()[0]
+        conn.commit()
+        logging.info(f"Created new parking service: {provider_name} (ID: {parking_service_id})")
+        cur.close()
+        
+        return parking_service_id
+        
+    except Exception as e:
+        logging.error(f"Error getting/creating parking service {provider_name}: {e}")
+        try:
+            conn.rollback()
+        except:
+            pass
+        return None
+
+def get_or_create_service_contract(conn, service_id, parking_service_id):
+    """Create connection between Service and ParkingService via Contract table"""
+    try:
+        cur = conn.cursor()
+        
+        # Get current user for contract creation
+        current_user_id = get_current_user()
+        if not current_user_id:
+            logging.error("Cannot create contract without current user")
+            return None
+        
+        # Check if active contract already exists for this parking service
+        cur.execute('''
+            SELECT "id" FROM "Contract" 
+            WHERE "parkingServiceId" = %s AND "type" = 'PARKING' AND "status" = 'ACTIVE'
+        ''', (parking_service_id,))
+        
+        result = cur.fetchone()
+        if result:
+            contract_id = result[0]
+            logging.info(f"Found existing contract for parking service: {contract_id}")
+            
+            # Check if ServiceContract already exists for this service
+            cur.execute('''
+                SELECT "id" FROM "ServiceContract" 
+                WHERE "contractId" = %s AND "serviceId" = %s
+            ''', (contract_id, service_id))
+            
+            service_contract_result = cur.fetchone()
+            if service_contract_result:
+                logging.info(f"ServiceContract already exists")
+                cur.close()
+                return service_contract_result[0]
+            
+            # Create ServiceContract
+            cur.execute('''
+                INSERT INTO "ServiceContract" ("id", "contractId", "serviceId", "createdAt", "updatedAt")
+                VALUES (gen_random_uuid(), %s, %s, %s, %s)
+                RETURNING "id"
+            ''', (contract_id, service_id, datetime.now(), datetime.now()))
+            
+            service_contract_id = cur.fetchone()[0]
+            conn.commit()
+            logging.info(f"Created ServiceContract: {service_contract_id}")
+            cur.close()
+            return service_contract_id
+        
+        # If no contract exists, create it
+        # First create basic contract
+        cur.execute('''
+            INSERT INTO "Contract" (
+                "id", "name", "contractNumber", "type", "status", "startDate", "endDate", 
+                "revenuePercentage", "parkingServiceId", "createdAt", "updatedAt", "createdById"
+            )
+            VALUES (gen_random_uuid(), %s, %s, 'PARKING', 'ACTIVE', %s, %s, %s, %s, %s, %s, %s)
+            RETURNING "id"
+        ''', (
+            f'Auto-generated contract for parking service',
+            f'AUTO-PARKING-{parking_service_id[:8]}-{datetime.now().strftime("%Y%m%d")}',
+            datetime.now(),
+            datetime.now().replace(year=datetime.now().year + 1),
+            10.0,
+            parking_service_id,
+            datetime.now(),
+            datetime.now(),
+            current_user_id
+        ))
+        
+        contract_id = cur.fetchone()[0]
+        
+        # Then create ServiceContract
+        cur.execute('''
+            INSERT INTO "ServiceContract" ("id", "contractId", "serviceId", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid(), %s, %s, %s, %s)
+            RETURNING "id"
+        ''', (contract_id, service_id, datetime.now(), datetime.now()))
+        
+        service_contract_id = cur.fetchone()[0]
+        conn.commit()
+        
+        logging.info(f"Created new contract: {contract_id} and ServiceContract: {service_contract_id}")
+        cur.close()
+        
+        return service_contract_id
+        
+    except Exception as e:
+        logging.error(f"Error creating service contract: {e}")
+        try:
+            conn.rollback()
+        except:
+            pass
+        return None
+
 def convert_to_float(val):
-    """Konvertuje vrednost u float uklanjajući hiljadarske zareze, ako je moguće."""
+    """Convert value to float removing thousand separators if possible."""
     if isinstance(val, str):
         val = val.replace(",", "").strip()
         try:
@@ -104,7 +348,7 @@ def convert_to_float(val):
         return None
 
 def extract_parking_provider(filename):
-    """Izvlači naziv parking provajdera iz naziva fajla."""
+    """Extract parking provider name from filename."""
     try:
         match = re.search(r"_mParking_(.+?)_\d+__\d+_", filename)
         if match:
@@ -124,7 +368,7 @@ def extract_parking_provider(filename):
         return "unknown"
 
 def clean_date(date_val):
-    """Popravlja format datuma: uklanja nevidljive znakove i prelamanje redova."""
+    """Fix date format: remove invisible characters and line breaks."""
     if isinstance(date_val, str):
         date_val = date_val.strip()
         date_val = re.sub(r'\s+', ' ', date_val)
@@ -132,51 +376,52 @@ def clean_date(date_val):
         date_val = date_val.rstrip('.')
     return date_val
 
-def get_or_create_parking_service(conn, provider_name):
-    """Pronalazi ili kreira ParkingService na osnovu naziva provajdera"""
+def convert_date_format(date_str):
+    """Convert DD.MM.YYYY to YYYY-MM-DD format for PostgreSQL"""
+    if not date_str:
+        return None
+    
     try:
-        cur = conn.cursor()
+        # Clean the date string
+        cleaned_date = clean_date(str(date_str))
         
-        # Pokušaj da pronađeš postojeći parking service
-        cur.execute('SELECT "id" FROM "ParkingService" WHERE "name" = %s', (provider_name,))
-        result = cur.fetchone()
+        # Try to parse DD.MM.YYYY format
+        if '.' in cleaned_date:
+            parts = cleaned_date.split('.')
+            if len(parts) == 3:
+                day, month, year = parts
+                # Return in YYYY-MM-DD format
+                formatted_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                logging.debug(f"Converted date {cleaned_date} to {formatted_date}")
+                return formatted_date
         
-        if result:
-            parking_service_id = result[0]
-            logging.info(f"Found existing parking service: {provider_name} (ID: {parking_service_id})")
-            cur.close()
-            return parking_service_id
-        
-        # **FIX 4: Kreiraj novi parking service u separate transaction**
-        cur.execute('''
-            INSERT INTO "ParkingService" ("id", "name", "isActive", "createdAt", "updatedAt")
-            VALUES (gen_random_uuid(), %s, true, %s, %s)
-            RETURNING "id"
-        ''', (provider_name, datetime.now(), datetime.now()))
-        
-        parking_service_id = cur.fetchone()[0]
-        conn.commit()  # Commit immediately
-        logging.info(f"Created new parking service: {provider_name} (ID: {parking_service_id})")
-        cur.close()
-        
-        # **FIX 5: Log creation sa novom konekcijom da izbegnemo transaction conflicts**
-        try:
-            log_conn = psycopg2.connect(**DB_PARAMS)
-            log_to_database(log_conn, 'PARKING_SERVICE', parking_service_id, 'ACTIVATION', 
-                          f'Created parking service: {provider_name}', 
-                          f'Automatically created during data import', 'FINISHED')
-            log_conn.close()
-        except Exception as log_e:
-            logging.error(f"Failed to log parking service creation: {log_e}")
-        
-        return parking_service_id
+        logging.warning(f"Could not convert date format: {cleaned_date}")
+        return None
         
     except Exception as e:
-        logging.error(f"Error getting/creating parking service {provider_name}: {e}")
-        try:
-            conn.rollback()
-        except:
-            pass
+        logging.error(f"Error converting date {date_str}: {e}")
+        return None
+
+def sanitize_parking_record(row):
+    """Sanitizes a parking record for database insertion"""
+    try:
+        # Extract service code from serviceName
+        original_service_name = str(row.get('serviceName', ''))
+        service_code = extract_service_code(original_service_name)
+        
+        return {
+            'parkingServiceId': row.get('parkingServiceId', ''),
+            'serviceId': row.get('serviceId', ''),
+            'date': convert_date_format(row.get('date', '')),
+            'group': str(row.get('group', '')),
+            'serviceName': service_code,  # Use extracted 4-digit code
+            'originalServiceName': original_service_name,  # Keep original for reference
+            'price': convert_to_float(row.get('price', 0)) or 0,
+            'quantity': convert_to_float(row.get('quantity', 0)) or 0,
+            'amount': convert_to_float(row.get('amount', 0)) or 0
+        }
+    except Exception as e:
+        logging.error(f"Error sanitizing record: {e}")
         return None
 
 def process_excel(input_file, conn):
@@ -203,6 +448,9 @@ def process_excel(input_file, conn):
         parking_service_id = get_or_create_parking_service(conn, provider_name)
         if not parking_service_id:
             raise Exception(f"Could not get/create parking service for {provider_name}")
+
+        # Track unique service codes for this file
+        service_codes_in_file = set()
 
         i = 1
         while i < len(rows):
@@ -231,6 +479,10 @@ def process_excel(input_file, conn):
             else:
                 if row[0]:
                     service_name = row[0]
+                    # Extract service code for Service creation
+                    service_code = extract_service_code(service_name)
+                    service_codes_in_file.add(service_code)
+                    
                     price = convert_to_float(row[1])
 
                     quantity_values = row[3:-1] if header[-1].upper() == "TOTAL" else row[3:]
@@ -250,8 +502,10 @@ def process_excel(input_file, conn):
                         if quantity is not None and quantity > 0 and current_group == "prepaid":
                             record = {
                                 "parkingServiceId": parking_service_id,
+                                "serviceId": None,  # Will be set later
                                 "group": current_group,
                                 "serviceName": service_name,
+                                "serviceCode": service_code,  # Add service code
                                 "price": price,
                                 "date": cleaned_date,
                                 "quantity": quantity,
@@ -263,54 +517,31 @@ def process_excel(input_file, conn):
                 else:
                     i += 1
 
-        logging.info(f"Processed {input_file}: {len(output_records)} prepaid records")
+        # Create Service records for each unique service code found in this file
+        service_id_mapping = {}
+        for service_code in service_codes_in_file:
+            service_id = get_or_create_service(conn, service_code, 'PARKING', 'PREPAID')
+            if service_id:
+                service_id_mapping[service_code] = service_id
+                # Create connection between Service and ParkingService via Contract
+                service_contract_id = get_or_create_service_contract(conn, service_id, parking_service_id)
+                if not service_contract_id:
+                    logging.warning(f"Could not create service contract for {service_code}")
+
+        # Update records with correct serviceId
+        for record in output_records:
+            service_code = record.get('serviceCode')
+            if service_code in service_id_mapping:
+                record['serviceId'] = service_id_mapping[service_code]
+            # Remove serviceCode as it's not needed in final output
+            record.pop('serviceCode', None)
+
+        logging.info(f"Processed {input_file}: {len(output_records)} prepaid records, {len(service_codes_in_file)} unique services")
         return output_records
         
     except Exception as e:
         logging.error(f"Error processing file {input_file}: {e}")
         raise
-
-def sanitize_parking_record(row):
-    """Sanitize and validate the parking transaction record."""
-    
-    # Sanitize and format the date (dd.mm.yyyy) -> yyyy-mm-dd
-    sanitized_date = row.get('date', '').replace('"', '').replace('\n', '').replace('\r', '') if row.get('date') else None
-    
-    # Convert date format
-    if sanitized_date and len(sanitized_date) == 10:
-        try:
-            formatted_date = "-".join(sanitized_date.split(".")[::-1])
-        except Exception as e:
-            logging.warning(f"Error formatting date {sanitized_date}: {e}")
-            formatted_date = None
-    else:
-        formatted_date = None
-
-    # Validate numeric fields
-    try:
-        price = float(row.get('price', 0)) if row.get('price') is not None else 0.0
-    except (ValueError, TypeError):
-        price = 0.0
-
-    try:
-        quantity = float(row.get('quantity', 0)) if row.get('quantity') is not None else 0.0
-    except (ValueError, TypeError):
-        quantity = 0.0
-
-    try:
-        amount = float(row.get('amount', 0)) if row.get('amount') is not None else 0.0
-    except (ValueError, TypeError):
-        amount = 0.0
-
-    return {
-        "parkingServiceId": row.get("parkingServiceId"),
-        'group': row.get('group', 'prepaid'),
-        "serviceName": row.get("serviceName", ""),
-        'price': price,
-        'date': formatted_date,
-        "quantity": quantity,
-        'amount': amount
-    }
 
 def save_to_csv(data, output_file):
     """Save data to CSV file"""
@@ -318,7 +549,7 @@ def save_to_csv(data, output_file):
         logging.warning("No data to save to CSV.")
         return
 
-    fieldnames = ["parkingServiceId", "group", "serviceName", "price", "date", "quantity", "amount"]
+    fieldnames = ["parkingServiceId", "serviceId", "group", "serviceName", "price", "date", "quantity", "amount"]
     try:
         with open(output_file, "w", newline="", encoding="utf-8-sig") as fout:
             writer = csv.DictWriter(fout, fieldnames=fieldnames)
@@ -342,7 +573,7 @@ def import_to_postgresql(csv_path, conn):
         for _, row in df.iterrows():
             sanitized_row = sanitize_parking_record(row)
             # Only add rows with valid dates, positive quantities, and prepaid group
-            if (sanitized_row['date'] and 
+            if (sanitized_row and sanitized_row['date'] and 
                 sanitized_row['quantity'] > 0 and 
                 sanitized_row['group'] == 'prepaid'):
                 sanitized_data.append(sanitized_row)
@@ -353,7 +584,7 @@ def import_to_postgresql(csv_path, conn):
 
         logging.info(f"Importing {len(sanitized_data)} prepaid parking transactions...")
 
-        # **FIX 6: Process in batches and better error handling**
+        # Process in batches and better error handling
         cur = conn.cursor()
         inserted_count = 0
         updated_count = 0
@@ -379,7 +610,7 @@ def import_to_postgresql(csv_path, conn):
                     record['parkingServiceId'],
                     record['date'],
                     record['group'],
-                    record['serviceName'],
+                    record['serviceName'],  # Now contains 4-digit code
                     record['price'],
                     record['quantity'],
                     record['amount'],
@@ -417,17 +648,6 @@ def import_to_postgresql(csv_path, conn):
         cur.close()
         
         logging.info(f"Import completed: {inserted_count} inserted, {updated_count} updated, {error_count} errors (prepaid only)")
-        
-        # **FIX 7: Log with separate connection**
-        try:
-            log_conn = psycopg2.connect(**DB_PARAMS)
-            log_to_database(log_conn, 'PARKING_SERVICE', 'bulk_import', 'NOTE', 
-                           f'Prepaid parking transactions import completed',
-                           f'Imported {inserted_count} new prepaid records, updated {updated_count} records, {error_count} errors',
-                           'FINISHED')
-            log_conn.close()
-        except Exception as log_e:
-            logging.error(f"Failed to log import completion: {log_e}")
 
     except Exception as e:
         logging.error(f"Error importing to PostgreSQL: {e}")
@@ -457,12 +677,18 @@ def process_all_files():
         logging.error("Cannot proceed without database connection. Please set SUPABASE_PASSWORD environment variable.")
         return
     
+    # Ensure current user exists
+    current_user_id = get_current_user()
+    if not current_user_id:
+        logging.error("Cannot proceed without current user.")
+        return
+    
     file_pattern = os.path.join(FOLDER_PATH, "Servis__MicropaymentMerchantReport_*mParking*.xls*")
     files = glob.glob(file_pattern)
     
     if not files:
         logging.info(f"No parking service files found in: {FOLDER_PATH}")
-        logging.info("Please place your Excel files in the scripts/input/ folder")
+        logging.info("Please place your Excel files in the input/ folder")
         return
 
     logging.info(f"Found {len(files)} parking service files to process")
@@ -472,10 +698,11 @@ def process_all_files():
     error_files = []
 
     for file_path in files:
-        # **FIX 8: Koristi separate konekcije za svaki fajl**
+        # Use separate connections for each file
         conn = None
         try:
-            conn = psycopg2.connect(**DB_PARAMS)
+            db_params = get_db_params()
+            conn = psycopg2.connect(**db_params)
             logging.info(f"Processing: {file_path}")
             
             # Process the Excel file
@@ -483,33 +710,10 @@ def process_all_files():
             all_data.extend(file_data)
             processed_files.append(file_path)
             
-            # Log successful processing with separate connection
-            try:
-                log_conn = psycopg2.connect(**DB_PARAMS)
-                filename = os.path.basename(file_path)
-                log_to_database(log_conn, 'PARKING_SERVICE', filename, 'NOTE',
-                              f'Successfully processed file: {filename}',
-                              f'Extracted {len(file_data)} prepaid parking transaction records',
-                              'FINISHED')
-                log_conn.close()
-            except Exception as log_e:
-                logging.error(f"Failed to log file processing: {log_e}")
-            
         except Exception as e:
             logging.error(f"Failed to process {file_path}: {e}")
             error_files.append(file_path)
             
-            # Log error with separate connection
-            try:
-                log_conn = psycopg2.connect(**DB_PARAMS)
-                filename = os.path.basename(file_path)
-                log_to_database(log_conn, 'PARKING_SERVICE', filename, 'NOTE',
-                              f'Failed to process file: {filename}',
-                              f'Error: {str(e)}', 'FINISHED')
-                log_conn.close()
-            except Exception as log_e:
-                logging.error(f"Failed to log file error: {log_e}")
-        
         finally:
             if conn:
                 conn.close()
@@ -521,7 +725,8 @@ def process_all_files():
             save_to_csv(all_data, OUTPUT_FILE)
             
             # Import to database with fresh connection
-            import_conn = psycopg2.connect(**DB_PARAMS)
+            db_params = get_db_params()
+            import_conn = psycopg2.connect(**db_params)
             import_to_postgresql(OUTPUT_FILE, import_conn)
             
             # Move successfully processed files
@@ -552,12 +757,14 @@ if __name__ == "__main__":
     print(f"Current working directory: {os.getcwd()}")
     print(f"Input folder: {FOLDER_PATH}")
     print(f"Expected folder structure:")
-    print(f"  - scripts/python/input/     (place Excel files here)")
-    print(f"  - scripts/python/processed/ (processed files)")
-    print(f"  - scripts/python/errors/    (error files)")
-    print(f"  - scripts/python/data/      (output CSV)")
+    print(f"  - input/     (place Excel files here)")
+    print(f"  - processed/ (processed files)")
+    print(f"  - errors/    (error files)")
+    print(f"  - data/      (output CSV)")
     print(f"Make sure to set SUPABASE_PASSWORD environment variable!")
+    print(f"Set CURRENT_USER_ID")
     print("=" * 50)
     
-    process_all_files()
+    process_all_files()   
+    print("✅ Skripta pokrenuta!", flush=True)
     print("✅ Parking service data processing completed!")

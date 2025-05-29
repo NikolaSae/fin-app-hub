@@ -1,6 +1,4 @@
 //app/(protected)/parking-services/page.tsx
-
-
 import { Suspense } from "react";
 import { Metadata } from "next";
 import { getParkingServices } from "@/actions/parking-services/getParkingServices";
@@ -19,12 +17,12 @@ export const metadata: Metadata = {
 };
 
 interface ParkingServiceFilters {
-  name?: string;
+  searchTerm?: string;
   isActive?: boolean | undefined;
   page: number;
-  limit: number;
+  pageSize: number;
   sortBy?: string;
-  sortOrder?: "asc" | "desc";
+  sortDirection?: "asc" | "desc";
 }
 
 async function ParkingServiceListFetcher({ filters }: { filters: ParkingServiceFilters }) {
@@ -35,11 +33,18 @@ async function ParkingServiceListFetcher({ filters }: { filters: ParkingServiceF
     return <div>Greška pri učitavanju parking servisa: {result.error || "Nepoznata greška"}</div>;
   }
 
-  const parkingServicesArray = result.data.parkingServices;
+  const { parkingServices, totalCount, page, pageSize, totalPages } = result.data;
 
-  return <ParkingServiceList parkingServices={parkingServicesArray} />;
+  return (
+    <ParkingServiceList 
+      parkingServices={parkingServices}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      totalPages={totalPages}
+    />
+  );
 }
-
 
 export default async function ParkingServicesPage({
   searchParams,
@@ -49,12 +54,12 @@ export default async function ParkingServicesPage({
   const awaitedSearchParams = await searchParams;
 
   const filters: ParkingServiceFilters = {
-    name: awaitedSearchParams.name as string | undefined,
+    searchTerm: awaitedSearchParams.searchTerm as string | undefined,
     isActive: awaitedSearchParams.isActive === "true" ? true : awaitedSearchParams.isActive === "false" ? false : undefined,
     page: awaitedSearchParams.page ? parseInt(awaitedSearchParams.page as string) : 1,
-    limit: awaitedSearchParams.limit ? parseInt(awaitedSearchParams.limit as string) : 10,
+    pageSize: awaitedSearchParams.pageSize ? parseInt(awaitedSearchParams.pageSize as string) : 10, // ili povećajte na 25, 50, itd.
     sortBy: awaitedSearchParams.sortBy as string | undefined,
-    sortOrder: awaitedSearchParams.sortOrder as "asc" | "desc" | undefined,
+    sortDirection: awaitedSearchParams.sortDirection as "asc" | "desc" | undefined,
   };
 
   return (
@@ -79,7 +84,7 @@ export default async function ParkingServicesPage({
         <CardContent>
           <ParkingServiceFilters initialFilters={filters} />
 
-          <Suspense fallback={<ListSkeleton count={filters.limit} />}>
+          <Suspense fallback={<ListSkeleton count={filters.pageSize} />}>
             <ParkingServiceListFetcher filters={filters} />
           </Suspense>
         </CardContent>

@@ -1,14 +1,11 @@
 //actions/parking-services/getParkingServices.ts
 
-//actions/parking-services/getParkingServices.ts
-
 "use server";
 
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ParkingServiceFilters, PaginatedParkingServices } from "@/lib/types/parking-service-types";
 import { parkingServiceFiltersSchema } from "@/schemas/parking-service";
-import { logActivity } from "@/lib/security/audit-logger"; // Corrected import
 
 export async function getParkingServices(
   filters: ParkingServiceFilters = {}
@@ -63,14 +60,7 @@ export async function getParkingServices(
 
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    await logActivity("GET_PARKING_SERVICES", { // Corrected function call and arguments
-      entityType: "parking_service",
-       // No specific entityId for a list view unless logging based on filter params
-       // entityId: undefined,
-      userId: currentUser.id,
-       // Log the filters used
-      details: `Retrieved parking services list with filters: ${JSON.stringify(filters)}`,
-    });
+    // Uklonjen logActivity poziv - ne treba log za GET operacije
 
     return {
       success: true,
