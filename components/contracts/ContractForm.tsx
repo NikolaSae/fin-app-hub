@@ -1,7 +1,6 @@
-// components/contracts/contractform.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 interface ContractFormProps {
   contract?: {
@@ -40,6 +40,7 @@ interface ContractFormProps {
     services?: Array<{ serviceId: string; specificTerms?: string }>;
     createdAt: Date;
     updatedAt: Date;
+    createdById: string; // Added for permission checks
   };
   isEditing?: boolean;
   humanitarianOrgs?: Array<{ id: string; name: string }>;
@@ -57,9 +58,45 @@ export function ContractForm({
   operators = []
 }: ContractFormProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
-  const [submitEnabled, setSubmitEnabled] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [formReady, setFormReady] = useState(false);
+
+  // Fix for hydration errors and extension attributes
+  useEffect(() => {
+    // Remove problematic attributes added by browser extensions
+    const removeExtensionAttributes = () => {
+      if (formRef.current) {
+        formRef.current.querySelectorAll('[fdprocessedid]').forEach(el => {
+          el.removeAttribute('fdprocessedid');
+        });
+      }
+    };
+
+    removeExtensionAttributes();
+    setFormReady(true);
+    
+    // Setup mutation observer to catch dynamically added attributes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'fdprocessedid') {
+          mutation.target.removeAttribute('fdprocessedid');
+        }
+      });
+    });
+
+    if (formRef.current) {
+      observer.observe(formRef.current, {
+        attributes: true,
+        attributeFilter: ['fdprocessedid'],
+        subtree: true
+      });
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   const form = useForm<ContractFormData>({
     resolver: zodResolver(contractSchema),
@@ -83,8 +120,9 @@ export function ContractForm({
     mode: 'onChange',
   });
 
+  // Initialize form with contract data
   useEffect(() => {
-    if (contract) {
+    if (contract && formReady) {
       const initialServices = contract.services?.map(s => ({
         serviceId: s.serviceId,
         specificTerms: s.specificTerms || ''
@@ -93,156 +131,135 @@ export function ContractForm({
       setSelectedServices(initialServices);
       form.reset({
         ...contract,
-        startDate: contract.startDate ? new Date(contract.startDate).toISOString().split('T')[0] : '',
-        endDate: contract.endDate ? new Date(contract.endDate).toISOString().split('T')[0] : '',
+        startDate: contract.startDate.toISOString().split('T')[0],
+        endDate: contract.endDate.toISOString().split('T')[0],
         services: initialServices,
         isRevenueSharing: contract.isRevenueSharing ?? true,
         operatorId: contract.operatorId || '',
         operatorRevenue: contract.operatorRevenue || 0,
       });
-    } else {
-      form.reset({
-        name: '',
-        contractNumber: '',
-        type: ContractType.PROVIDER,
-        status: "ACTIVE",
-        startDate: '',
-        endDate: '',
-        revenuePercentage: 10,
-        isRevenueSharing: true,
-        operatorId: '',
-        operatorRevenue: 0,
-        description: '',
-        providerId: '',
-        humanitarianOrgId: '',
-        parkingServiceId: '',
-        services: [],
-      });
-      setSelectedServices([]);
     }
-  }, [contract, form]);
+  }, [contract, form, formReady]);
 
+  // Reset services when contract type changes
   useEffect(() => {
-    const currentType = form.watch('type');
-    if (!isEditing || (isEditing && contract && currentType !== contract.type)) {
-      setSelectedServices([]);
-      form.setValue('services', []);
+    if (!isEditing || !contract) {
+      const currentType = form.watch('type');
+      if (currentType !== contract?.type) {
+        setSelectedServices([]);
+        form.setValue('services', []);
+      }
     }
   }, [form.watch('type'), contract?.type, isEditing, form]);
 
+  // Sync selected services with form value
   useEffect(() => {
-    const validateForm = async () => {
-      const values = form.getValues();
-      const currentType = values.type;
+    form.setValue('services', selectedServices, { shouldValidate: true });
+  }, [selectedServices, form]);
 
-      let isValid = true;
-
-      if (!values.name || !values.contractNumber || !values.startDate || !values.endDate) {
-        isValid = false;
-      }
-
-      if (selectedServices.length === 0) {
-        isValid = false;
-      }
-
-      if (currentType === ContractType.PROVIDER && !values.providerId) {
-        isValid = false;
-      } else if (currentType === ContractType.HUMANITARIAN && !values.humanitarianOrgId) {
-        isValid = false;
-      } else if (currentType === ContractType.PARKING && !values.parkingServiceId) {
-        isValid = false;
-      }
-
-      if (values.startDate && values.endDate) {
-        const startDate = new Date(values.startDate);
-        const endDate = new Date(values.endDate);
-        if (endDate < startDate) {
-          isValid = false;
-        }
-      }
-
-      if (values.revenuePercentage < 0 || values.revenuePercentage > 100) {
-        isValid = false;
-      }
-
-      // Check if revenue sharing is enabled and operator fields are filled
-      if (values.isRevenueSharing) {
-        if (!values.operatorId) {
-          isValid = false;
-        }
-        if (values.operatorRevenue === undefined || values.operatorRevenue < 0 || values.operatorRevenue > 100) {
-          isValid = false;
-        }
-      }
-
-      setSubmitEnabled(isValid && !isLoading);
-    };
-
-    const subscription = form.watch(() => {
-      validateForm();
-    });
-
-    validateForm();
-
-    return () => subscription.unsubscribe();
-  }, [form, selectedServices, isLoading]);
-
+  // Reset operator fields when revenue sharing is disabled
   useEffect(() => {
-    // Reset or clear operator fields when revenue sharing is toggled off
-    const isRevenueSharingEnabled = form.watch('isRevenueSharing');
-    
-    if (!isRevenueSharingEnabled) {
+    if (!form.watch('isRevenueSharing')) {
       form.setValue('operatorId', '');
       form.setValue('operatorRevenue', 0);
     }
   }, [form.watch('isRevenueSharing'), form]);
 
-  useEffect(() => {
-    form.setValue('services', selectedServices);
-  }, [selectedServices, form]);
-
   const contractType = form.watch("type");
   const isRevenueSharing = form.watch("isRevenueSharing");
 
-  const onSubmit = async (data: ContractFormData) => {
-    setIsLoading(true);
-    try {
-      // Ensure operatorId is included only when revenue sharing is enabled
-      const formData = { ...data };
-      if (!formData.isRevenueSharing) {
-        formData.operatorId = '';
-        formData.operatorRevenue = 0;
+  // U ContractForm komponenti - modifikuj onSubmit funkciju
+
+
+const onSubmit = async (data: ContractFormData) => {
+  setIsLoading(true);
+  try {
+    console.log('[FORM_SUBMIT] Starting submission:', { isEditing, contractId: contract?.id });
+    
+    // Authorization check - only ADMIN or contract owner can update
+    if (isEditing && contract && session?.user) {
+      const isAdmin = session.user.role === 'ADMIN';
+      const isOwner = contract.createdById === session.user.id;
+      
+      console.log('[FORM_SUBMIT] Authorization check:', {
+        isAdmin,
+        isOwner,
+        userRole: session.user.role,
+        userId: session.user.id,
+        contractCreatedById: contract.createdById
+      });
+      
+      if (!isAdmin && !isOwner) {
+        toast.error("You don't have permission to update this contract");
+        setIsLoading(false);
+        return;
+      }
+    }
+    
+    // Prepare payload with proper data types
+    const payload = {
+      ...data,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
+      revenuePercentage: Number(data.revenuePercentage),
+      operatorRevenue: isRevenueSharing ? Number(data.operatorRevenue) : 0,
+      operatorId: isRevenueSharing ? data.operatorId : null,
+    };
+    
+    console.log('[FORM_SUBMIT] Prepared payload:', {
+      keys: Object.keys(payload),
+      isRevenueSharing,
+      hasOperatorId: !!payload.operatorId
+    });
+
+    // Call server action directly
+    const result = isEditing && contract
+      ? await updateContract(contract.id, payload)
+      : await createContract(payload);
+    
+    console.log('[FORM_SUBMIT] Server action result:', result);
+
+    if (result?.success) {
+      toast.success(result.message || 'Contract updated successfully');
+      
+      // Navigate to contract details or list
+      if (result.contract?.id) {
+        router.push(`/contracts/${result.contract.id}`);
+      } else if (contract?.id) {
+        router.push(`/contracts/${contract.id}`);
+      } else {
+        router.push('/contracts');
       }
       
-      const payload = {
-        ...formData,
-        services: selectedServices,
-        startDate: new Date(formData.startDate),
-        endDate: new Date(formData.endDate),
-      };
-
-      console.log('Submitting contract payload:', payload);
-      console.log('Payload operatorId:', payload.operatorId);
-      console.log('isRevenueSharing:', payload.isRevenueSharing);
-
-      const result = isEditing && contract
-        ? await updateContract(contract.id, payload)
-        : await createContract(payload);
-
-      if (result?.success) {
-        toast.success(result.success);
-        router.push(result.id ? `/contracts/${result.id}` : '/contracts');
-      } else {
-        toast.error(result?.error || 'Unknown error occurred');
-      }
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setIsLoading(false);
+      router.refresh();
+    } else if (result?.error) {
+      console.error('[FORM_SUBMIT] Server action error:', result.error);
+      toast.error(result.error);
+    } else {
+      console.error('[FORM_SUBMIT] Unknown result format:', result);
+      toast.error('Unknown error occurred');
     }
-  };
-
+  } catch (error) {
+    console.error('[FORM_SUBMIT] Submission error:', error);
+    
+    // Better error handling
+    if (error instanceof Error) {
+      if (error.message.includes('ECONNRESET')) {
+        toast.error('Connection lost. Please try again.');
+      } else if (error.message.includes('Unauthorized')) {
+        toast.error('You are not authorized to perform this action.');
+      } else if (error.message.includes('Contract not found')) {
+        toast.error('Contract not found. It may have been deleted.');
+      } else {
+        toast.error(`Error: ${error.message}`);
+      }
+    } else {
+      toast.error('An unexpected error occurred');
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -255,7 +272,11 @@ export function ContractForm({
 
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form 
+            ref={formRef}
+            onSubmit={form.handleSubmit(onSubmit)} 
+            className="space-y-6"
+          >
             <FormField
               control={form.control}
               name="name"
@@ -386,6 +407,7 @@ export function ContractForm({
                 )}
               />
             </div>
+            
             <div className="border p-4 rounded-md">
               <h3 className="font-medium mb-4">Revenue Configuration</h3>
               <FormField
@@ -409,6 +431,7 @@ export function ContractForm({
                   </FormItem>
                 )}
               />
+              
               <div className="mt-4">
                 <FormField
                   control={form.control}
@@ -429,6 +452,7 @@ export function ContractForm({
                   )}
                 />
               </div>
+              
               {isRevenueSharing && (
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
@@ -438,12 +462,7 @@ export function ContractForm({
                       <FormItem>
                         <FormLabel>Operator *</FormLabel>
                         <Select
-                          onValueChange={(value) => {
-                            console.log('Select operatorId value changed:', value);
-                            field.onChange(value);
-                            // Ensure the form value is updated
-                            form.setValue('operatorId', value, { shouldValidate: true });
-                          }}
+                          onValueChange={field.onChange}
                           value={field.value || ""}
                           disabled={isLoading}
                         >
@@ -488,6 +507,7 @@ export function ContractForm({
                 </div>
               )}
             </div>
+            
             {contractType === ContractType.PROVIDER && (
               <FormField
                 control={form.control}
@@ -590,10 +610,7 @@ export function ContractForm({
                   <ServiceSelector
                     contractType={contractType}
                     selectedServices={selectedServices}
-                    onChange={(services) => {
-                      setSelectedServices(services);
-                      form.setValue('services', services, { shouldValidate: true });
-                    }}
+                    onChange={setSelectedServices}
                     error={form.formState.errors.services?.message as string}
                     disabled={isLoading}
                   />
@@ -635,7 +652,7 @@ export function ContractForm({
               </Button>
               <Button
                 type="submit"
-                disabled={!submitEnabled}
+                disabled={isLoading || !form.formState.isValid}
                 className="w-32"
               >
                 {isLoading ? (

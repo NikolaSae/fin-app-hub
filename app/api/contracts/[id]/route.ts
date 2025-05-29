@@ -2,8 +2,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { db } from '@/lib/db'; // Pretpostavljena putanja do vašeg Prisma klijenta
-// U realnoj aplikaciji, verovatno biste imali middleware ili helper za proveru autentifikacije/autorizacije za /api/ rute
-// import { auth } from '@/auth';
+
+import { auth } from '@/auth';
 
 // Importovanje Server Akcija za PUT i DELETE
 import { updateContract } from '@/actions/contracts/update'; // Akcija koju smo prethodno kreirali
@@ -11,21 +11,20 @@ import { deleteContract } from '@/actions/contracts/delete'; // Akcija koju smo 
 
 // Handler za GET za dohvatanje pojedinačnog ugovora po ID-u
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } } // Hvatanje dinamičkog segmenta rute ([id])
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
-  // U realnoj aplikaciji, dodali biste proveru autentifikacije/autorizacije
-  // const session = await auth();
-  // if (!session?.user) {
-  //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  // }
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const { id } = params; // Dobijanje ID-a iz URL-a
 
   // Osnovna validacija ID-a (opciono, Prisma će baciti grešku za nevalidan format)
-  // if (!id || typeof id !== 'string') {
-  //      return NextResponse.json({ error: 'Invalid contract ID format.' }, { status: 400 });
-  // }
+   if (!id || typeof id !== 'string') {
+        return NextResponse.json({ error: 'Invalid contract ID format.' }, { status: 400 });
+   }
 
 
   try {
@@ -69,10 +68,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
      // U realnoj aplikaciji, dodali biste proveru autentifikacije/autorizacije
-     // const session = await auth();
-     // if (!session?.user) {
-     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-     // }
+      const session = await auth();
+      if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
     const { id } = params; // Dobijanje ID-a iz URL-a
 
@@ -112,10 +111,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
      // U realnoj aplikaciji, dodali biste proveru autentifikacije/autorizacije
-     // const session = await auth();
-     // if (!session?.user) {
-     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-     // }
+      const session = await auth();
+      if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
     const { id } = params; // Dobijanje ID-a iz URL-a
 

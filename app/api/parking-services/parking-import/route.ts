@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
     return new Promise((resolve) => {
       // Pass the actual user ID (UUID) to Python script
-      const pythonProcess = spawn("python3", [scriptPath, user.id], {
+      const pythonProcess = spawn("python", [scriptPath, user.id], {
         env: {
           ...process.env,
           SUPABASE_PASSWORD: process.env.SUPABASE_PASSWORD || "",

@@ -5,7 +5,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { ActivityLogCreate } from "@/lib/activity-log";
+// import { ActivityLogCreate } from "@/lib/activity-log";
 import { getCurrentUser } from "@/lib/auth";
 
 /**
@@ -26,12 +26,12 @@ export async function getAllParkingServices() {
     });
 
     // Log the activity
-    await ActivityLogCreate({
-      action: "GET_ALL_PARKING_SERVICES",
-      entityType: "parking_service",
-      userId: currentUser.id,
-      details: `Retrieved all parking services`,
-    });
+    // await ActivityLogCreate({
+    //  action: "GET_ALL_PARKING_SERVICES",
+    //  entityType: "parking_service",
+    //  userId: currentUser.id,
+    //  details: `Retrieved all parking services`,
+   // });
 
     return { success: true, data: parkingServices };
   } catch (error) {

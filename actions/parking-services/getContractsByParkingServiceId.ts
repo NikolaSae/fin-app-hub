@@ -4,7 +4,7 @@
 
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { ActivityLogCreate } from "@/lib/activity-log";
+// import { ActivityLogCreate } from "@/lib/activity-log";
 
 /**
  * Get contracts associated with a parking service
@@ -55,13 +55,13 @@ export async function getContractsByParkingServiceId(parkingServiceId: string) {
     });
 
     // Log the activity
-    await ActivityLogCreate({
-      action: "GET_CONTRACTS_BY_PARKING_SERVICE_ID",
-      entityType: "parking_service",
-      entityId: parkingServiceId,
-      userId: currentUser.id,
-      details: `Retrieved contracts for parking service with ID: ${parkingServiceId}`,
-    });
+    // await ActivityLogCreate({
+    //  action: "GET_CONTRACTS_BY_PARKING_SERVICE_ID",
+    //  entityType: "parking_service",
+    //  entityId: parkingServiceId,
+    //  userId: currentUser.id,
+    //  details: `Retrieved contracts for parking service with ID: ${parkingServiceId}`,
+  //  });
 
     return { success: true, data: contracts };
   } catch (error) {

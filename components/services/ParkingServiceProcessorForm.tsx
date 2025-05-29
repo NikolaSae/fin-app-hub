@@ -1,105 +1,88 @@
 // Path: components/services/ParkingServiceProcessorForm.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 
 export function ParkingServiceProcessorForm() {
   const { data: session } = useSession();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [logs, setLogs] = useState<string>("");
+  const [logs, setLogs] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  console.log("Session:", session);
-  console.log("Selected file:", selectedFile?.name);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("File change event:", event.target.files);
-    
     if (event.target.files && event.target.files.length > 0) {
       setSelectedFile(event.target.files[0]);
-      setLogs("");
     }
   };
 
   const handleSubmit = async () => {
-    console.log("Submit button clicked");
-    
     if (!selectedFile) {
-      console.log("No file selected");
       toast.error("📂 Molimo izaberite fajl za upload.");
       return;
     }
 
-    // Check for user email
     if (!session?.user?.email) {
-      console.log("No user session or user email");
       toast.error("🔒 Morate biti prijavljeni da biste izvršili ovu akciju");
       return;
     }
 
-    console.log("Starting processing...");
     setIsProcessing(true);
-    setLogs("");
-
-    const uploadToast = toast.loading("⏳ Uploadujem fajl...");
+    setLogs(prev => [...prev, "Starting processing..."]);
 
     try {
-      // 1. Upload
+      // 1. Upload file
+      setLogs(prev => [...prev, "Uploading file..."]);
       const formData = new FormData();
       formData.append("file", selectedFile);
-      formData.append("userEmail", session.user.email); // Use userEmail
+      formData.append("userEmail", session.user.email);
 
-      console.log("Uploading file...");
       const uploadRes = await fetch("/api/parking-services/upload", {
         method: "POST",
         body: formData,
       });
 
       if (!uploadRes.ok) {
-        console.error("Upload failed:", uploadRes.status, uploadRes.statusText);
         throw new Error("Greška prilikom uploada fajla.");
       }
 
-      toast.success("✅ Fajl uspešno uploadovan!", { id: uploadToast });
-      console.log("File uploaded successfully");
-
-      // 2. Pokretanje skripte
-      const importToast = toast.loading("🚀 Pokrećem import skriptu...");
-      console.log("Starting import script...");
-
+      setLogs(prev => [...prev, "✅ Fajl uspešno uploadovan!"]);
+      
+      // 2. Run import script
+      setLogs(prev => [...prev, "🚀 Pokrećem import skriptu..."]);
       const importRes = await fetch("/api/parking-services/parking-import", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userEmail: session.user.email }), // Use userEmail
+        body: JSON.stringify({ userEmail: session.user.email }),
       });
 
       const result = await importRes.json();
-      console.log("Import response:", result);
-
+      
       if (importRes.ok && result.success) {
-        toast.success("✅ Import uspešan!", { id: importToast });
-        setLogs(result.output || "✅ Import završen bez dodatnih poruka.");
+        // Split output into log lines
+        const outputLines = result.output.split('\n').filter(Boolean);
+        setLogs(prev => [...prev, ...outputLines]);
+        setLogs(prev => [...prev, "✅ Import uspešan!"]);
       } else {
-        toast.error("❌ Greška tokom importa!", { id: importToast });
-        const errorLog =
-          result.error ||
-          result.stderr ||
-          result.stdout ||
-          JSON.stringify(result, null, 2) ||
-          "Nepoznata greška.";
-        setLogs(errorLog);
+        const errorLog = result.error || "Nepoznata greška";
+        setLogs(prev => [...prev, `❌ Greška tokom importa: ${errorLog}`]);
+        toast.error("❌ Greška tokom importa!");
       }
     } catch (error: any) {
-      console.error("Error during processing:", error);
+      const errorMsg = error?.message || String(error);
+      setLogs(prev => [...prev, `❌ Došlo je do greške: ${errorMsg}`]);
       toast.error("❌ Došlo je do greške.");
-      setLogs(error?.message || String(error));
     } finally {
-      console.log("Processing finished");
       setIsProcessing(false);
+      // Reset file input but keep logs
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setSelectedFile(null);
     }
   };
 
@@ -111,6 +94,7 @@ export function ParkingServiceProcessorForm() {
       </p>
 
       <input
+        ref={fileInputRef}
         type="file"
         accept=".xls,.xlsx"
         onChange={handleFileChange}
@@ -156,10 +140,24 @@ export function ParkingServiceProcessorForm() {
         )}
       </button>
 
-      {logs && (
-        <pre className="mt-4 p-4 bg-gray-100 text-sm overflow-auto max-h-96 whitespace-pre-wrap border rounded">
-          {logs}
-        </pre>
+      {logs.length > 0 && (
+        <div className="mt-4 p-4 bg-gray-100 text-sm overflow-auto max-h-96 border rounded">
+          <h4 className="font-medium mb-2">Processing Logs:</h4>
+          <div className="space-y-1">
+            {logs.map((log, index) => (
+              <div 
+                key={index} 
+                className={`font-mono text-xs ${
+                  log.includes('✅') ? 'text-green-600' : 
+                  log.includes('❌') ? 'text-red-600' : 
+                  'text-gray-700'
+                }`}
+              >
+                {log}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

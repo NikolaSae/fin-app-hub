@@ -1,3 +1,4 @@
+import uuid
 import pandas as pd
 import csv
 import glob
@@ -20,16 +21,26 @@ logging.basicConfig(
 
 def get_db_params():
     """Get database parameters with environment variable read at runtime"""
-    password = os.getenv("SUPABASE_PASSWORD")
-    if not password:
-        raise ValueError("SUPABASE_PASSWORD environment variable is not set")
-    
+    # Supabase connection (commented out)
+    # password = os.getenv("SUPABASE_PASSWORD")
+    # if not password:
+    #     raise ValueError("SUPABASE_PASSWORD environment variable is not set")
+    # 
+    # return {
+    #     "host": "aws-0-eu-central-1.pooler.supabase.com",
+    #     "port": "6543",
+    #     "dbname": "postgres",
+    #     "user": "postgres.srrdkqjfynsdoqlxsohi",
+    #     "password": password,
+    # }
+
+    # Local PostgreSQL connection
     return {
-        "host": "aws-0-eu-central-1.pooler.supabase.com",
-        "port": "6543",
-        "dbname": "postgres",
-        "user": "postgres.srrdkqjfynsdoqlxsohi",
-        "password": password,
+        "host": "localhost",
+        "port": "5432",
+        "dbname": "findatbas-copy",
+        "user": "postgres",
+        "password": "postgres"  # Use your actual local password
     }
 
 # GitHub Codespace folder paths
@@ -129,8 +140,8 @@ def get_or_create_system_user():
         logging.error(f"Error getting/creating system user: {e}")
         return None
 
-def log_to_database(conn, entity_type, entity_id, action, subject, description=None, status='IN_PROGRESS', user_id=None):
-    """Log actions to the database LogEntry table with proper error handling"""
+def log_to_database(conn, entity_type, entity_id, action, subject, description=None, severity='INFO', user_id=None):
+    """Log actions to the ActivityLog table"""
     try:
         cur = conn.cursor()
         
@@ -141,34 +152,50 @@ def log_to_database(conn, entity_type, entity_id, action, subject, description=N
                 logging.error("Cannot create log entry without valid user ID")
                 return
         
+        # Prepare details
+        details = f"{subject}"
+        if description:
+            details += f": {description}"
+        
+        # Generate a new UUID for the log entry
+        log_id = str(uuid.uuid4())
+        
         log_sql = """
-        INSERT INTO "LogEntry" (
-            "id", "entityType", "entityId", "action", "subject", "description", 
-            "status", "createdById", "createdAt", "updatedAt"
-        ) VALUES (gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO "ActivityLog" (
+            "id", "action", "entityType", "entityId", "details", 
+            "severity", "userId", "createdAt"
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         now = datetime.now()
         cur.execute(log_sql, (
-            entity_type, entity_id, action, subject, description,
-            status, user_id, now, now
+            log_id,
+            action,
+            entity_type,
+            entity_id,
+            details,
+            severity,
+            user_id,
+            now
         ))
         
         conn.commit()
-        cur.close()
-        logging.info(f"Log entry created: {subject}")
+        logging.info(f"ActivityLog created: {log_id} - {action} - {entity_type}")
+        return log_id
         
     except Exception as e:
-        logging.error(f"Failed to create log entry: {e}")
+        logging.error(f"Failed to create ActivityLog: {e}")
         try:
             conn.rollback()
         except:
             pass
+        return None
 
 def get_or_create_service(conn, service_code, service_type='PARKING', billing_type='PREPAID'):
     """Find or create Service based on extracted 4-digit code with proper billing type"""
     try:
         cur = conn.cursor()
+        created = False
         
         # Try to find existing service by name (4-digit code)
         cur.execute('SELECT "id" FROM "Service" WHERE "name" = %s', (service_code,))
@@ -178,9 +205,10 @@ def get_or_create_service(conn, service_code, service_type='PARKING', billing_ty
             service_id = result[0]
             logging.info(f"Found existing service: {service_code} (ID: {service_id})")
             cur.close()
-            return service_id
+            return service_id, created
         
         # Create new service with proper billing type
+        created = True
         cur.execute('''
             INSERT INTO "Service" ("id", "name", "type", "billingType", "description", "isActive", "createdAt", "updatedAt")
             VALUES (gen_random_uuid(), %s, %s, %s, %s, true, %s, %s)
@@ -192,7 +220,7 @@ def get_or_create_service(conn, service_code, service_type='PARKING', billing_ty
         logging.info(f"Created new service: {service_code} (ID: {service_id}) with billing type: {billing_type}")
         cur.close()
         
-        return service_id
+        return service_id, created
         
     except Exception as e:
         logging.error(f"Error getting/creating service {service_code}: {e}")
@@ -200,12 +228,13 @@ def get_or_create_service(conn, service_code, service_type='PARKING', billing_ty
             conn.rollback()
         except:
             pass
-        return None
+        return None, False
 
 def get_or_create_parking_service(conn, provider_name):
     """Find or create ParkingService based on provider name"""
     try:
         cur = conn.cursor()
+        created = False
         
         # Try to find existing parking service
         cur.execute('SELECT "id" FROM "ParkingService" WHERE "name" = %s', (provider_name,))
@@ -215,9 +244,10 @@ def get_or_create_parking_service(conn, provider_name):
             parking_service_id = result[0]
             logging.info(f"Found existing parking service: {provider_name} (ID: {parking_service_id})")
             cur.close()
-            return parking_service_id
+            return parking_service_id, created
         
         # Create new parking service
+        created = True
         cur.execute('''
             INSERT INTO "ParkingService" ("id", "name", "isActive", "createdAt", "updatedAt")
             VALUES (gen_random_uuid(), %s, true, %s, %s)
@@ -229,7 +259,7 @@ def get_or_create_parking_service(conn, provider_name):
         logging.info(f"Created new parking service: {provider_name} (ID: {parking_service_id})")
         cur.close()
         
-        return parking_service_id
+        return parking_service_id, created
         
     except Exception as e:
         logging.error(f"Error getting/creating parking service {provider_name}: {e}")
@@ -237,18 +267,19 @@ def get_or_create_parking_service(conn, provider_name):
             conn.rollback()
         except:
             pass
-        return None
+        return None, False
 
 def get_or_create_service_contract(conn, service_id, parking_service_id):
     """Create connection between Service and ParkingService via Contract table"""
     try:
         cur = conn.cursor()
+        created = False
         
         # Get current user for contract creation
         current_user_id = get_current_user()
         if not current_user_id:
             logging.error("Cannot create contract without current user")
-            return None
+            return None, created
         
         # Check if active contract already exists for this parking service
         cur.execute('''
@@ -269,11 +300,13 @@ def get_or_create_service_contract(conn, service_id, parking_service_id):
             
             service_contract_result = cur.fetchone()
             if service_contract_result:
-                logging.info(f"ServiceContract already exists")
+                service_contract_id = service_contract_result[0]
+                logging.info(f"ServiceContract already exists: {service_contract_id}")
                 cur.close()
-                return service_contract_result[0]
+                return service_contract_id, created
             
-            # Create ServiceContract
+            # Create ServiceContract if it doesn't exist
+            created = True
             cur.execute('''
                 INSERT INTO "ServiceContract" ("id", "contractId", "serviceId", "createdAt", "updatedAt")
                 VALUES (gen_random_uuid(), %s, %s, %s, %s)
@@ -284,9 +317,10 @@ def get_or_create_service_contract(conn, service_id, parking_service_id):
             conn.commit()
             logging.info(f"Created ServiceContract: {service_contract_id}")
             cur.close()
-            return service_contract_id
+            return service_contract_id, created
         
         # If no contract exists, create it
+        created = True
         # First create basic contract
         cur.execute('''
             INSERT INTO "Contract" (
@@ -322,7 +356,7 @@ def get_or_create_service_contract(conn, service_id, parking_service_id):
         logging.info(f"Created new contract: {contract_id} and ServiceContract: {service_contract_id}")
         cur.close()
         
-        return service_contract_id
+        return service_contract_id, created
         
     except Exception as e:
         logging.error(f"Error creating service contract: {e}")
@@ -330,7 +364,7 @@ def get_or_create_service_contract(conn, service_id, parking_service_id):
             conn.rollback()
         except:
             pass
-        return None
+        return None, False
 
 def convert_to_float(val):
     """Convert value to float removing thousand separators if possible."""
@@ -427,6 +461,22 @@ def sanitize_parking_record(row):
 def process_excel(input_file, conn):
     """Processes a single Excel file and returns a list of records for CSV."""
     try:
+        # Get current user for logging
+        current_user_id = get_current_user()
+        if not current_user_id:
+            logging.error("No valid user ID available for logging")
+            return []
+        
+        # Log start of processing
+        log_to_database(
+            conn,
+            entity_type="System",
+            entity_id="start",
+            action="PROCESS_START",
+            subject=f"Started processing {os.path.basename(input_file)}",
+            user_id=current_user_id
+        )
+        
         df = pd.read_excel(input_file, sheet_name=3, header=None)
         rows = df.fillna("").values.tolist()
         
@@ -445,9 +495,22 @@ def process_excel(input_file, conn):
         logging.info(f"Extracted provider: {provider_name}")
         
         # Get or create parking service
-        parking_service_id = get_or_create_parking_service(conn, provider_name)
+        parking_service_id, ps_created = get_or_create_parking_service(conn, provider_name)
         if not parking_service_id:
             raise Exception(f"Could not get/create parking service for {provider_name}")
+
+        # Log parking service creation (only if created)
+        if ps_created:
+            log_to_database(
+                conn,
+                entity_type="ParkingService",
+                entity_id=parking_service_id,
+                action="CREATE",
+                subject=f"Created parking service for {provider_name}",
+                user_id=current_user_id
+            )
+        else:
+            logging.info(f"Using existing parking service: {parking_service_id}")
 
         # Track unique service codes for this file
         service_codes_in_file = set()
@@ -520,12 +583,41 @@ def process_excel(input_file, conn):
         # Create Service records for each unique service code found in this file
         service_id_mapping = {}
         for service_code in service_codes_in_file:
-            service_id = get_or_create_service(conn, service_code, 'PARKING', 'PREPAID')
+            service_id, service_created = get_or_create_service(conn, service_code, 'PARKING', 'PREPAID')
             if service_id:
                 service_id_mapping[service_code] = service_id
+                
+                # Log service creation (only if created)
+                if service_created:
+                    log_to_database(
+                        conn,
+                        entity_type="Service",
+                        entity_id=service_id,
+                        action="CREATE",
+                        subject=f"Created service {service_code}",
+                        user_id=current_user_id
+                    )
+                else:
+                    logging.info(f"Using existing service: {service_code} (ID: {service_id})")
+                
                 # Create connection between Service and ParkingService via Contract
-                service_contract_id = get_or_create_service_contract(conn, service_id, parking_service_id)
-                if not service_contract_id:
+                service_contract_id, contract_created = get_or_create_service_contract(conn, service_id, parking_service_id)
+                if service_contract_id:
+                    # Log service contract creation/link (only if created)
+                    if contract_created:
+                        action = "CREATE"
+                        subject = f"Created service contract for {service_code}"
+                        log_to_database(
+                            conn,
+                            entity_type="ServiceContract",
+                            entity_id=service_contract_id,
+                            action=action,
+                            subject=subject,
+                            user_id=current_user_id
+                        )
+                    else:
+                        logging.info(f"Service contract already exists for service: {service_code}")
+                else:
                     logging.warning(f"Could not create service contract for {service_code}")
 
         # Update records with correct serviceId
@@ -537,10 +629,33 @@ def process_excel(input_file, conn):
             record.pop('serviceCode', None)
 
         logging.info(f"Processed {input_file}: {len(output_records)} prepaid records, {len(service_codes_in_file)} unique services")
+        
+        # Log successful completion
+        log_to_database(
+            conn,
+            entity_type="System",
+            entity_id="complete",
+            action="PROCESS_COMPLETE",
+            subject=f"Successfully processed {os.path.basename(input_file)}",
+            description=f"Created {len(output_records)} parking records",
+            user_id=current_user_id
+        )
+        
         return output_records
         
     except Exception as e:
         logging.error(f"Error processing file {input_file}: {e}")
+        # Log error to database
+        log_to_database(
+            conn,
+            entity_type="System",
+            entity_id="error",
+            action="PROCESS_ERROR",
+            subject=f"Error processing {os.path.basename(input_file)}",
+            description=str(e),
+            severity="ERROR",
+            user_id=current_user_id
+        )
         raise
 
 def save_to_csv(data, output_file):

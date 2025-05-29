@@ -1,15 +1,15 @@
 // /app/(protected)/contracts/[id]/edit/page.tsx
 import { ContractForm } from "@/components/contracts/ContractForm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { auth } from "@/auth";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata(props: { params: { id: string } }): Promise<Metadata> {
+  const params = await props.params; // Await the params promise
+  const id = params.id;
+  
   try {
-    // Await the params before accessing its properties
-    const resolvedParams = await params;
-    const id = resolvedParams.id;
-    
     const contract = await db.contract.findUnique({
       where: { id },
     });
@@ -17,19 +17,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     if (!contract) {
       return {
         title: "Contract Not Found",
-        description: "The requested contract could not be found",
       };
     }
 
     return {
       title: `Edit ${contract.name} | Contract Management`,
-      description: `Edit details for contract ${contract.contractNumber}`,
     };
   } catch (error) {
-    console.error("[METADATA_ERROR]", error);
     return {
       title: "Error Loading Contract",
-      description: "There was an error loading the contract details",
     };
   }
 }
@@ -40,11 +36,9 @@ interface EditContractPageProps {
   }>;
 }
 
-async function getContract(id: string) {
+// Zamenite postojeću getContract funkciju sa ovom
+async function getContract(id: string, currentUserId?: string, userRole?: string) {
   try {
-    // Add more detailed debugging
-    console.log(`[GET_CONTRACT] Fetching contract with ID: ${id}`);
-    
     const contract = await db.contract.findUnique({
       where: { id },
       include: {
@@ -53,60 +47,9 @@ async function getContract(id: string) {
             service: true
           }
         },
-        provider: {
-          select: {
-            id: true,
-            name: true, 
-            contactName: true,
-            email: true,
-            phone: true,
-            address: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-            contracts: true,
-            vasServices: true,
-            bulkServices: true,
-            complaints: true,
-            _count: true
-          }
-        },
-        humanitarianOrg: {
-          select: {
-            id: true,
-            name: true,
-            contactName: true,
-            email: true,
-            phone: true,
-            address: true,
-            website: true,
-            mission: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-            contracts: true,
-            renewals: true,
-            complaints: true,
-            _count: true
-          }
-        },
-        operator: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            description: true,
-            logoUrl: true,
-            website: true,
-            contactEmail: true,
-            contactPhone: true,
-            active: true,
-            createdAt: true,
-            updatedAt: true,
-            contracts: true,
-            _count: true
-          }
-        },
+        provider: true,
+        operator: true,
+        humanitarianOrg: true,
         createdBy: {
           select: {
             id: true,
@@ -114,192 +57,190 @@ async function getContract(id: string) {
             email: true,
           }
         },
-        lastModifiedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        }
       },
     });
 
     if (!contract) {
-      console.error(`[GET_CONTRACT] Contract with ID ${id} not found`);
-      return notFound();
+      return null;
     }
 
-    // Debug log to see what data we're getting from the database
-    console.log(`[GET_CONTRACT] Contract found:`, {
-      id: contract.id,
-      name: contract.name,
-      contractNumber: contract.contractNumber,
-      type: contract.type,
-      providerId: contract.providerId,
-      provider: contract.provider ? contract.provider.name : null,
-      operatorId: contract.operatorId,
-      operator: contract.operator ? contract.operator.name : null,
-      serviceCount: contract.services?.length || 0
+    // Debug logovi
+    console.log("[GET_CONTRACT] Permission check:", {
+      currentUserId,
+      userRole,
+      contractCreatedById: contract.createdById,
+      isAdmin: userRole === 'ADMIN',
+      isCreator: contract.createdById === currentUserId,
+      stringComparison: String(contract.createdById) === String(currentUserId)
     });
 
-    // Format contract data for consistent rendering
-    const formattedContract = {
+    // FIXED: Better permission logic
+    // Allow access if user is ADMIN OR if user is the creator
+    const isAdmin = userRole === 'ADMIN';
+    const isCreator = contract.createdById === currentUserId;
+    
+    if (currentUserId && !isAdmin && !isCreator) {
+      console.error("[GET_CONTRACT] Permission denied:", {
+        reason: "Not admin and not creator",
+        userRole,
+        currentUserId,
+        contractCreatedById: contract.createdById,
+        isAdmin,
+        isCreator
+      });
+      throw new Error("Forbidden");
+    }
+
+    console.log("[GET_CONTRACT] Permission granted");
+
+    return {
       ...contract,
-      // Ensure startDate and endDate are properly serialized
       startDate: contract.startDate ? new Date(contract.startDate) : null,
       endDate: contract.endDate ? new Date(contract.endDate) : null,
-      // Properly handle services data with safe defaults
-      services: Array.isArray(contract.services) ? contract.services.map(sc => ({
-        serviceId: sc.serviceId || "",
-        specificTerms: sc.specificTerms || "",
-        service: sc.service || {}
-      })) : [],
-      // Ensure provider data is available with safe defaults
-      providerId: contract.providerId || null,
-      provider: contract.provider || null,
-      // Ensure operator data is available with safe defaults
-      operatorId: contract.operatorId || null,
-      operator: contract.operator || null,
-      // Ensure humanitarianOrg data is available with safe defaults
-      humanitarianOrgId: contract.humanitarianOrgId || null,
-      humanitarianOrg: contract.humanitarianOrg || null,
-      // Ensure isRevenueSharing is a boolean
-      isRevenueSharing: contract.isRevenueSharing === null ? true : !!contract.isRevenueSharing,
+      services: contract.services.map(sc => ({
+        serviceId: sc.serviceId,
+        specificTerms: sc.specificTerms,
+        service: sc.service
+      })),
+      isRevenueSharing: contract.isRevenueSharing ?? true,
     };
-    
-    // Log the formatted contract for debugging
-    console.log(`[GET_CONTRACT] Formatted contract:`, {
-      providerId: formattedContract.providerId,
-      provider: formattedContract.provider ? formattedContract.provider.name : null,
-      operatorId: formattedContract.operatorId,
-      operator: formattedContract.operator ? formattedContract.operator.name : null,
-      servicesCount: formattedContract.services.length
-    });
-    
-    return formattedContract;
   } catch (error) {
-    console.error("[GET_CONTRACT_ERROR]", error);
-    return notFound();
+    console.error("GET_CONTRACT_ERROR", error);
+    return null;
   }
 }
 
-// Function to fetch providers
 async function getProviders() {
-  try {
-    const providers = await db.provider.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
-    
-    console.log(`[GET_PROVIDERS] Found ${providers.length} providers`);
-    return providers;
-  } catch (error) {
-    console.error("[GET_PROVIDERS_ERROR]", error);
-    return [];
-  }
+  return db.provider.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
 }
 
-// Function to fetch operators
 async function getOperators() {
-  try {
-    const operators = await db.operator.findMany({
-      where: { active: true },
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
-    
-    console.log(`[GET_OPERATORS] Found ${operators.length} operators`);
-    return operators;
-  } catch (error) {
-    console.error("[GET_OPERATORS_ERROR]", error);
-    return [];
-  }
+  return db.operator.findMany({
+    where: { active: true },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
 }
 
-// Function to fetch humanitarian organizations
 async function getHumanitarianOrgs() {
-  try {
-    const orgs = await db.humanitarianOrganization.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
-    
-    console.log(`[GET_HUMANITARIAN_ORGS] Found ${orgs.length} humanitarian organizations`);
-    return orgs;
-  } catch (error) {
-    console.error("[GET_HUMANITARIAN_ORGS_ERROR]", error);
-    return [];
-  }
+  return db.humanitarianOrg.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
 }
 
-// Function to fetch parking services
 async function getParkingServices() {
-  try {
-    const services = await db.service.findMany({
-      where: { 
-        type: 'PARKING',
-        isActive: true 
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
-    
-    console.log(`[GET_PARKING_SERVICES] Found ${services.length} parking services`);
-    return services;
-  } catch (error) {
-    console.error("[GET_PARKING_SERVICES_ERROR]", error);
-    return [];
-  }
+  return db.service.findMany({
+    where: { 
+      type: 'PARKING',
+      isActive: true 
+    },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
 }
 
-export default async function EditContractPage({ params }: EditContractPageProps) {
+export default async function EditContractPage(props: EditContractPageProps) {
+  const params = await props.params; // Await the params promise
+  const id = params.id;
+  
+  const session = await auth();
+  console.log("[EDIT_PAGE] Complete session debugging:", {
+  hasSession: !!session,
+  hasUser: !!session?.user,
+  userId: session?.user?.id,
+  userEmail: session?.user?.email,
+  userRole: (session?.user as any)?.role,
+  userProps: session?.user ? Object.keys(session.user) : [],
+  fullUser: session?.user,
+  rawSession: session
+});
+  // Handle session/user state
+  if (!session) {
+    console.error("[EDIT_PAGE] No session found");
+    return redirect("/auth/login");
+  }
+  
+  if (!session.user) {
+    console.error("[EDIT_PAGE] Session exists but no user object");
+    return redirect("/auth/login");
+  }
+  if (session?.user?.id) {
   try {
-    // Await the params before accessing its properties
-    const resolvedParams = await params;
-    const id = resolvedParams.id;
-    
-    // Fetch all necessary data in parallel
+    const dbUser = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true, role: true, name: true }
+    });
+    console.log("[EDIT_PAGE] Direct DB user query:", dbUser);
+  } catch (error) {
+    console.error("[EDIT_PAGE] Error fetching user from DB:", error);
+  }
+}
+  // Enhanced user ID extraction
+  let userId = '';
+  let userRole = '';
+  
+  // Try to get user data from database since session is incomplete
+  if (session.user.email) {
+    try {
+      const dbUser = await db.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, role: true, name: true }
+      });
+      
+      if (dbUser) {
+        userId = dbUser.id;
+        userRole = dbUser.role || '';
+        console.log("[EDIT_PAGE] Enhanced user data from DB:", {
+          userId,
+          userRole,
+          userName: dbUser.name
+        });
+      } else {
+        console.error("[EDIT_PAGE] User not found in database with email:", session.user.email);
+      }
+    } catch (error) {
+      console.error("[EDIT_PAGE] Error fetching user from DB:", error);
+    }
+  }
+  
+  // Fallback to session-based extraction if DB lookup failed
+  if (!userId) {
+    if (session.user.id) userId = session.user.id;
+    else if ((session.user as any)?.sub) userId = (session.user as any).sub;
+    else if ((session as any)?.userId) userId = (session as any).userId;
+  }
+  
+  if (!userId) {
+    console.error(
+      "[EDIT_PAGE] User ID not found anywhere:", 
+      JSON.stringify(session, null, 2)
+    );
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold text-red-600">Authentication Error</h1>
+        <p>User identification failed. Please try logging in again.</p>
+      </div>
+    );
+  }
+
+  try {
     const [contract, providers, operators, humanitarianOrgs, parkingServices] = await Promise.all([
-      getContract(id),
+      getContract(id, userId, userRole), // Now passing the correct role
       getProviders(),
       getOperators(),
       getHumanitarianOrgs(),
       getParkingServices()
     ]);
-    
-    // Additional debug log in the page component
-    console.log("[EDIT_PAGE] Contract data for form:", {
-      id: contract.id,
-      contractNumber: contract.contractNumber,
-      providerId: contract.providerId,
-      provider: contract.provider ? contract.provider.name : "No provider",
-      operatorId: contract.operatorId,
-      operator: contract.operator ? contract.operator.name : "No operator",
-      providerOptionsCount: providers.length,
-      operatorOptionsCount: operators.length
-    });
+
+    if (!contract) {
+      return notFound();
+    }
 
     return (
       <div className="p-6 space-y-6">
@@ -322,7 +263,16 @@ export default async function EditContractPage({ params }: EditContractPageProps
         </div>
       </div>
     );
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "Forbidden") {
+      return (
+        <div className="p-6">
+          <h1 className="text-2xl font-bold text-red-600">Permission Denied</h1>
+          <p>You don't have permission to update this contract</p>
+        </div>
+      );
+    }
+
     console.error("[EDIT_CONTRACT_PAGE_ERROR]", error);
     return (
       <div className="p-6">

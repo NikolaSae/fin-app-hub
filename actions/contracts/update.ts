@@ -1,191 +1,167 @@
-// /actions/contracts/update.ts
-'use server';
+//actions/contracts/update.ts
+import { auth } from "@/auth";
+import { db } from "@/lib/db";
 
-import { z } from 'zod';
-import { db } from '@/lib/db';
-import { contractSchema } from '@/schemas/contract';
-import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
-import { ContractFormData } from '@/lib/types/contract-types';
-
-export const updateContract = async (id: string, data: ContractFormData) => {
-  try {
-    console.log("[UPDATE_CONTRACT] Raw data:", JSON.stringify({
-      operatorId: data.operatorId,
-      isRevenueSharing: data.isRevenueSharing,
-      operatorRevenue: data.operatorRevenue
-    }));
-    
-    const formattedData = {
-      ...data,
-      startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
-      endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
-      providerId: data.type === 'PROVIDER' ? data.providerId : null,
-      humanitarianOrgId: data.type === 'HUMANITARIAN' ? data.humanitarianOrgId : null,
-      parkingServiceId: data.type === 'PARKING' ? data.parkingServiceId : null,
-      operatorId: data.operatorId?.trim() || null,
-      isRevenueSharing: data.isRevenueSharing === false ? false : true,
-      operatorRevenue: data.operatorRevenue !== undefined && data.operatorRevenue !== '' 
-        ? Number(data.operatorRevenue) 
-        : null,
-    };
-
-    const validatedFields = contractSchema.safeParse(formattedData);
-    if (!validatedFields.success) {
-      return { error: "Invalid fields!", details: validatedFields.error.format() };
-    }
-
-    const {
-      name,
-      contractNumber,
-      type,
-      status,
-      startDate,
-      endDate,
-      revenuePercentage,
-      description,
-      providerId,
-      humanitarianOrgId,
-      parkingServiceId,
-      operatorId,
-      isRevenueSharing,
-      operatorRevenue,
-      services,
-    } = validatedFields.data;
-
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return { error: "Unauthorized" };
-    }
-
-    const existingContract = await db.contract.findUnique({
-      where: { id },
-      include: {
-        services: true,
-      }
-    });
-
-    if (!existingContract) {
-      return { error: "Contract not found." };
-    }
-
-    const serviceIds = Array.isArray(services) 
-      ? services.map(service => typeof service === 'object' && service.serviceId ? service.serviceId : service)
-      : [];
-
-    const existingServiceIds = existingContract.services.map(sc => sc.serviceId);
-    
-    const servicesToAdd = serviceIds.filter(serviceId => !existingServiceIds.includes(serviceId));
-    const servicesToRemove = existingServiceIds.filter(serviceId => !serviceIds.includes(serviceId));
-
-    await db.$transaction([
-      ...servicesToRemove.map(serviceId =>
-        db.serviceContract.deleteMany({
-          where: {
-            contractId: id,
-            serviceId: serviceId,
-          },
-        })
-      ),
-      ...servicesToAdd.map(serviceId =>
-        db.serviceContract.create({
-          data: {
-            contractId: id,
-            serviceId: serviceId,
-            specificTerms: Array.isArray(services) 
-              ? services.find(s => 
-                  (typeof s === 'object' && s.serviceId === serviceId && s.specificTerms) || undefined
-                )?.specificTerms 
-              : undefined
-          },
-        })
-      ),
-      db.contract.update({
-        where: { id },
-        data: {
-          name,
-          status,
-          startDate,
-          endDate,
-          revenuePercentage,
-          description,
-          providerId,
-          humanitarianOrgId,
-          parkingServiceId,
-          operatorId,
-          isRevenueSharing,
-          operatorRevenue,
-          lastModifiedById: userId,
-        },
-      })
-    ]);
-    
-    // Log the final data being saved to the database
-    console.log("[UPDATE_CONTRACT] Final data being saved:", {
-      operatorId,
-      isRevenueSharing,
-      operatorRevenue
-    });
-
-    await db.activityLog.create({
-      data: {
-        action: "CONTRACT_UPDATED",
-        entityType: "contract",
-        entityId: id,
-        details: `Contract updated: ${contractNumber} - ${name}`,
-        userId: userId,
-        severity: "INFO",
-      },
-    });
-
-    revalidatePath('/app/(protected)/contracts');
-    revalidatePath(`/app/(protected)/contracts/${id}`);
-    revalidatePath(`/app/(protected)/contracts/${id}/edit`);
-    revalidatePath('/app/(protected)/contracts/expiring');
-    
-    return { success: "Contract updated successfully!", id: id };
-  } catch (error) {
-    console.error("[UPDATE_CONTRACT_ERROR]", error);
-
-    if (error instanceof z.ZodError) {
-      return {
-        error: "Invalid input data",
-        formErrors: error.format()
-      };
-    }
-
-    if (error instanceof Error) {
-      const prismaError = error as any;
-
-      if (prismaError.code === 'P2002') {
-        return {
-          error: "Data conflict",
-          message: "A record with this unique field already exists.",
-          details: prismaError.meta?.target
-        };
-      }
-
-      if (prismaError.code === 'P2003') {
-        return {
-          error: "Invalid reference",
-          message: "One of the linked items (Provider, Org, Operator, Service) does not exist.",
-          details: prismaError.meta?.field_name
-        };
-      }
-
-      if (prismaError.code && prismaError.clientVersion) {
-        return {
-          error: "Database operation failed",
-          message: `Prisma error: ${prismaError.code}`,
-          details: prismaError.message
-        };
-      }
-    }
-
-    return { 
-      error: "Failed to update contract.",
-      details: error instanceof Error ? error.message : "Unknown error" 
-    };
+async function getCurrentUserWithRole() {
+  const session = await auth();
+  
+  if (!session?.user?.email) {
+    return null;
   }
-};
+  
+  const user = await db.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true, role: true, email: true, name: true }
+  });
+  
+  return user;
+}
+
+export async function updateContract(contractId: string, data: any) {
+  console.log("[UPDATE_CONTRACT] Starting update for:", contractId);
+  console.log("[UPDATE_CONTRACT] Data keys:", Object.keys(data || {}));
+  
+  try {
+    // Get current user with role from database
+    const currentUser = await getCurrentUserWithRole();
+    
+    if (!currentUser) {
+      console.error("[UPDATE_CONTRACT] No authenticated user");
+      return { error: "Authentication required" };
+    }
+    
+    console.log("[UPDATE_CONTRACT] Current user:", {
+      id: currentUser.id,
+      role: currentUser.role,
+      email: currentUser.email
+    });
+    
+    // Get the contract to check ownership
+    const existingContract = await db.contract.findUnique({
+      where: { id: contractId },
+      select: { 
+        id: true, 
+        createdById: true,
+        contractNumber: true 
+      }
+    });
+    
+    if (!existingContract) {
+      console.error("[UPDATE_CONTRACT] Contract not found:", contractId);
+      return { error: "Contract not found" };
+    }
+    
+    // Check permissions - ADMIN or creator can update
+    const isAdmin = currentUser.role === 'ADMIN';
+    const isCreator = existingContract.createdById === currentUser.id;
+    
+    console.log("[UPDATE_CONTRACT] Permission check:", {
+      contractId,
+      currentUserId: currentUser.id,
+      createdById: existingContract.createdById,
+      isAdmin,
+      isCreator,
+      hasPermission: isAdmin || isCreator
+    });
+    
+    if (!isAdmin && !isCreator) {
+      console.error("[UPDATE_CONTRACT] Permission denied");
+      return { error: "You don't have permission to update this contract" };
+    }
+
+    // Clean and prepare data for update
+    const updateData = { ...data };
+    
+    // Remove any undefined or null values that shouldn't be updated
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined || updateData[key] === null) {
+        delete updateData[key];
+      }
+    });
+    
+    // Add metadata
+    updateData.updatedAt = new Date();
+    // Note: You might want to add lastModifiedById if you have that field
+    
+    console.log("[UPDATE_CONTRACT] Prepared update data:", {
+      keys: Object.keys(updateData),
+      contractId
+    });
+    
+    // Perform the update with transaction for safety
+    const updatedContract = await db.$transaction(async (tx) => {
+      // First, handle services if they're being updated
+      if (data.services && Array.isArray(data.services)) {
+        // Delete existing services
+        await tx.serviceContract.deleteMany({
+          where: { contractId }
+        });
+        
+        // Create new services
+        if (data.services.length > 0) {
+          await tx.serviceContract.createMany({
+            data: data.services.map((service: any) => ({
+              contractId,
+              serviceId: service.serviceId,
+              specificTerms: service.specificTerms || null
+            }))
+          });
+        }
+        
+        // Remove services from main update data since it's handled separately
+        delete updateData.services;
+      }
+      
+      // Update the main contract
+      return await tx.contract.update({
+        where: { id: contractId },
+        data: updateData,
+        include: {
+          services: {
+            include: {
+              service: true
+            }
+          },
+          provider: true,
+          operator: true,
+          humanitarianOrg: true,
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      });
+    });
+    
+    console.log("[UPDATE_CONTRACT] Successfully updated contract:", contractId);
+    
+    return { 
+      success: true, 
+      contract: updatedContract,
+      message: "Contract updated successfully"
+    };
+    
+  } catch (error) {
+    console.error("[UPDATE_CONTRACT] Error:", error);
+    
+    // Handle specific Prisma errors
+    if (error instanceof Error) {
+      if (error.message.includes('Unique constraint')) {
+        return { error: "Contract number already exists" };
+      }
+      
+      if (error.message.includes('Foreign key constraint')) {
+        return { error: "Invalid reference to provider, operator, or service" };
+      }
+      
+      if (error.message.includes('Record to update not found')) {
+        return { error: "Contract not found" };
+      }
+    }
+    
+    return { error: "Failed to update contract" };
+  }
+}
