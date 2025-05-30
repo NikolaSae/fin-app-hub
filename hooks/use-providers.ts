@@ -1,7 +1,7 @@
 // hooks/use-providers.ts
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface Provider {
   id: string;
@@ -10,7 +10,7 @@ export interface Provider {
   email?: string | null;
   phone?: string | null;
   isActive: boolean;
-  imageUrl?: string | null; // Added imageUrl field
+  imageUrl?: string | null;
   _count?: {
     contracts?: number;
     complaints?: number;
@@ -43,8 +43,19 @@ export function useProviders(
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationOptions>(initialPagination);
   const [filters, setFilters] = useState<FilterOptions>(initialFilters);
+  
+  // Track previous values to prevent unnecessary re-fetches
+  const prevRequest = useRef<string>("");
 
-  const fetchProviders = async () => {
+  const fetchProviders = useCallback(async () => {
+    const requestKey = JSON.stringify({ pagination, filters });
+    
+    // Skip if same request was already made
+    if (prevRequest.current === requestKey) {
+      return;
+    }
+    
+    prevRequest.current = requestKey;
     setLoading(true);
     setError(null);
 
@@ -75,14 +86,16 @@ export function useProviders(
         params.append("sortDirection", filters.sortDirection || "asc");
       }
 
-      const response = await fetch(`/api/providers?${params.toString()}`);
+      const response = await fetch(`/api/providers?${params.toString()}`, {
+        credentials: 'include',
+        cache: 'no-store'
+      });
 
       if (!response.ok) {
         throw new Error(`Error fetching providers: ${response.statusText}`);
       }
 
       const data = await response.json();
-
       setProviders(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -91,11 +104,12 @@ export function useProviders(
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination, filters]);
 
+  // Fetch only when pagination or filters change
   useEffect(() => {
     fetchProviders();
-  }, [pagination.page, pagination.limit, filters]);
+  }, [fetchProviders]);
 
   return {
     providers,

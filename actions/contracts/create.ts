@@ -6,44 +6,49 @@ import { contractSchema } from '@/schemas/contract';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import type { ContractFormData } from '@/schemas/contract';
-import { z } from 'zod';
+import { ContractType } from '@prisma/client';
 
 export async function createContract(data: ContractFormData) {
   try {
     // Debug logs to help troubleshoot form submissions
-    console.log("[CREATE_CONTRACT] Received data:", JSON.stringify({
+    console.log("[CREATE_CONTRACT] Received data:", {
       ...data,
+      startDate: data.startDate,
+      endDate: data.endDate,
       operatorId: data.operatorId,
-      isRevenueSharing: data.isRevenueSharing
-    }, null, 2));
+      operatorRevenue: data.operatorRevenue,
+      isRevenueSharing: data.isRevenueSharing,
+      services: data.services?.length
+    });
 
-    const formattedData = {
+    // Validate contract type
+    const validContractTypes = Object.values(ContractType);
+    if (!validContractTypes.includes(data.type)) {
+      return {
+        error: "Invalid contract type",
+        details: `Received: ${data.type}, Valid types: ${validContractTypes.join(', ')}`,
+        success: false
+      };
+    }
+
+    // Prepare data for database
+    const dbData = {
       ...data,
-      startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
-      endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
-      providerId: data.type === 'PROVIDER' ? data.providerId : null,
-      humanitarianOrgId: data.type === 'HUMANITARIAN' ? data.humanitarianOrgId : null,
-      parkingServiceId: data.type === 'PARKING' ? data.parkingServiceId : null,
-      // Fix: Properly handle operatorId by checking for empty strings
-      operatorId: data.operatorId && data.operatorId.trim() !== '' ? data.operatorId : null,
-      // Fix: Ensure isRevenueSharing has a default boolean value
-      isRevenueSharing: typeof data.isRevenueSharing === 'boolean' ? data.isRevenueSharing : true,
-      // Fix: Ensure operatorRevenue is a number or null
-      operatorRevenue: data.operatorRevenue !== undefined && data.operatorRevenue !== '' 
-        ? Number(data.operatorRevenue) 
-        : null,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
+      revenuePercentage: Number(data.revenuePercentage),
+      operatorRevenue: data.isRevenueSharing ? Number(data.operatorRevenue) : 0,
+      operatorId: data.isRevenueSharing ? data.operatorId : null,
+      // Clear irrelevant IDs based on contract type
+      providerId: data.type === ContractType.PROVIDER ? data.providerId : null,
+      humanitarianOrgId: data.type === ContractType.HUMANITARIAN ? data.humanitarianOrgId : null,
+      parkingServiceId: data.type === ContractType.PARKING ? data.parkingServiceId : null,
     };
 
-    // Debug logs after formatting
-    console.log("[CREATE_CONTRACT] Formatted data:", JSON.stringify({
-      operatorId: formattedData.operatorId,
-      isRevenueSharing: formattedData.isRevenueSharing,
-      operatorRevenue: formattedData.operatorRevenue
-    }, null, 2));
-
-    const validationResult = contractSchema.safeParse(formattedData);
+    // Validate with Zod schema
+    const validationResult = contractSchema.safeParse(dbData);
     if (!validationResult.success) {
-      console.error("[CREATE_CONTRACT] Validation failed:", validationResult.error.flatten());
+      console.error("[CREATE_CONTRACT] Validation failed:", validationResult.error);
       return {
         error: "Validation failed",
         details: validationResult.error.flatten(),
@@ -51,52 +56,37 @@ export async function createContract(data: ContractFormData) {
       };
     }
 
+    // Authorization check
     const session = await auth();
     if (!session?.user?.id) {
       return { error: "Unauthorized", success: false };
     }
 
+    // Check for duplicate contract number
     const existingContract = await db.contract.findUnique({
-      where: { contractNumber: formattedData.contractNumber },
+      where: { contractNumber: dbData.contractNumber },
     });
+    
     if (existingContract) {
-      console.warn(`[CREATE_CONTRACT] Attempted to create duplicate contract number: ${formattedData.contractNumber}`);
-      return { error: "Contract number already exists", success: false };
+      return { 
+        error: "Contract number already exists", 
+        success: false,
+        existingId: existingContract.id
+      };
     }
 
-    const contractData = {
-      name: formattedData.name,
-      contractNumber: formattedData.contractNumber,
-      type: formattedData.type,
-      status: formattedData.status,
-      startDate: formattedData.startDate,
-      endDate: formattedData.endDate,
-      revenuePercentage: formattedData.revenuePercentage,
-      description: formattedData.description,
-      providerId: formattedData.providerId,
-      humanitarianOrgId: formattedData.humanitarianOrgId,
-      parkingServiceId: formattedData.parkingServiceId,
-      operatorId: formattedData.operatorId,
-      isRevenueSharing: formattedData.isRevenueSharing,
-      operatorRevenue: formattedData.operatorRevenue,
-      services: {
-        create: formattedData.services?.map(service => ({
-          serviceId: service.serviceId,
-          specificTerms: service.specificTerms
-        })) || []
-      },
-      createdById: session.user.id,
-    };
-
-    // Log the final contract data before submission
-    console.log("[CREATE_CONTRACT] Final contract data:", JSON.stringify({
-      operatorId: contractData.operatorId,
-      isRevenueSharing: contractData.isRevenueSharing,
-      operatorRevenue: contractData.operatorRevenue
-    }, null, 2));
-
+    // Create contract
     const newContract = await db.contract.create({
-      data: contractData,
+      data: {
+        ...dbData,
+        services: {
+          create: dbData.services?.map(service => ({
+            serviceId: service.serviceId,
+            specificTerms: service.specificTerms || null
+          })) || []
+        },
+        createdById: session.user.id,
+      },
       include: {
         services: true,
         provider: true,
@@ -107,6 +97,7 @@ export async function createContract(data: ContractFormData) {
       }
     });
 
+    // Create activity log
     await db.activityLog.create({
       data: {
         action: "CONTRACT_CREATED",
@@ -118,6 +109,7 @@ export async function createContract(data: ContractFormData) {
       },
     });
 
+    // Revalidate cache
     revalidatePath('/contracts');
     revalidatePath(`/contracts/${newContract.id}`);
 
@@ -128,53 +120,31 @@ export async function createContract(data: ContractFormData) {
       contract: newContract
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("[CONTRACT_CREATE_ERROR]", error);
 
-    if (error instanceof z.ZodError) {
-       const formattedErrors = error.format();
-       return {
-         error: "Invalid input data",
-         formErrors: formattedErrors,
-         success: false
-       };
+    // Handle specific error cases
+    if (error.code === 'P2002') {
+      return {
+        error: "Data conflict",
+        message: "A record with this unique field already exists.",
+        details: error.meta?.target,
+        success: false
+      };
     }
 
-    if (error instanceof Error) {
-       const prismaError = error as any;
-
-       if (prismaError.code === 'P2002') {
-         return {
-            error: "Data conflict",
-            message: "A record with this unique field already exists.",
-            details: prismaError.meta?.target,
-            success: false
-         };
-       }
-
-       if (prismaError.code === 'P2003') {
-         return {
-           error: "Invalid reference",
-           message: "One of the linked items (Provider, Org, Operator, Service) does not exist.",
-           details: prismaError.meta?.field_name,
-           success: false
-         };
-       }
-
-       if (prismaError.code && prismaError.clientVersion) {
-            return {
-                error: "Database operation failed",
-                message: `Prisma error: ${prismaError.code}`,
-                details: prismaError.message,
-                success: false
-            };
-       }
+    if (error.code === 'P2003') {
+      return {
+        error: "Invalid reference",
+        message: "One of the linked items does not exist.",
+        details: error.meta?.field_name,
+        success: false
+      };
     }
 
     return {
       error: "An unexpected error occurred",
-      message: "Failed to create contract.",
-      details: error instanceof Error ? error.message : "Unknown error",
+      message: error.message || "Failed to create contract",
       success: false
     };
   }

@@ -1,80 +1,65 @@
-import { newPassword } from "@/actions/password";
-import { UserRole } from "@prisma/client";
-import * as z from "zod";
+// schemas/index.ts - Export all schemas from a central location
 
-export const LoginSchema = z.object({
-  email: z.string().email({
-    message: "Email is required",
-  }),
-  password: z.string().min(1, {
-    message: "Password is required",
-  }),
-  code: z.optional(z.string()),
-});
+// Auth schemas
+export {
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+  newPasswordSchema,
+  changePasswordSchema,
+  profileUpdateSchema,
+  userRoleUpdateSchema,
+  userActivationSchema,
+  verifyEmailSchema,
+  twoFactorSetupSchema,
+  twoFactorVerificationSchema,
+  type LoginFormData,
+  type RegisterFormData,
+  type ResetPasswordFormData,
+  type NewPasswordFormData,
+  type ChangePasswordFormData,
+  type ProfileUpdateFormData,
+  type UserRoleUpdateFormData,
+  type UserActivationFormData,
+  type VerifyEmailFormData,
+  type TwoFactorSetupFormData,
+  type TwoFactorVerificationFormData,
+} from './auth';
 
-export const RegisterSchema = z.object({
-  email: z.string().email({
-    message: "Email is required",
-  }),
-  password: z.string().min(6, {
-    message: "Minimum 6 characters required",
-  }),
-  name: z.string().min(1, {
-    message: "Name is required",
-  }),
-});
+// Operator schemas
+export {
+  operatorSchema,
+  operatorFilterSchema,
+  operatorUpdateSchema,
+  operatorActivationSchema,
+  operatorBulkOperationSchema,
+  operatorImportSchema,
+  operatorExportSchema,
+  type OperatorFormData,
+  type OperatorFilterData,
+  type OperatorUpdateData,
+  type OperatorActivationData,
+  type OperatorBulkOperationData,
+  type OperatorImportData,
+  type OperatorExportData,
+} from './operator';
 
-export const ResetSchema = z.object({
-  email: z.string().email({
-    message: "Email is required",
-  }),
-});
+// Security schemas
+export {
+  ActivityLogSchema,
+  ActivityLogFilterSchema,
+  PermissionSchema,
+  RolePermissionSchema,
+  RateLimitSchema,
+  BackupConfigSchema,
+  SecurityPolicySchema,
+  SecurityLogExportSchema,
+  PerformanceMetricSchema,
+} from './security';
 
-export const NewPasswordSchema = z.object({
-  password: z.string().min(6, {
-    message: "Minimum 6 characters required",
-  }),
-});
+// You can add more schema exports here as you create them
+// Contract schemas (when you create them)
+// export { contractSchema, ... } from './contract';
 
-export const SettingsSchema = z
-  .object({
-    name: z.optional(z.string()),
-    isTwoFactorEnabled: z.optional(z.boolean()),
-    role: z.enum([UserRole.ADMIN, UserRole.USER]),
-    email: z.optional(z.string().email()),
-    password: z.optional(z.string().min(6)),
-    newPassword: z.optional(z.string().min(6)),
-  })
-  .refine(
-    (data) => {
-      if (data.password && !data.newPassword) {
-        return false;
-      }
-
-      return true;
-    },
-    {
-      message: "New password is required",
-      path: ["newPassword"],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.newPassword && !data.password) {
-        return false;
-      }
-
-      return true;
-    },
-    {
-      message: "Password is required",
-      path: ["password"],
-    }
-  );
-export * from "./complaint";
-
-export type ComplaintFormValues = z.infer<typeof ComplaintFormSchema>;
-export type CommentFormValues = z.infer<typeof CommentFormSchema>;
-export type AssignComplaintFormValues = z.infer<typeof AssignComplaintFormSchema>;
-export type ResolveComplaintFormValues = z.infer<typeof ResolveComplaintFormSchema>;
-export type AttachmentFormValues = z.infer<typeof AttachmentFormSchema>;
+// Complaint schemas (when you create them)  
+// export { complaintSchema, ... } from './complaint';

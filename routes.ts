@@ -1,14 +1,19 @@
-// routes.ts
-/**_
+// routes.ts - FIXED VERSION
+
+/**
  * An array of routes that are accessible to the public
  * These routes do not require authentication
  * @type {string[]}
  */
-export const publicRoutes = ["/dashboard/", "/auth/new-verification"];
+export const publicRoutes = [
+  "/", // Home page
+  "/auth/new-verification"
+  // REMOVED "/dashboard/" - dashboard should be protected!
+];
 
 /**
  * An array of routes that are used for authentication
- * These routes will redirect logged in users to /settings
+ * These routes will redirect logged in users to /complaints
  * @type {string[]}
  */
 export const authRoutes = [
@@ -18,6 +23,7 @@ export const authRoutes = [
   "/auth/reset",
   "/auth/new-password",
 ];
+
 /**
  * Rute koje su dostupne samo korisnicima sa admin ulogom
  * @type {string[]}
@@ -25,9 +31,13 @@ export const authRoutes = [
 export const adminRoutes = [
   "/admin",
   "/complaints/admin",
+  "/operators/new", // Dodano
+  "/providers/new", // Dodano ako postoji
+  "/services/new",  // Dodano ako postoji
 ];
+
 /**
-* Rute koje su dostupne samo autentifikovanim korisnicima
+ * Rute koje su dostupne samo autentifikovanim korisnicima
  * @type {string[]}
  */
 export const protectedRoutes = [
@@ -35,9 +45,20 @@ export const protectedRoutes = [
   "/server",
   "/client",
   "/admin",
+  "/dashboard", // Dodano (bez trailing slash!)
   "/complaints",
   "/complaints/new",
   "/complaints/admin",
+  "/operators", // DODANO
+  "/operators/new", // DODANO
+  "/operators/[id]", // DODANO
+  "/operators/[id]/edit", // DODANO
+  "/contracts", // DODANO
+  "/contracts/new", // DODANO
+  "/contracts/[id]", // DODANO
+  "/contracts/[id]/edit", // DODANO
+  "/providers", // DODANO ako postoji
+  "/services", // DODANO ako postoji
 ];
 
 /**
@@ -51,5 +72,29 @@ export const apiAuthPrefix = "/api/auth";
  * The default redirect path after logging in
  * @type {string}
  */
-// Glavna putanja
 export const DEFAULT_LOGIN_REDIRECT = "/complaints";
+
+// DODANO: Helper funkcije za lakše upravljanje rutama
+export const isPublicRoute = (pathname: string): boolean => {
+  return publicRoutes.includes(pathname);
+};
+
+export const isAuthRoute = (pathname: string): boolean => {
+  return authRoutes.includes(pathname);
+};
+
+export const isProtectedRoute = (pathname: string): boolean => {
+  return protectedRoutes.some(route => {
+    if (route.includes('[')) {
+      // Handle dynamic routes like /operators/[id]
+      const pattern = route.replace(/\[.*?\]/g, '[^/]+');
+      const regex = new RegExp(`^${pattern}$`);
+      return regex.test(pathname);
+    }
+    return pathname.startsWith(route);
+  });
+};
+
+export const isAdminRoute = (pathname: string): boolean => {
+  return adminRoutes.some(route => pathname.startsWith(route));
+};
