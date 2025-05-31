@@ -6,7 +6,7 @@ import { checkPermission } from "@/actions/security/check-permission";
 import { getCurrentUser } from "@/lib/auth";
 import { NotificationType } from "@prisma/client";
 import { sendPushNotification } from "@/lib/notifications/in-app-notifier";
-import { logEvent } from "@/actions/security/log-event";
+import { logActivity } from "@/lib/security/audit-logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,8 +52,7 @@ export async function POST(req: NextRequest) {
     await sendPushNotification(userId, notification);
     
     // Log the event
-    await logEvent({
-      action: "SEND_PUSH_NOTIFICATION",
+    await logActivity("SEND_PUSH_NOTIFICATION", {
       entityType: "notification",
       entityId: notification.id,
       details: `Push notification sent to user ${userId}`,
