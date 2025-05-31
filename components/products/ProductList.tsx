@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"; // Za paginaciju
 import { Skeleton } from "@/components/ui/skeleton"; // Za loading state
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 // Uvozimo AlertDialog za potvrdu brisanja
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -33,7 +33,7 @@ const ITEMS_PER_PAGE = 10; // Prilagodite broj stavki po stranici
  */
 export function ProductList() {
     const router = useRouter();
-    const { toast } = useToast();
+    // const { toast } = useToast();
 
     // Korišćenje AŽURIRANOG hooka useProducts
     const {
