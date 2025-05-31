@@ -191,9 +191,9 @@ export function getAllPermissionsByResource(): Record<string, Permission[]> {
   
   for (const permission of PERMISSIONS) {
     if (!result[permission.resource]) {
-      result[permission.resource] = [];
-    }
-    result[permission.resource].push(permission);
+  result[permission.resource] = [];
+}
+result[permission.resource].push(permission);
   }
   
   return result;
