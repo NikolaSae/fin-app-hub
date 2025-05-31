@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/actions/security/check-permission";
 import { getCurrentUser } from "@/lib/auth";
-import { NotificationType } from "@prisma/client";
+import { NotificationType, LogSeverity } from "@prisma/client";
 import { sendPushNotification } from "@/lib/notifications/in-app-notifier";
 import { logActivity } from "@/lib/security/audit-logger";
 
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       entityType: "notification",
       entityId: notification.id,
       details: `Push notification sent to user ${userId}`,
-      severity: "INFO",
+      severity: LogSeverity.INFO,
       userId: currentUser.id
     });
     
