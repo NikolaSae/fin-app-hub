@@ -1,7 +1,5 @@
 ///actions/security/check-permission.ts
 
-
-
 "use server";
 
 import { auth } from "@/lib/auth";
@@ -192,13 +190,16 @@ export function getPermissionsForRole(role: UserRole): string[] {
  * @returns Object with resources as keys and arrays of permissions as values
  */
 export function getAllPermissionsByResource(): Record<string, Permission[]> {
-  return PERMISSIONS.reduce<Record<string, Permission[]>>((acc, permission) => {
-    if (!acc[permission.resource]) {
-      acc[permission.resource] = [];
+  const result: Record<string, Permission[]> = {};
+  
+  for (const permission of PERMISSIONS) {
+    if (!result[permission.resource]) {
+      result[permission.resource] = [];
     }
-    acc[permission.resource].push(permission);
-    return acc;
-  }, {});
+    result[permission.resource].push(permission);
+  }
+  
+  return result;
 }
 
 /**
