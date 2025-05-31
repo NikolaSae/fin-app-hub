@@ -1,6 +1,5 @@
 ///app/api/notifications/push/route.ts
 
-
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/actions/security/check-permission";
@@ -17,8 +16,8 @@ export async function POST(req: NextRequest) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
     
-    // Check permissions
-    const hasPermission = await checkPermission(currentUser.id, "SEND_NOTIFICATIONS");
+    // ISPRAVKA: Promenjen redosled parametara - prvo permission name, pa userId
+    const hasPermission = await checkPermission("send_system_notification", currentUser.id);
     
     if (!hasPermission) {
       return new NextResponse("Forbidden", { status: 403 });
