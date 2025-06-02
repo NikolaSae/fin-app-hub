@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 //schemas/index.ts
 
 
@@ -15,7 +15,7 @@ export const LoginSchema = z.object({
   }),
   code: z.optional(z.string()),
 });
-=======
+
 // schemas/index.ts - Export all schemas from a central location
 
 // Auth schemas
@@ -43,7 +43,7 @@ export {
   type TwoFactorSetupFormData,
   type TwoFactorVerificationFormData,
 } from './auth';
->>>>>>> 49014e722309dabc1a1e95bbf7dcf4f35e0f7f53
+
 
 // Operator schemas
 export {
@@ -80,7 +80,7 @@ export {
 // Contract schemas (when you create them)
 // export { contractSchema, ... } from './contract';
 
-<<<<<<< HEAD
+
 export const SettingsSchema = z
   .object({
     name: z.optional(z.string()),
@@ -223,7 +223,7 @@ export type PerformanceMetricData = z.infer<typeof PerformanceMetricSchema>;
 export type ServiceFormData = z.infer<typeof serviceSchema>;
 export type ServiceUpdateData = z.infer<typeof serviceUpdateSchema>;
 export type ServiceFilterData = z.infer<typeof serviceFilterSchema>;
-=======
+
 // Complaint schemas (when you create them)  
 // export { complaintSchema, ... } from './complaint';
->>>>>>> 49014e722309dabc1a1e95bbf7dcf4f35e0f7f53
+
