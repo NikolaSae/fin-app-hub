@@ -1,4 +1,4 @@
-// auth.ts - Update your NextAuth configuration
+//auth.ts
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/db";
@@ -112,7 +112,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return {
               id: user.id,
               email: user.email,
-              role: user.role, // Include role in the returned user object
+              role: user.role,
             };
           }
         }
