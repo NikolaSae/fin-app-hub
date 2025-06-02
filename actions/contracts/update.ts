@@ -1,70 +1,123 @@
-//actions/contracts/update.ts
+// /actions/contracts/update.ts
 'use server';
 
-import { db } from '@/lib/db';
-import { auth } from '@/auth';
+import { z } from 'zod';
 import { ContractType } from '@prisma/client';
+import { db } from '@/lib/db';
+import { revalidatePath } from 'next/cache';
+import { auth } from '@/auth';
+import { logActivity } from '@/lib/security/audit-logger';
+import { contractSchema } from '@/schemas/contract';
 
 export async function updateContract(contractId: string, data: any) {
+  console.log('[UPDATE_CONTRACT] Starting update for:', contractId);
+  console.log('[UPDATE_CONTRACT] Data keys:', Object.keys(data || {}));
+  
   try {
-    // Get current user
-    const session = await auth();
-    const userId = session?.user?.id;
-    const userRole = session?.user?.role;
+    // Get session with error handling
+    let session;
+    try {
+      session = await auth();
+    } catch (authError) {
+      console.error('[UPDATE_CONTRACT] Auth error:', authError);
+      return { 
+        success: false, 
+        error: 'Authentication failed. Please refresh the page and try again.' 
+      };
+    }
     
-    if (!userId) {
-      return { error: "Authentication required" };
+    if (!session?.user) {
+      console.log('[UPDATE_CONTRACT] No session or user');
+      return { success: false, error: 'Unauthorized - please log in again' };
     }
 
-    // Get the contract to check ownership
+    const userId = session.user.id;
+    const userRole = session.user.role;
+    
+    console.log('[UPDATE_CONTRACT] Session obtained:', {
+      userId,
+      userRole
+    });
+
+    // Validate input data
+    let validatedData;
+    try {
+      validatedData = contractSchema.parse(data);
+    } catch (validationError) {
+      console.error('[UPDATE_CONTRACT] Validation error:', validationError);
+      return { 
+        success: false, 
+        error: 'Invalid form data. Please check all fields.' 
+      };
+    }
+    
+    // Find the existing contract
     const existingContract = await db.contract.findUnique({
       where: { id: contractId },
       select: { 
         id: true, 
         createdById: true,
         contractNumber: true,
-        type: true
+        type: true,
+        name: true
       }
     });
     
     if (!existingContract) {
-      return { error: "Contract not found" };
+      console.log('[UPDATE_CONTRACT] Contract not found:', contractId);
+      return { success: false, error: 'Contract not found' };
     }
-    
-    // Check permissions - ADMIN or contract owner can update
+
+    console.log('[UPDATE_CONTRACT] Existing contract:', {
+      id: existingContract.id,
+      createdById: existingContract.createdById
+    });
+
+    // Check permissions
     const isAdmin = userRole === 'ADMIN';
     const isOwner = existingContract.createdById === userId;
     
+    console.log('[UPDATE_CONTRACT] Permission check:', {
+      isAdmin,
+      isOwner,
+      userRole,
+      userId,
+      contractCreatedById: existingContract.createdById
+    });
+    
     if (!isAdmin && !isOwner) {
-      return { error: "You don't have permission to update this contract" };
+      return { 
+        success: false, 
+        error: 'You do not have permission to edit this contract' 
+      };
     }
 
     // Prepare data for database
     const dbData = {
-      ...data,
+      ...validatedData,
       // Clear irrelevant IDs based on contract type
-      providerId: data.type === ContractType.PROVIDER ? data.providerId : null,
-      humanitarianOrgId: data.type === ContractType.HUMANITARIAN ? data.humanitarianOrgId : null,
-      parkingServiceId: data.type === ContractType.PARKING ? data.parkingServiceId : null,
+      providerId: validatedData.type === ContractType.PROVIDER ? validatedData.providerId : null,
+      humanitarianOrgId: validatedData.type === ContractType.HUMANITARIAN ? validatedData.humanitarianOrgId : null,
+      parkingServiceId: validatedData.type === ContractType.PARKING ? validatedData.parkingServiceId : null,
       // Clear operator data if revenue sharing is disabled
-      operatorId: data.isRevenueSharing ? data.operatorId : null,
-      operatorRevenue: data.isRevenueSharing ? data.operatorRevenue : 0,
+      operatorId: validatedData.isRevenueSharing ? validatedData.operatorId : null,
+      operatorRevenue: validatedData.isRevenueSharing ? validatedData.operatorRevenue : 0,
       updatedAt: new Date(),
     };
 
     // Perform the update with transaction
     const updatedContract = await db.$transaction(async (tx) => {
       // Handle services update
-      if (Array.isArray(data.services)) {
+      if (Array.isArray(validatedData.services)) {
         // Delete existing services
         await tx.serviceContract.deleteMany({
           where: { contractId }
         });
         
         // Create new services if any
-        if (data.services.length > 0) {
+        if (validatedData.services.length > 0) {
           await tx.serviceContract.createMany({
-            data: data.services.map((service: any) => ({
+            data: validatedData.services.map((service: any) => ({
               contractId,
               serviceId: service.serviceId,
               specificTerms: service.specificTerms || null
@@ -98,56 +151,65 @@ export async function updateContract(contractId: string, data: any) {
       });
     });
 
-    // Create activity log
-    await db.activityLog.create({
-      data: {
-        action: "CONTRACT_UPDATED",
-        entityType: "contract",
-        entityId: contractId,
-        details: `Contract updated: ${updatedContract.contractNumber} - ${updatedContract.name}`,
-        userId: userId,
-        severity: "INFO",
-      },
-    });
+    console.log('[UPDATE_CONTRACT] Contract updated successfully:', updatedContract.id);
+
+    // Log activity
+    try {
+      await logActivity({
+        action: 'UPDATE',
+        entityType: 'contract',
+        entityId: updatedContract.id,
+        details: `Updated contract: ${updatedContract.name}`,
+        userId
+      });
+    } catch (logError) {
+      console.warn('[UPDATE_CONTRACT] Failed to log activity:', logError);
+    }
 
     // Revalidate cache
-    revalidatePath('/contracts');
-    revalidatePath(`/contracts/${contractId}`);
+    try {
+      revalidatePath('/contracts');
+      revalidatePath(`/contracts/${contractId}`);
+      revalidatePath(`/contracts/${contractId}/edit`);
+    } catch (revalidateError) {
+      console.warn('[UPDATE_CONTRACT] Failed to revalidate paths:', revalidateError);
+    }
 
+    console.log('[UPDATE_CONTRACT] Success - returning result');
     return { 
       success: true, 
-      contract: updatedContract,
-      message: "Contract updated successfully"
+      contractId: updatedContract.id,
+      message: 'Contract updated successfully'
     };
     
   } catch (error: any) {
-    console.error("[UPDATE_CONTRACT] Error:", error);
+    console.error('[UPDATE_CONTRACT] Unexpected error:', error);
     
     // Handle specific errors
     if (error.code === 'P2002') {
       return { 
-        error: "Contract number already exists",
-        success: false
+        success: false, 
+        error: 'Contract number already exists. Please use a different number.' 
       };
     }
     
     if (error.code === 'P2003') {
       return { 
-        error: "Invalid reference to provider, operator, or service",
-        success: false
+        success: false, 
+        error: 'Invalid reference to provider, operator, or service' 
       };
     }
     
     if (error.code === 'P2025') {
       return { 
-        error: "Contract not found",
-        success: false
+        success: false, 
+        error: 'Contract not found' 
       };
     }
     
     return { 
-      error: error.message || "Failed to update contract",
-      success: false
+      success: false, 
+      error: 'Failed to update contract. Please try again.' 
     };
   }
 }
