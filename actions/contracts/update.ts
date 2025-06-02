@@ -1,19 +1,20 @@
 // /actions/contracts/update.ts
-'use server'
+'use server';
 
 import { z } from 'zod';
-import { contractSchema } from '@/schemas/contract';
+import { ContractType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { logActivity } from '@/lib/security/audit-logger';
+import { contractSchema } from '@/schemas/contract';
 
-export async function updateContract(id: string, formData: any) {
-  console.log('[UPDATE_CONTRACT] Starting update for:', id);
-  console.log('[UPDATE_CONTRACT] Data keys:', Object.keys(formData));
+export async function updateContract(contractId: string, data: any) {
+  console.log('[UPDATE_CONTRACT] Starting update for:', contractId);
+  console.log('[UPDATE_CONTRACT] Data keys:', Object.keys(data || {}));
   
   try {
-    // Pokušaj da dobiješ session - ovo je kritična linija
+    // Get session with error handling
     let session;
     try {
       session = await auth();
@@ -30,15 +31,18 @@ export async function updateContract(id: string, formData: any) {
       return { success: false, error: 'Unauthorized - please log in again' };
     }
 
+    const userId = session.user.id;
+    const userRole = session.user.role;
+    
     console.log('[UPDATE_CONTRACT] Session obtained:', {
-      userId: session.user.id,
-      userRole: session.user.role
+      userId,
+      userRole
     });
 
-    // Validacija podataka
+    // Validate input data
     let validatedData;
     try {
-      validatedData = contractSchema.parse(formData);
+      validatedData = contractSchema.parse(data);
     } catch (validationError) {
       console.error('[UPDATE_CONTRACT] Validation error:', validationError);
       return { 
@@ -47,18 +51,20 @@ export async function updateContract(id: string, formData: any) {
       };
     }
     
-    // Pronađi postojeći ugovor
+    // Find the existing contract
     const existingContract = await db.contract.findUnique({
-      where: { id },
-      select: {
-        id: true,
+      where: { id: contractId },
+      select: { 
+        id: true, 
         createdById: true,
+        contractNumber: true,
+        type: true,
         name: true
       }
     });
     
     if (!existingContract) {
-      console.log('[UPDATE_CONTRACT] Contract not found:', id);
+      console.log('[UPDATE_CONTRACT] Contract not found:', contractId);
       return { success: false, error: 'Contract not found' };
     }
 
@@ -67,15 +73,15 @@ export async function updateContract(id: string, formData: any) {
       createdById: existingContract.createdById
     });
 
-    // Proveri dozvole
-    const isAdmin = session.user.role === 'ADMIN';
-    const isOwner = existingContract.createdById === session.user.id;
+    // Check permissions
+    const isAdmin = userRole === 'ADMIN';
+    const isOwner = existingContract.createdById === userId;
     
     console.log('[UPDATE_CONTRACT] Permission check:', {
       isAdmin,
       isOwner,
-      userRole: session.user.role,
-      userId: session.user.id,
+      userRole,
+      userId,
       contractCreatedById: existingContract.createdById
     });
     
@@ -86,53 +92,87 @@ export async function updateContract(id: string, formData: any) {
       };
     }
 
-    // Ažuriraj ugovor
-    const updatedContract = await db.contract.update({
-      where: { id },
-      data: {
-        name: validatedData.name,
-        contractNumber: validatedData.contractNumber,
-        type: validatedData.type,
-        status: validatedData.status,
-        startDate: validatedData.startDate,
-        endDate: validatedData.endDate,
-        revenuePercentage: validatedData.revenuePercentage,
-        description: validatedData.description,
-        providerId: validatedData.providerId,
-        humanitarianOrgId: validatedData.humanitarianOrgId,
-        parkingServiceId: validatedData.parkingServiceId,
-        operatorId: validatedData.operatorId,
-        isRevenueSharing: validatedData.isRevenueSharing,
-        operatorRevenue: validatedData.operatorRevenue,
-        services: validatedData.services,
-        updatedAt: new Date()
+    // Prepare data for database
+    const dbData = {
+      ...validatedData,
+      // Clear irrelevant IDs based on contract type
+      providerId: validatedData.type === ContractType.PROVIDER ? validatedData.providerId : null,
+      humanitarianOrgId: validatedData.type === ContractType.HUMANITARIAN ? validatedData.humanitarianOrgId : null,
+      parkingServiceId: validatedData.type === ContractType.PARKING ? validatedData.parkingServiceId : null,
+      // Clear operator data if revenue sharing is disabled
+      operatorId: validatedData.isRevenueSharing ? validatedData.operatorId : null,
+      operatorRevenue: validatedData.isRevenueSharing ? validatedData.operatorRevenue : 0,
+      updatedAt: new Date(),
+    };
+
+    // Perform the update with transaction
+    const updatedContract = await db.$transaction(async (tx) => {
+      // Handle services update
+      if (Array.isArray(validatedData.services)) {
+        // Delete existing services
+        await tx.serviceContract.deleteMany({
+          where: { contractId }
+        });
+        
+        // Create new services if any
+        if (validatedData.services.length > 0) {
+          await tx.serviceContract.createMany({
+            data: validatedData.services.map((service: any) => ({
+              contractId,
+              serviceId: service.serviceId,
+              specificTerms: service.specificTerms || null
+            }))
+          });
+        }
       }
+      
+      // Update the main contract
+      return await tx.contract.update({
+        where: { id: contractId },
+        data: dbData,
+        include: {
+          services: {
+            include: {
+              service: true
+            }
+          },
+          provider: true,
+          operator: true,
+          humanitarianOrg: true,
+          parkingService: true,
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      });
     });
 
     console.log('[UPDATE_CONTRACT] Contract updated successfully:', updatedContract.id);
 
-    // Log aktivnost (opciono - samo ako logActivity radi)
+    // Log activity
     try {
       await logActivity({
         action: 'UPDATE',
         entityType: 'contract',
         entityId: updatedContract.id,
         details: `Updated contract: ${updatedContract.name}`,
-        userId: session.user.id
+        userId
       });
     } catch (logError) {
       console.warn('[UPDATE_CONTRACT] Failed to log activity:', logError);
-      // Ne prekidaj proces zbog greške u logovanju
     }
 
     // Revalidate cache
     try {
       revalidatePath('/contracts');
-      revalidatePath(`/contracts/${id}`);
-      revalidatePath(`/contracts/${id}/edit`);
+      revalidatePath(`/contracts/${contractId}`);
+      revalidatePath(`/contracts/${contractId}/edit`);
     } catch (revalidateError) {
       console.warn('[UPDATE_CONTRACT] Failed to revalidate paths:', revalidateError);
-      // Ne prekidaj proces zbog greške u revalidaciji
     }
 
     console.log('[UPDATE_CONTRACT] Success - returning result');
@@ -142,23 +182,29 @@ export async function updateContract(id: string, formData: any) {
       message: 'Contract updated successfully'
     };
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('[UPDATE_CONTRACT] Unexpected error:', error);
     
-    // Specifične greške
-    if (error instanceof Error) {
-      if (error.message.includes('headers')) {
-        return { 
-          success: false, 
-          error: 'Session error. Please refresh the page and try again.' 
-        };
-      }
-      if (error.message.includes('Unique constraint')) {
-        return { 
-          success: false, 
-          error: 'Contract number already exists. Please use a different number.' 
-        };
-      }
+    // Handle specific errors
+    if (error.code === 'P2002') {
+      return { 
+        success: false, 
+        error: 'Contract number already exists. Please use a different number.' 
+      };
+    }
+    
+    if (error.code === 'P2003') {
+      return { 
+        success: false, 
+        error: 'Invalid reference to provider, operator, or service' 
+      };
+    }
+    
+    if (error.code === 'P2025') {
+      return { 
+        success: false, 
+        error: 'Contract not found' 
+      };
     }
     
     return { 

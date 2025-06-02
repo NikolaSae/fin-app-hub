@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //schemas/index.ts
 
 
@@ -14,31 +15,72 @@ export const LoginSchema = z.object({
   }),
   code: z.optional(z.string()),
 });
+=======
+// schemas/index.ts - Export all schemas from a central location
 
-export const RegisterSchema = z.object({
-  email: z.string().email({
-    message: "Email is required",
-  }),
-  password: z.string().min(6, {
-    message: "Minimum 6 characters required",
-  }),
-  name: z.string().min(1, {
-    message: "Name is required",
-  }),
-});
+// Auth schemas
+export {
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+  newPasswordSchema,
+  changePasswordSchema,
+  profileUpdateSchema,
+  userRoleUpdateSchema,
+  userActivationSchema,
+  verifyEmailSchema,
+  twoFactorSetupSchema,
+  twoFactorVerificationSchema,
+  type LoginFormData,
+  type RegisterFormData,
+  type ResetPasswordFormData,
+  type NewPasswordFormData,
+  type ChangePasswordFormData,
+  type ProfileUpdateFormData,
+  type UserRoleUpdateFormData,
+  type UserActivationFormData,
+  type VerifyEmailFormData,
+  type TwoFactorSetupFormData,
+  type TwoFactorVerificationFormData,
+} from './auth';
+>>>>>>> 49014e722309dabc1a1e95bbf7dcf4f35e0f7f53
 
-export const ResetSchema = z.object({
-  email: z.string().email({
-    message: "Email is required",
-  }),
-});
+// Operator schemas
+export {
+  operatorSchema,
+  operatorFilterSchema,
+  operatorUpdateSchema,
+  operatorActivationSchema,
+  operatorBulkOperationSchema,
+  operatorImportSchema,
+  operatorExportSchema,
+  type OperatorFormData,
+  type OperatorFilterData,
+  type OperatorUpdateData,
+  type OperatorActivationData,
+  type OperatorBulkOperationData,
+  type OperatorImportData,
+  type OperatorExportData,
+} from './operator';
 
-export const NewPasswordSchema = z.object({
-  password: z.string().min(6, {
-    message: "Minimum 6 characters required",
-  }),
-});
+// Security schemas
+export {
+  ActivityLogSchema,
+  ActivityLogFilterSchema,
+  PermissionSchema,
+  RolePermissionSchema,
+  RateLimitSchema,
+  BackupConfigSchema,
+  SecurityPolicySchema,
+  SecurityLogExportSchema,
+  PerformanceMetricSchema,
+} from './security';
 
+// You can add more schema exports here as you create them
+// Contract schemas (when you create them)
+// export { contractSchema, ... } from './contract';
+
+<<<<<<< HEAD
 export const SettingsSchema = z
   .object({
     name: z.optional(z.string()),
@@ -181,3 +223,7 @@ export type PerformanceMetricData = z.infer<typeof PerformanceMetricSchema>;
 export type ServiceFormData = z.infer<typeof serviceSchema>;
 export type ServiceUpdateData = z.infer<typeof serviceUpdateSchema>;
 export type ServiceFilterData = z.infer<typeof serviceFilterSchema>;
+=======
+// Complaint schemas (when you create them)  
+// export { complaintSchema, ... } from './complaint';
+>>>>>>> 49014e722309dabc1a1e95bbf7dcf4f35e0f7f53

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,7 +42,7 @@ interface ContractFormProps {
     services?: Array<{ serviceId: string; specificTerms?: string }>;
     createdAt: Date;
     updatedAt: Date;
-    createdById: string; // Added for permission checks
+    createdById: string;
   };
   isEditing?: boolean;
   humanitarianOrgs?: Array<{ id: string; name: string }>;
@@ -61,42 +63,6 @@ export function ContractForm({
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
-  const formRef = useRef<HTMLFormElement>(null);
-  const [formReady, setFormReady] = useState(false);
-
-  // Fix for hydration errors and extension attributes
-  useEffect(() => {
-    // Remove problematic attributes added by browser extensions
-    const removeExtensionAttributes = () => {
-      if (formRef.current) {
-        formRef.current.querySelectorAll('[fdprocessedid]').forEach(el => {
-          el.removeAttribute('fdprocessedid');
-        });
-      }
-    };
-
-    removeExtensionAttributes();
-    setFormReady(true);
-    
-    // Setup mutation observer to catch dynamically added attributes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'fdprocessedid') {
-          mutation.target.removeAttribute('fdprocessedid');
-        }
-      });
-    });
-
-    if (formRef.current) {
-      observer.observe(formRef.current, {
-        attributes: true,
-        attributeFilter: ['fdprocessedid'],
-        subtree: true
-      });
-    }
-
-    return () => observer.disconnect();
-  }, []);
 
   const form = useForm<ContractFormData>({
     resolver: zodResolver(contractSchema),
@@ -122,7 +88,7 @@ export function ContractForm({
 
   // Initialize form with contract data
   useEffect(() => {
-    if (contract && formReady) {
+    if (contract) {
       const initialServices = contract.services?.map(s => ({
         serviceId: s.serviceId,
         specificTerms: s.specificTerms || ''
@@ -139,18 +105,7 @@ export function ContractForm({
         operatorRevenue: contract.operatorRevenue || 0,
       });
     }
-  }, [contract, form, formReady]);
-
-  // Reset services when contract type changes
-  useEffect(() => {
-    if (!isEditing || !contract) {
-      const currentType = form.watch('type');
-      if (currentType !== contract?.type) {
-        setSelectedServices([]);
-        form.setValue('services', []);
-      }
-    }
-  }, [form.watch('type'), contract?.type, isEditing, form]);
+  }, [contract, form]);
 
   // Sync selected services with form value
   useEffect(() => {
@@ -168,98 +123,87 @@ export function ContractForm({
   const contractType = form.watch("type");
   const isRevenueSharing = form.watch("isRevenueSharing");
 
-  // U ContractForm komponenti - modifikuj onSubmit funkciju
-
-
-const onSubmit = async (data: ContractFormData) => {
-  setIsLoading(true);
-  try {
-    console.log('[FORM_SUBMIT] Starting submission:', { isEditing, contractId: contract?.id });
+  const onSubmit = async (data: ContractFormData) => {
+    setIsLoading(true);
     
-    // Authorization check - only ADMIN or contract owner can update
-    if (isEditing && contract && session?.user) {
-      const isAdmin = session.user.role === 'ADMIN';
-      const isOwner = contract.createdById === session.user.id;
+    // Validate dates
+    if (isNaN(new Date(data.startDate).getTime())) {
+      toast.error("Invalid start date");
+      setIsLoading(false);
+      return;
+    }
+    if (isNaN(new Date(data.endDate).getTime())) {
+      toast.error("Invalid end date");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Authorization check
+      if (isEditing && contract && session?.user) {
+        const isAdmin = session.user.role === 'ADMIN';
+        const isOwner = contract.createdById === session.user.id;
+        
+        if (!isAdmin && !isOwner) {
+          toast.error("You don't have permission to update this contract");
+          setIsLoading(false);
+          return;
+        }
+      }
       
-      console.log('[FORM_SUBMIT] Authorization check:', {
-        isAdmin,
-        isOwner,
-        userRole: session.user.role,
-        userId: session.user.id,
-        contractCreatedById: contract.createdById
-      });
+      // Prepare payload with proper data types
+      const payload = {
+        ...data,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
+        revenuePercentage: Number(data.revenuePercentage),
+        operatorRevenue: isRevenueSharing ? Number(data.operatorRevenue) : 0,
+        operatorId: isRevenueSharing ? data.operatorId : null,
+        // Conditionally include type-specific IDs
+        providerId: contractType === ContractType.PROVIDER ? data.providerId : null,
+        humanitarianOrgId: contractType === ContractType.HUMANITARIAN ? data.humanitarianOrgId : null,
+        parkingServiceId: contractType === ContractType.PARKING ? data.parkingServiceId : null,
+      };
       
-      if (!isAdmin && !isOwner) {
-        toast.error("You don't have permission to update this contract");
+      // Validate service selection
+      if (!data.services || data.services.length === 0) {
+        toast.error("Please select at least one service");
         setIsLoading(false);
         return;
       }
-    }
-    
-    // Prepare payload with proper data types
-    const payload = {
-      ...data,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
-      revenuePercentage: Number(data.revenuePercentage),
-      operatorRevenue: isRevenueSharing ? Number(data.operatorRevenue) : 0,
-      operatorId: isRevenueSharing ? data.operatorId : null,
-    };
-    
-    console.log('[FORM_SUBMIT] Prepared payload:', {
-      keys: Object.keys(payload),
-      isRevenueSharing,
-      hasOperatorId: !!payload.operatorId
-    });
 
-    // Call server action directly
-    const result = isEditing && contract
-      ? await updateContract(contract.id, payload)
-      : await createContract(payload);
-    
-    console.log('[FORM_SUBMIT] Server action result:', result);
+      // Call server action
+      const result = isEditing && contract
+        ? await updateContract(contract.id, payload)
+        : await createContract(payload);
 
-    if (result?.success) {
-      toast.success(result.message || 'Contract updated successfully');
-      
-      // Navigate to contract details or list
-      if (result.contract?.id) {
-        router.push(`/contracts/${result.contract.id}`);
-      } else if (contract?.id) {
-        router.push(`/contracts/${contract.id}`);
+      if (result?.success) {
+        toast.success(result.message || (isEditing ? 'Contract updated successfully' : 'Contract created successfully'));
+        
+        // Reset form after successful creation
+        if (!isEditing) form.reset();
+        
+        // Navigate after successful operation
+        if (result.contract?.id) {
+          router.push(`/contracts/${result.contract.id}`);
+        } else if (contract?.id) {
+          router.push(`/contracts/${contract.id}`);
+        } else {
+          router.push('/contracts');
+        }
+        router.refresh();
+      } else if (result?.error) {
+        toast.error(result.error);
       } else {
-        router.push('/contracts');
+        toast.error('Unknown error occurred');
       }
-      
-      router.refresh();
-    } else if (result?.error) {
-      console.error('[FORM_SUBMIT] Server action error:', result.error);
-      toast.error(result.error);
-    } else {
-      console.error('[FORM_SUBMIT] Unknown result format:', result);
-      toast.error('Unknown error occurred');
+    } catch (error: any) {
+      console.error('[FORM_SUBMIT] Error:', error);
+      toast.error(error.message || 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('[FORM_SUBMIT] Submission error:', error);
-    
-    // Better error handling
-    if (error instanceof Error) {
-      if (error.message.includes('ECONNRESET')) {
-        toast.error('Connection lost. Please try again.');
-      } else if (error.message.includes('Unauthorized')) {
-        toast.error('You are not authorized to perform this action.');
-      } else if (error.message.includes('Contract not found')) {
-        toast.error('Contract not found. It may have been deleted.');
-      } else {
-        toast.error(`Error: ${error.message}`);
-      }
-    } else {
-      toast.error('An unexpected error occurred');
-    }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -273,7 +217,6 @@ const onSubmit = async (data: ContractFormData) => {
       <CardContent>
         <Form {...form}>
           <form 
-            ref={formRef}
             onSubmit={form.handleSubmit(onSubmit)} 
             className="space-y-6"
           >
@@ -652,7 +595,7 @@ const onSubmit = async (data: ContractFormData) => {
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading || !form.formState.isValid}
+                disabled={isLoading}
                 className="w-32"
               >
                 {isLoading ? (

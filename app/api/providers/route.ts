@@ -7,35 +7,43 @@ import { UserRole } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
+    // Use getServerSession with authOptions
     const session = await auth();
     const user = session?.user;
 
-    // Провера ауторизације
-    if (!user || ![UserRole.ADMIN, UserRole.MANAGER].includes(user.role as UserRole)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // Authorization check
+    if (!session) {
+      return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
     }
 
-    // Парсирање параметара упита
+    if (![UserRole.ADMIN, UserRole.MANAGER].includes(user?.role as UserRole)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Parse query parameters
     const searchParams = req.nextUrl.searchParams;
-    const page = Number(searchParams.get("page") || "1");
-    const limit = Number(searchParams.get("limit") || "12");
-    const search = searchParams.get("search") || undefined;
-    const isActive = searchParams.get("isActive") 
-      ? searchParams.get("isActive") === "true" 
-      : undefined;
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "12", 10);
+    const skip = (page - 1) * limit;
+    
+    // Get all parameters
+    const searchTerm = searchParams.get("search") || undefined;
+    const isActiveParam = searchParams.get("isActive");
+    const isActive = isActiveParam ? isActiveParam === "true" : undefined;
     const hasContracts = searchParams.get("hasContracts") === "true";
     const hasComplaints = searchParams.get("hasComplaints") === "true";
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortDirection = searchParams.get("sortDirection") || "desc";
 
-    // Креирање услова за упит
+    // Build where clause
     const where: any = {};
     
-    if (search) {
+    // Fixed: Use searchTerm instead of search
+    if (searchTerm) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { contactName: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
+        { name: { contains: searchTerm, mode: "insensitive" } },
+        { contactName: { contains: searchTerm, mode: "insensitive" } },
+        { email: { contains: searchTerm, mode: "insensitive" } },
       ];
     }
     
@@ -51,16 +59,16 @@ export async function GET(req: NextRequest) {
       where.complaints = { some: {} };
     }
 
-    // Креирање сортирања
+    // Create sorting
     const orderBy: any = {};
     orderBy[sortBy] = sortDirection;
 
-    // Извршавање упита
+    // Execute queries
     const [providers, total] = await Promise.all([
       db.provider.findMany({
         where,
         orderBy,
-        skip: (page - 1) * limit,
+        skip,
         take: limit,
         include: {
           _count: {
@@ -81,11 +89,12 @@ export async function GET(req: NextRequest) {
       total,
       page,
       limit,
+      totalPages: Math.ceil(total / limit),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Provider API error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch providers" },
+      { error: "Failed to fetch providers", details: error.message },
       { status: 500 }
     );
   }

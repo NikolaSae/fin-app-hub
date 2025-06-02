@@ -8,7 +8,7 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getUserRole } from "@/lib/auth/auth-utils";
+import { getUserRole, getCurrentUser, hasRequiredRole } from "@/lib/auth/auth-utils";
 import { UserRole } from "@prisma/client";
 
 export const metadata: Metadata = {
@@ -17,26 +17,64 @@ export const metadata: Metadata = {
 };
 
 export default async function NewOperatorPage() {
-  const userRole = await getUserRole();
+  console.log("[NEW_OPERATOR_PAGE] Starting page load");
   
-  // Only ADMIN and MANAGER can create operators
-  if (userRole !== UserRole.ADMIN && userRole !== UserRole.MANAGER) {
-    redirect("/dashboard");
+  try {
+    // Debug: Check multiple ways to get user info
+    const userRole = await getUserRole();
+    const currentUser = await getCurrentUser();
+    const hasAccess = await hasRequiredRole([UserRole.ADMIN, UserRole.MANAGER]);
+    
+    console.log("[NEW_OPERATOR_PAGE] Access check:", {
+      userRole,
+      currentUser: currentUser ? {
+        id: currentUser.id,
+        email: currentUser.email,
+        role: currentUser.role
+      } : null,
+      hasAccess,
+      requiredRoles: [UserRole.ADMIN, UserRole.MANAGER]
+    });
+    
+    // Check access using the helper function
+    if (!hasAccess) {
+      console.log("[NEW_OPERATOR_PAGE] Access denied, redirecting to operators list");
+      redirect("/operators"); // Redirect to operators list instead of dashboard
+    }
+    
+    console.log("[NEW_OPERATOR_PAGE] Access granted, rendering page");
+    
+    return (
+      <DashboardShell>
+        <DashboardHeader
+          heading="Create New Operator"
+          text="Add a new operator to the system"
+        >
+          <Button asChild variant="outline">
+            <Link href="/operators">Cancel</Link>
+          </Button>
+        </DashboardHeader>
+        <div className="grid gap-8">
+          <OperatorForm />
+        </div>
+      </DashboardShell>
+    );
+    
+  } catch (error) {
+    console.error("[NEW_OPERATOR_PAGE] Error:", error);
+    
+    // Show error page instead of redirecting
+    return (
+      <DashboardShell>
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <h2 className="text-2xl font-bold text-red-600">Access Error</h2>
+          <p className="text-gray-600">There was an error checking your permissions.</p>
+          <p className="text-sm text-gray-500">Please try refreshing the page or contact support.</p>
+          <Button asChild>
+            <Link href="/operators">Back to Operators</Link>
+          </Button>
+        </div>
+      </DashboardShell>
+    );
   }
-  
-  return (
-    <DashboardShell>
-      <DashboardHeader
-        heading="Create New Operator"
-        text="Add a new operator to the system"
-      >
-        <Button asChild variant="outline">
-          <Link href="/operators">Cancel</Link>
-        </Button>
-      </DashboardHeader>
-      <div className="grid gap-8">
-        <OperatorForm />
-      </div>
-    </DashboardShell>
-  );
 }

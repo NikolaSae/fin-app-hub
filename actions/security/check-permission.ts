@@ -1,13 +1,10 @@
 ///actions/security/check-permission.ts
-
-
-
 "use server";
 
 import { auth } from "@/lib/auth";
-import { UserRole } from "@prisma/client";
+import { UserRole, LogSeverity } from "@prisma/client";
 import { db } from "@/lib/db";
-import { logSecurityEvent } from "@/lib/security/audit-logger";
+import { logActivity } from "@/lib/security/audit-logger";
 
 export interface Permission {
   name: string;
@@ -134,12 +131,11 @@ export async function checkPermission(
     
     // Permission not defined
     if (!permission) {
-      await logSecurityEvent({
-        action: "permission_check_failed",
+      await logActivity("permission_check_failed", {
         entityType: "permission",
         entityId: permissionName,
         details: `Permission "${permissionName}" does not exist in the system`,
-        severity: "WARNING",
+        severity: LogSeverity.WARNING,
         userId: user.id
       });
       return false;
@@ -159,12 +155,11 @@ export async function checkPermission(
     ];
     
     if (sensitivePermissions.includes(permissionName)) {
-      await logSecurityEvent({
-        action: hasPermission ? "permission_granted" : "permission_denied",
+      await logActivity(hasPermission ? "permission_granted" : "permission_denied", {
         entityType: "permission",
         entityId: permissionName,
         details: `User ${hasPermission ? "has" : "does not have"} permission "${permissionName}"`,
-        severity: hasPermission ? "INFO" : "WARNING",
+        severity: hasPermission ? LogSeverity.INFO : LogSeverity.WARNING,
         userId: user.id
       });
     }
@@ -192,13 +187,16 @@ export function getPermissionsForRole(role: UserRole): string[] {
  * @returns Object with resources as keys and arrays of permissions as values
  */
 export function getAllPermissionsByResource(): Record<string, Permission[]> {
-  return PERMISSIONS.reduce<Record<string, Permission[]>>((acc, permission) => {
-    if (!acc[permission.resource]) {
-      acc[permission.resource] = [];
-    }
-    acc[permission.resource].push(permission);
-    return acc;
-  }, {});
+  const result: Record<string, Permission[]> = {};
+  
+  for (const permission of PERMISSIONS) {
+    if (!result[permission.resource]) {
+  result[permission.resource] = [];
+}
+result[permission.resource].push(permission);
+  }
+  
+  return result;
 }
 
 /**

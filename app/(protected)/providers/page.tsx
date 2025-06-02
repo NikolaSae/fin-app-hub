@@ -3,6 +3,8 @@ import { Metadata } from "next";
 import { ProviderList } from "@/components/providers/ProviderList";
 import { auth } from "@/auth";
 import { UserRole } from "@prisma/client";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = {
   title: "Providers | Management Dashboard",
@@ -11,10 +13,14 @@ export const metadata: Metadata = {
 
 export default async function ProvidersPage() {
   const session = await auth();
-  const currentUser = session?.user;
-  const userRole = currentUser?.role as UserRole | undefined;
   
-  if (!userRole || ![UserRole.ADMIN, UserRole.MANAGER].includes(userRole)) {
+  if (!session) {
+    return <div>Unauthenticated</div>;
+  }
+
+  const userRole = session.user?.role as UserRole;
+  
+  if (![UserRole.ADMIN, UserRole.MANAGER].includes(userRole)) {
     return <div>Unauthorized</div>;
   }
   
@@ -37,7 +43,9 @@ export default async function ProvidersPage() {
         </div>
       </div>
       
-      <ProviderList />
+      <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+        <ProviderList />
+      </Suspense>
     </div>
   );
 }

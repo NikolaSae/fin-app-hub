@@ -1,15 +1,14 @@
 //components/providers/ProviderList.tsx
-
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { ProviderCard } from "@/components/providers/ProviderCard";
 import { ProviderFilters } from "@/components/providers/ProviderFilters";
 import { useProviders } from "@/hooks/use-providers";
 import { toast } from "sonner";
 import ProviderLogList from "@/components/providers/ProviderLogList";
-
+import { useDebounce } from "use-debounce";
 
 export function ProviderList() {
   const {
@@ -26,17 +25,27 @@ export function ProviderList() {
 
   const [actionLoading, setActionLoading] = useState(false);
   const [logRefreshKey, setLogRefreshKey] = useState(0);
+  
+  // Debounce filter changes
+  const [debouncedFilters] = useDebounce(filters, 300);
+  
+  // Sync debounced filters with hook
+  useEffect(() => {
+    if (JSON.stringify(filters) !== JSON.stringify(debouncedFilters)) {
+      setFilters(debouncedFilters);
+    }
+  }, [debouncedFilters, filters, setFilters]);
 
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = useCallback((newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
-  };
+  }, [setPagination]);
 
-  const handleFilterChange = (newFilters) => {
+  const handleFilterChange = useCallback((newFilters: any) => {
     setPagination(prev => ({ ...prev, page: 1 }));
     setFilters(newFilters);
-  };
+  }, [setPagination, setFilters]);
 
-  const handleStatusChange = async (id: string, isActive: boolean) => {
+  const handleStatusChange = useCallback(async (id: string, isActive: boolean) => {
     setActionLoading(true);
     try {
       const response = await fetch(`/api/providers/${id}/status`, {
@@ -51,15 +60,16 @@ export function ProviderList() {
 
       toast.success(`Provider ${isActive ? 'activated' : 'deactivated'} successfully`);
       refreshData();
+      setLogRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error(error);
       toast.error("Failed to update provider status");
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [refreshData]);
 
-  const handleRenewContract = async (id: string) => {
+  const handleRenewContract = useCallback(async (id: string) => {
     setActionLoading(true);
     try {
       const response = await fetch(`/api/providers/${id}/renew-contract`, {
@@ -73,19 +83,18 @@ export function ProviderList() {
 
       toast.success("Contract renewed successfully");
       refreshData();
+      setLogRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error(error);
       toast.error("Failed to renew contract");
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [refreshData]);
 
-  const triggerLogRefresh = () => {
-      console.log("Triggering log refresh...");
-      setLogRefreshKey(prevKey => prevKey + 1);
-  };
-
+  const triggerLogRefresh = useCallback(() => {
+    setLogRefreshKey(prev => prev + 1);
+  }, []);
 
   if (loading && providers.length === 0) {
     return <div className="text-center py-4">Loading providers...</div>;
@@ -94,6 +103,8 @@ export function ProviderList() {
   if (error) {
     return <div className="text-center py-4 text-red-500">{error}</div>;
   }
+
+  const totalPages = Math.ceil(total / pagination.limit);
 
   return (
     <div className="space-y-4">
@@ -115,12 +126,13 @@ export function ProviderList() {
               onStatusChange={handleStatusChange}
               onRenewContract={handleRenewContract}
               triggerLogRefresh={triggerLogRefresh}
+              disabled={actionLoading}
             />
           ))}
         </div>
       )}
 
-      {total > pagination.limit && (
+      {total > pagination.limit && totalPages > 1 && (
         <Pagination className="mt-6">
           <PaginationContent>
             <PaginationItem>
@@ -129,21 +141,24 @@ export function ProviderList() {
                 disabled={pagination.page === 1 || loading || actionLoading}
               />
             </PaginationItem>
-            {Array.from({ length: Math.ceil(total / pagination.limit) }).map((_, index) => (
-              <PaginationItem key={index}>
-                <PaginationLink
-                  onClick={() => handlePageChange(index + 1)}
-                  isActive={index + 1 === pagination.page}
-                  disabled={loading || actionLoading}
-                >
-                  {index + 1}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
+            {Array.from({ length: Math.min(5, totalPages) }).map((_, index) => {
+              const pageNum = index + 1;
+              return (
+                <PaginationItem key={pageNum}>
+                  <PaginationLink
+                    onClick={() => handlePageChange(pageNum)}
+                    isActive={pageNum === pagination.page}
+                    disabled={loading || actionLoading}
+                  >
+                    {pageNum}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            })}
             <PaginationItem>
               <PaginationNext
-                onClick={() => handlePageChange(Math.min(Math.ceil(total / pagination.limit), pagination.page + 1))}
-                disabled={pagination.page >= Math.ceil(total / pagination.limit) || loading || actionLoading}
+                onClick={() => handlePageChange(Math.min(totalPages, pagination.page + 1))}
+                disabled={pagination.page >= totalPages || loading || actionLoading}
               />
             </PaginationItem>
           </PaginationContent>
@@ -151,9 +166,8 @@ export function ProviderList() {
       )}
 
       <div className="mt-8">
-          <ProviderLogList logRefreshKey={logRefreshKey} />
+        <ProviderLogList logRefreshKey={logRefreshKey} />
       </div>
-
     </div>
   );
 }
