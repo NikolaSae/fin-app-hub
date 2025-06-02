@@ -12,22 +12,29 @@ import { ServiceType } from '@prisma/client'; // Uvozimo enum ServiceType iz Pri
 // import { createService } from '@/actions/services/create'; // Pretpostavljena putanja
 
 // U realnoj aplikaciji, dodali biste proveru autentifikacije/autorizacije
-// import { auth } from '@/auth';
+import { auth } from '@/auth';
 // import { currentRole } from "@/lib/auth";
 // import { UserRole } from "@prisma/client";
 
 
 // Handler za GET za dohvatanje liste servisa, opciono filtriranih po tipu
 export async function GET(request: NextRequest) {
-    // U realnoj aplikaciji, dodali biste proveru autentifikacije/autorizacije
-    // const session = await auth();
-    // if (!session?.user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    try {
-        const { searchParams } = request.nextUrl;
-        const typeParam = searchParams.get('type'); // Dobijanje 'type' query parametra (npr. "PROVIDER", "HUMANITARIAN")
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const { searchParams } = request.nextUrl;
+    const typeParam = searchParams.get('type');
 
         let where: any = {}; // Prisma where klauzula
 

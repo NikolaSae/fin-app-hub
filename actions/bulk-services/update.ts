@@ -1,5 +1,6 @@
 //actions/bulk-services/update.ts
 
+//actions/bulk-services/update.ts
 "use server";
 
 import { db } from "@/lib/db";
@@ -28,7 +29,7 @@ export async function updateBulkService(id: string, data: unknown) {
     }
 
     // Validate the input data
-    const validatedData = BulkServiceSchema.parse(data);
+    const validatedData = bulkServiceSchema.parse(data); // ✅ Ispravka: bulkServiceSchema
 
     // Update the bulk service
     const updatedBulkService = await db.bulkService.update({

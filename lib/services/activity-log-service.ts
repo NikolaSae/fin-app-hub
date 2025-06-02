@@ -1,5 +1,4 @@
 // lib/services/activity-log-service.ts
-// lib/services/activity-log-service.ts
 
 import { db } from "@/lib/db"; // Uvoz tvoje Prisma klijent instance
 import { LogSeverity, LogActionType, LogEntityType } from "@prisma/client"; // Uvoz LogSeverity, LogActionType, LogEntityType enum-a

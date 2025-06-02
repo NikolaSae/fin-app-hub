@@ -1,4 +1,5 @@
 // auth.config.ts
+
 import bcrypt from "bcryptjs";
 import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
@@ -9,17 +10,65 @@ import { JWT } from "next-auth/jwt";
 import { LoginSchema } from "@/schemas";
 import { getUserByEmail } from "@/data/user";
 
+// Add global type extensions
+declare module "next-auth" {
+  interface User {
+    id: string;
+    role: string;
+    isActive: boolean;
+  }
+  
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      role: string;
+      isActive: boolean;
+      image?: string | null;
+    } & DefaultSession["user"];
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+    isActive: boolean;
+  }
+}
+
 export default {
   providers: [
     GitHub({
       clientId: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
       allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        return {
+          id: profile.id.toString(),
+          name: profile.name || profile.login,
+          email: profile.email,
+          image: profile.avatar_url,
+          role: "USER", // Default role
+          isActive: true,
+        };
+      }
     }),
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          role: "USER", // Default role
+          isActive: true,
+        };
+      }
     }),
     Credentials({
       async authorize(credentials) {
@@ -33,7 +82,17 @@ export default {
 
           const passwordMatch = await bcrypt.compare(password, user.password);
 
-          if (passwordMatch) return user;
+          if (passwordMatch) {
+            // Return complete user object
+            return {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              isActive: user.isActive,
+              image: user.image,
+            };
+          }
         }
 
         return null;
@@ -42,35 +101,46 @@ export default {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 dana
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
-      // Dodaj user ID u JWT token
+    async jwt({ token, user, trigger, session }) {
+      // 1. Handle initial sign-in
       if (user) {
-        token.id = user.id;
+        return {
+          ...token,
+          id: user.id,
+          role: user.role,
+          isActive: user.isActive,
+        };
       }
+      
+      // 2. Handle session updates
+      if (trigger === "update" && session?.user) {
+        return { ...token, ...session.user };
+      }
+      
       return token;
     },
     async session({ session, token }: { session: Session; token: JWT }) {
-      // Proslijedi user ID iz tokena u sesiju
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
-      }
-      return session;
+      // Ensure all required fields are present
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.id || "",
+          role: token.role || "USER",
+          isActive: token.isActive !== undefined ? token.isActive : true,
+        }
+      };
     },
     async signIn({ user, account, profile }) {
-      // Dozvoli prijavu bez email verifikacije za social providere
+      // Allow social sign-ins without email verification
       if (account?.provider !== "credentials") return true;
 
-      // Za credentials prijavu, provjeri da li je email verificiran
+      // For credentials, require email verification
       const existingUser = await getUserByEmail(user.email!);
-      
-      if (!existingUser?.emailVerified) {
-        return false; // Blokiraj prijavu ako email nije verificiran
-      }
-      
-      return true;
+      return !!existingUser?.emailVerified;
     }
   },
   pages: {

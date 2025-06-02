@@ -4,7 +4,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { ComplaintImportSchema } from "@/schemas/complaint";
+import { ComplaintImportSchema } from "@/schemas/complaint"; // ✅ Ispravka: ComplaintImportSchema postoji
 import { LogSeverity, ComplaintStatus } from "@prisma/client";
 
 export type ImportResult = {
@@ -15,8 +15,12 @@ export type ImportResult = {
   message?: string;
 };
 
+// ✅ Potrebno je kreirati ComplaintImportSchema u schemas/complaint.ts
+// ili koristiti postojeću ComplaintSchema
+
 export async function importComplaints(formData: FormData): Promise<ImportResult> {
   const session = await auth();
+  
   if (!session?.user || !["ADMIN", "MANAGER"].includes(session.user.role)) {
     return {
       success: false,
@@ -62,8 +66,8 @@ export async function importComplaints(formData: FormData): Promise<ImportResult
           rowData[header] = values[index];
         });
 
-        // Validate and parse data
-        const complaintData = ComplaintImportSchema.parse({
+        // Validate and parse data - koristiti ComplaintSchema ili kreirati specifičnu za import
+        const complaintData = ComplaintSchema.parse({
           title: rowData.title,
           description: rowData.description,
           priority: parseInt(rowData.priority) || 3,

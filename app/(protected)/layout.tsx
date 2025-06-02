@@ -24,7 +24,7 @@ export default async function ProtectedLayout({
           <div className="sticky top-0 z-10 w-full flex justify-center bg-card border-b border-border">
             <Navbar />
           </div>
-          <div className="w-full flex flex-col gap-y-10 items-center justify-center bg-background">
+          <div className="w-full flex flex-col gap-y-0 items-center justify-center bg-background">
             {children}
             <ThemeToggle />
           </div>

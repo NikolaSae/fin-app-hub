@@ -1,5 +1,6 @@
 //actions/bulk-services/create.ts
 
+//actions/bulk-services/create.ts
 "use server";
 
 import { db } from "@/lib/db";
@@ -19,7 +20,7 @@ export async function createBulkService(data: unknown) {
     }
 
     // Validate the input data
-    const validatedData = BulkServiceSchema.parse(data);
+    const validatedData = bulkServiceSchema.parse(data); // ✅ Ispravka: bulkServiceSchema
 
     // Create the bulk service
     const bulkService = await db.bulkService.create({

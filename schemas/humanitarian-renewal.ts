@@ -70,6 +70,6 @@ export const renewalFiltersSchema = z.object({
 });
 
 export type CreateHumanitarianRenewalInput = z.infer<typeof createHumanitarianRenewalSchema>;
-export type UpdateHumanitarianRenewalInput = z.infer<typeof updateHumanitonealRenewalSchema>;
+export type UpdateHumanitarianRenewalInput = z.infer<typeof updateHumanitarianRenewalSchema>;
 export type RenewalFilters = z.infer<typeof renewalFiltersSchema>;
 export type HumanitarianRenewalSubStatus = z.infer<typeof HumanitarianRenewalSubStatusEnum>;
