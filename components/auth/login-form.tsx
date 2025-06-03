@@ -1,3 +1,5 @@
+// components/auth/login-form.tsx
+
 "use client";
 
 import * as z from "zod";
@@ -6,7 +8,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LoginSchema } from "@/schemas";
+import { loginSchema } from "@/schemas";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,15 +39,15 @@ export const LoginForm = () => {
   const [success, setSuccess] = useState<string | undefined>("");
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<z.infer<typeof LoginSchema>>({
-    resolver: zodResolver(LoginSchema),
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  const onSubmit = (values: z.infer<typeof LoginSchema>) => {
+  const onSubmit = (values: z.infer<typeof loginSchema>) => {
     setError("");
     setSuccess("");
 

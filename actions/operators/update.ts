@@ -8,7 +8,7 @@ import { OperatorFormValues } from "@/lib/types/operator-types";
 import { operatorSchema } from "@/schemas/operator";
 import { revalidatePath } from "next/cache";
 
-export async function updateOperator(operatorId: string, data: OperatorFormValues) {
+export async function updateOperator(id: string, data: OperatorFormValues) {
   try {
     const session = await auth();
     
@@ -25,29 +25,21 @@ export async function updateOperator(operatorId: string, data: OperatorFormValue
     
     const { name, code, description, logoUrl, website, contactEmail, contactPhone, active } = validatedData.data;
     
-    // Check if the operator exists
-    const existingOperator = await db.operator.findUnique({
-      where: { id: operatorId },
+    // Check if operator with the same code already exists (excluding current)
+    const existingOperator = await db.operator.findFirst({
+      where: {
+        code,
+        id: { not: id }
+      },
     });
     
-    if (!existingOperator) {
-      return { error: "Operator not found" };
-    }
-    
-    // Check if code is being changed and if new code already exists
-    if (code !== existingOperator.code) {
-      const operatorWithCode = await db.operator.findUnique({
-        where: { code },
-      });
-      
-      if (operatorWithCode) {
-        return { error: "An operator with this code already exists" };
-      }
+    if (existingOperator) {
+      return { error: "An operator with this code already exists" };
     }
     
     // Update the operator
     const operator = await db.operator.update({
-      where: { id: operatorId },
+      where: { id },
       data: {
         name,
         code,
@@ -56,13 +48,13 @@ export async function updateOperator(operatorId: string, data: OperatorFormValue
         website,
         contactEmail,
         contactPhone,
-        active,
+        active: active ?? true,
       },
     });
     
-    // Revalidate the operators list and detail pages
+    // Revalidate the operators list
     revalidatePath("/operators");
-    revalidatePath(`/operators/${operatorId}`);
+    revalidatePath(`/operators/${id}`);
     
     return { success: true, data: operator };
     

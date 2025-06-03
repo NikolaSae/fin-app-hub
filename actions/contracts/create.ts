@@ -1,4 +1,5 @@
 // Path: /actions/contracts/create.ts
+// Path: /actions/contracts/create.ts
 'use server';
 
 import { db } from '@/lib/db';
@@ -31,7 +32,18 @@ export async function createContract(data: ContractFormData) {
       };
     }
 
-    // Prepare data for database
+    // PRVO VALIDACIJA SA ZOD SCHEMA - sa string datumima
+    const validationResult = contractSchema.safeParse(data);
+    if (!validationResult.success) {
+      console.error("[CREATE_CONTRACT] Validation failed:", validationResult.error);
+      return {
+        error: "Validation failed",
+        details: validationResult.error.flatten(),
+        success: false
+      };
+    }
+
+    // NAKON validacije, pripremi podatke za bazu - konvertuj datume
     const dbData = {
       ...data,
       startDate: new Date(data.startDate),
@@ -44,17 +56,6 @@ export async function createContract(data: ContractFormData) {
       humanitarianOrgId: data.type === ContractType.HUMANITARIAN ? data.humanitarianOrgId : null,
       parkingServiceId: data.type === ContractType.PARKING ? data.parkingServiceId : null,
     };
-
-    // Validate with Zod schema
-    const validationResult = contractSchema.safeParse(dbData);
-    if (!validationResult.success) {
-      console.error("[CREATE_CONTRACT] Validation failed:", validationResult.error);
-      return {
-        error: "Validation failed",
-        details: validationResult.error.flatten(),
-        success: false
-      };
-    }
 
     // Authorization check
     const session = await auth();

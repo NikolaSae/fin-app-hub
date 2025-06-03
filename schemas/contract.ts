@@ -16,12 +16,19 @@ const baseContractSchema = z.object({
     errorMap: () => ({ message: "Invalid contract type" }),
   }),
   status: z.string(), // Changed from enum to string to match the form data structure
-  startDate: z.string().refine((val) => !isNaN(new Date(val).getTime()), {
-    message: "Start date is required and must be a valid date",
+  startDate: z.union([
+  z.string().refine((val) => !isNaN(new Date(val).getTime()), {
+    message: "Start date must be a valid date string",
   }),
-  endDate: z.string().refine((val) => !isNaN(new Date(val).getTime()), {
-    message: "End date is required and must be a valid date",
+  z.date()
+]).transform((val) => typeof val === 'string' ? val : val.toISOString()),
+
+endDate: z.union([
+  z.string().refine((val) => !isNaN(new Date(val).getTime()), {
+    message: "End date must be a valid date string",
   }),
+  z.date()
+]).transform((val) => typeof val === 'string' ? val : val.toISOString()),
   revenuePercentage: z.number()
     .min(0, { message: "Revenue percentage cannot be negative" })
     .max(100, { message: "Revenue percentage cannot exceed 100" })

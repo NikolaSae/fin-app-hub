@@ -1,3 +1,5 @@
+//actions/login.ts
+
 "use server";
 
 import * as z from "zod";
@@ -5,7 +7,7 @@ import { AuthError } from "next-auth";
 
 import { db } from "@/lib/db";
 import { signIn } from "@/auth";
-import { LoginSchema } from "@/schemas";
+import { loginSchema } from "@/schemas";
 import { getUserByEmail } from "@/data/user";
 import { getTwoFactorTokenByEmail } from "@/data/two-factor-token";
 import { sendVerificationEmail, sendTwoFactorTokenEmail } from "@/lib/mail";
@@ -17,10 +19,10 @@ import {
 import { getTwoFactorConfoirmationByUserId } from "@/data/two-factor-confirmation";
 
 export const login = async (
-  values: z.infer<typeof LoginSchema>,
+  values: z.infer<typeof loginSchema>,
   callbackUrl?: string | null
 ) => {
-  const validatedFields = LoginSchema.safeParse(values);
+  const validatedFields = loginSchema.safeParse(values);
 
   if (!validatedFields.success) {
     return { error: "Invalid fields!" };

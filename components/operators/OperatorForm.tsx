@@ -55,33 +55,77 @@ export function OperatorForm({ operator }: OperatorFormProps) {
   });
 
   async function onSubmit(data: OperatorFormValues) {
+    console.log("Form submitted with data:", data);
+    setIsLoading(true);
+    
     try {
-      setIsLoading(true);
-      
       if (isEditing && operator) {
-        // Update existing operator
-        await updateOperator(operator.id, data);
-        toast.success("Operator updated successfully");
-        router.push(`/operators/${operator.id}`);
+        console.log("Updating operator:", operator.id);
+        const result = await updateOperator(operator.id, data);
+        console.log("Update result:", result);
+        
+        if (result?.error) {
+          toast.error(result.error);
+          if (result.details) {
+            console.error("Validation details:", result.details);
+          }
+        } else if (result?.success) {
+          toast.success("Operator updated successfully");
+          router.push(`/operators/${operator.id}`);
+          router.refresh();
+        } else {
+          toast.error("Operator update failed");
+        }
       } else {
-        // Create new operator
-        const newOperator = await createOperator(data);
-        toast.success("Operator created successfully");
-        router.push(`/operators/${newOperator.id}`);
+        console.log("Creating new operator");
+        const result = await createOperator(data);
+        console.log("Create result:", result);
+        
+        if (result?.error) {
+          toast.error(result.error);
+          if (result.details) {
+            console.error("Validation details:", result.details);
+          }
+        } else if (result?.success && result.data) {
+          toast.success("Operator created successfully");
+          router.push(`/operators/${result.data.id}`);
+          router.refresh();
+        } else {
+          toast.error("Operator creation failed");
+        }
       }
     } catch (error) {
-      console.error("Error saving operator:", error);
-      toast.error("Failed to save operator. Please try again.");
+      console.error("Unexpected error:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
   }
 
+  // Handle form submission with proper validation
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    console.log("Form submit event triggered");
+    e.preventDefault();
+    
+    // Manually trigger validation and submission
+    const isValid = await form.trigger();
+    console.log("Form validation result:", isValid);
+    
+    if (isValid) {
+      const formData = form.getValues();
+      console.log("Form data to submit:", formData);
+      await onSubmit(formData);
+    } else {
+      console.log("Form validation failed:", form.formState.errors);
+      toast.error("Please fix the form errors before submitting");
+    }
+  };
+
   return (
     <Card>
       <CardContent className="pt-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleFormSubmit} className="space-y-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -90,7 +134,11 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                   <FormItem>
                     <FormLabel>Operator Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter operator name" {...field} />
+                      <Input 
+                        placeholder="Enter operator name" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -104,7 +152,11 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                   <FormItem>
                     <FormLabel>Operator Code</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter unique code" {...field} />
+                      <Input 
+                        placeholder="Enter unique code" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormDescription>
                       A unique identifier for the operator
@@ -125,6 +177,7 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                         placeholder="Enter operator description"
                         className="min-h-32"
                         {...field}
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormMessage />
@@ -139,7 +192,11 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                   <FormItem>
                     <FormLabel>Logo URL</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com/logo.png" {...field} />
+                      <Input 
+                        placeholder="https://example.com/logo.png" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,7 +210,11 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                   <FormItem>
                     <FormLabel>Website</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com" {...field} />
+                      <Input 
+                        placeholder="https://example.com" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -167,7 +228,11 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                   <FormItem>
                     <FormLabel>Contact Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="contact@example.com" {...field} />
+                      <Input 
+                        placeholder="contact@example.com" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -181,7 +246,11 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                   <FormItem>
                     <FormLabel>Contact Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="+1234567890" {...field} />
+                      <Input 
+                        placeholder="+1234567890" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -197,6 +266,7 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
@@ -221,10 +291,14 @@ export function OperatorForm({ operator }: OperatorFormProps) {
                     router.push("/operators");
                   }
                 }}
+                disabled={isLoading}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+              >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? "Update Operator" : "Create Operator"}
               </Button>

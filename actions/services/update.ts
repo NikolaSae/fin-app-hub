@@ -93,3 +93,67 @@ export async function updateContract(id: string, formData: any) {
     };
   }
 }
+export async function updateService(id: string, values: ServiceFormData) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { error: 'Unauthorized' };
+    }
+
+    // Validate input data
+    const validatedData = serviceSchema.parse(values);
+
+    // Find existing service
+    const existingService = await db.service.findUnique({
+      where: { id }
+    });
+
+    if (!existingService) {
+      return { error: 'Service not found' };
+    }
+
+    // Check permissions
+    const isAdmin = session.user.role === 'ADMIN';
+    const isOwner = existingService.createdById === session.user.id;
+
+    if (!isAdmin && !isOwner) {
+      return { error: 'Insufficient permissions' };
+    }
+
+    // Update service
+    const updatedService = await db.service.update({
+      where: { id },
+      data: {
+        name: validatedData.name,
+        type: validatedData.type,
+        description: validatedData.description,
+        isActive: validatedData.isActive,
+        updatedAt: new Date(),
+      }
+    });
+
+    // Log activity
+    await logActivity({
+      action: 'UPDATE',
+      entityType: 'service',
+      entityId: updatedService.id,
+      details: `Updated service: ${updatedService.name}`,
+      userId: session.user.id
+    });
+
+    // Revalidate cache
+    revalidatePath('/services');
+    revalidatePath(`/services/${id}`);
+    revalidatePath(`/services/${id}/edit`);
+
+    return { success: `Service "${updatedService.name}" updated successfully!` };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { 
+        error: 'Validation error', 
+        details: error.errors.map(e => e.message) 
+      };
+    }
+    return { error: 'Failed to update service' };
+  }
+}
