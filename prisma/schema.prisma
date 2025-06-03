@@ -173,20 +173,22 @@ model HumanitarianOrg {
 }
 
 model ParkingTransaction {
-  id               String         @id @default(cuid())
-  parkingServiceId String
-  date             DateTime
-  group            String
-  serviceName      String
-  price            Float
-  quantity         Float
-  amount           Float
-  createdAt        DateTime       @default(now())
+  id               String         @id @default(cuid())
+  parkingServiceId String
+  date             DateTime
+  group            String
+  serviceName      String
+  price            Float
+  quantity         Float
+  amount           Float
+  createdAt        DateTime       @default(now())
+  serviceId        String
 
-  parkingService   ParkingService @relation(fields: [parkingServiceId], references: [id])
+  parkingService   ParkingService @relation(fields: [parkingServiceId], references: [id])
+  service          Service        @relation(fields: [serviceId], references: [id])  // Add relation to Service
 
-  @@index([parkingServiceId, date, serviceName])
-  @@unique([parkingServiceId, date, serviceName, group])
+  @@index([parkingServiceId, date, serviceName])
+  @@unique([parkingServiceId, date, serviceName, group])
 }
 
 // Parking Service model
@@ -423,6 +425,7 @@ model Service {
   vasServices   VasService[]
   bulkServices  BulkService[]
   complaints    Complaint[]
+  transactions  ParkingTransaction[]
 
   @@index([type])
   @@index([name])

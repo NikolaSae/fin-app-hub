@@ -33,16 +33,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteService } from "@/actions/parking-services/delete";
 import { toast } from "sonner";
-// Import the actual ParkingServiceContracts component if it's defined in a separate file
 import ParkingServiceContracts from "@/components/parking-services/ParkingServiceContracts";
-
 
 interface ParkingServiceDetailsProps {
   parkingService: ParkingServiceDetail;
+  contractsCount: number;
+  servicesCount: number;
 }
 
 export default function ParkingServiceDetails({
   parkingService,
+  contractsCount,
+  servicesCount
 }: ParkingServiceDetailsProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -184,28 +186,49 @@ export default function ParkingServiceDetails({
         </Card>
       </div>
 
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">Associated Contracts</CardTitle>
-              <Link href={`/contracts/new?parkingServiceId=${parkingService.id}`}>
-                <Button variant="outline" size="sm">
-                  Add Contract
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div id="contracts-container">
-               {/* Render the actual ParkingServiceContracts component here */}
-               <ParkingServiceContracts parkingServiceId={parkingService.id} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Related Entities Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Related Entities</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="text-center">
+            <h3 className="text-sm font-medium text-muted-foreground">Contracts</h3>
+            <p className="text-3xl font-bold">{contractsCount}</p>
+            <Link href="#contracts">
+              <Button variant="link" className="mt-2">
+                View Contracts
+              </Button>
+            </Link>
+          </div>
+          
+          <div className="text-center">
+            <h3 className="text-sm font-medium text-muted-foreground">Services</h3>
+            <p className="text-3xl font-bold">{servicesCount}</p>
+            <Link href="#services-overview">
+              <Button variant="link" className="mt-2">
+                View Services
+              </Button>
+            </Link>
+          </div>
+          
+          <div className="text-center">
+            <h3 className="text-sm font-medium text-muted-foreground">Bulk Services</h3>
+            <p className="text-3xl font-bold">0</p>
+            <Button variant="link" className="mt-2" disabled>
+              Coming Soon
+            </Button>
+          </div>
+          
+          <div className="text-center">
+            <h3 className="text-sm font-medium text-muted-foreground">Complaints</h3>
+            <p className="text-3xl font-bold">0</p>
+            <Button variant="link" className="mt-2" disabled>
+              Coming Soon
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-// Removed the ParkingServiceContractsPlaceholder component definition

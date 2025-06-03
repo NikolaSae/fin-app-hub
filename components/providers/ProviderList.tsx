@@ -8,7 +8,7 @@ import { ProviderFilters } from "@/components/providers/ProviderFilters";
 import { useProviders } from "@/hooks/use-providers";
 import { toast } from "sonner";
 import ProviderLogList from "@/components/providers/ProviderLogList";
-import { useDebounce } from "use-debounce";
+import { useDebounce } from '@/hooks/useDebounce';
 
 export function ProviderList() {
   const {
@@ -27,7 +27,7 @@ export function ProviderList() {
   const [logRefreshKey, setLogRefreshKey] = useState(0);
   
   // Debounce filter changes
-  const [debouncedFilters] = useDebounce(filters, 300);
+  const debouncedFilters = useDebounce(filters, 300);
   
   // Sync debounced filters with hook
   useEffect(() => {

@@ -41,7 +41,20 @@ def return_db_connection(conn):
     connection_pool.putconn(conn)
 
 def get_db_params():
-    """Get database parameters with environment variable read at runtime"""
+    """Get database parameters based on environment configuration"""
+    # Check if we should use local database
+    if os.getenv("USE_LOCAL_DB", "true").lower() == "true":
+        logging.info("Using LOCAL database configuration")
+        return {
+            "host": "localhost",
+            "port": "5432",
+            "dbname": "findatbas-copy",
+            "user": "postgres",
+            "password": "postgres",
+        }
+    
+    # SUPABASE configuration (kept as fallback)
+    logging.info("Using SUPABASE database configuration")
     password = os.getenv("SUPABASE_PASSWORD")
     if not password:
         raise ValueError("SUPABASE_PASSWORD environment variable is not set")
@@ -432,16 +445,16 @@ def sanitize_parking_record(row):
         
         return {
             'parkingServiceId': row.get('parkingServiceId', ''),
-            'serviceId': row.get('serviceId', ''),
+            'serviceId': row.get('serviceId', ''),  # Ensure this is included
             'date': convert_date_format(row.get('date', '')),
             'group': str(row.get('group', '')),
             'serviceName': service_code,
-            'originalServiceName': original_service_name,
             'price': convert_to_float(row.get('price', 0)) or 0,
             'quantity': convert_to_float(row.get('quantity', 0)) or 0,
             'amount': convert_to_float(row.get('amount', 0)) or 0
         }
     except Exception as e:
+        logging.error(f"Sanitization error: {e}")
         return None
 
 def process_excel(input_file):
@@ -652,6 +665,7 @@ def import_to_postgresql(csv_path):
                 sanitized_row['quantity'] > 0 and 
                 sanitized_row['group'] == 'prepaid'):
                 sanitized_data.append(sanitized_row)
+                logging.info(f"First record data: {sanitized_data[0]}")
 
         if not sanitized_data:
             return
@@ -666,9 +680,9 @@ def import_to_postgresql(csv_path):
                 upsert_sql = """
                 INSERT INTO "ParkingTransaction" (
                     "id", "parkingServiceId", "date", "group", "serviceName", 
-                    "price", "quantity", "amount", "createdAt"
+                    "price", "quantity", "amount", "createdAt", "serviceId"
                 )
-                VALUES (gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT ("parkingServiceId", "date", "serviceName", "group")
                 DO UPDATE SET
                     "price" = EXCLUDED."price",
@@ -685,7 +699,8 @@ def import_to_postgresql(csv_path):
                     record['price'],
                     record['quantity'],
                     record['amount'],
-                    datetime.now()
+                    datetime.now(),
+                    record['serviceId']
                 ))
                 
                 result = cur.fetchone()
@@ -699,6 +714,7 @@ def import_to_postgresql(csv_path):
                     
             except Exception as e:
                 error_count += 1
+                logging.error(f"Error on record {i}: {e}")
                 try:
                     conn.rollback()
                     cur = conn.cursor()

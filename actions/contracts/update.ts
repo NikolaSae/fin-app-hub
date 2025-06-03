@@ -1,4 +1,5 @@
 // /actions/contracts/update.ts
+// /actions/contracts/update.ts
 'use server';
 
 import { z } from 'zod';
@@ -92,32 +93,35 @@ export async function updateContract(contractId: string, data: any) {
       };
     }
 
+    // Extract services to handle separately
+    const { services: servicesData, ...restValidatedData } = validatedData;
+
     // Prepare data for database
     const dbData = {
-      ...validatedData,
+      ...restValidatedData,
       // Clear irrelevant IDs based on contract type
-      providerId: validatedData.type === ContractType.PROVIDER ? validatedData.providerId : null,
-      humanitarianOrgId: validatedData.type === ContractType.HUMANITARIAN ? validatedData.humanitarianOrgId : null,
-      parkingServiceId: validatedData.type === ContractType.PARKING ? validatedData.parkingServiceId : null,
+      providerId: restValidatedData.type === ContractType.PROVIDER ? restValidatedData.providerId : null,
+      humanitarianOrgId: restValidatedData.type === ContractType.HUMANITARIAN ? restValidatedData.humanitarianOrgId : null,
+      parkingServiceId: restValidatedData.type === ContractType.PARKING ? restValidatedData.parkingServiceId : null,
       // Clear operator data if revenue sharing is disabled
-      operatorId: validatedData.isRevenueSharing ? validatedData.operatorId : null,
-      operatorRevenue: validatedData.isRevenueSharing ? validatedData.operatorRevenue : 0,
+      operatorId: restValidatedData.isRevenueSharing ? restValidatedData.operatorId : null,
+      operatorRevenue: restValidatedData.isRevenueSharing ? restValidatedData.operatorRevenue : 0,
       updatedAt: new Date(),
     };
 
     // Perform the update with transaction
     const updatedContract = await db.$transaction(async (tx) => {
       // Handle services update
-      if (Array.isArray(validatedData.services)) {
+      if (Array.isArray(servicesData)) {
         // Delete existing services
         await tx.serviceContract.deleteMany({
           where: { contractId }
         });
         
         // Create new services if any
-        if (validatedData.services.length > 0) {
+        if (servicesData.length > 0) {
           await tx.serviceContract.createMany({
-            data: validatedData.services.map((service: any) => ({
+            data: servicesData.map((service: any) => ({
               contractId,
               serviceId: service.serviceId,
               specificTerms: service.specificTerms || null
@@ -126,7 +130,7 @@ export async function updateContract(contractId: string, data: any) {
         }
       }
       
-      // Update the main contract
+      // Update the main contract (without services)
       return await tx.contract.update({
         where: { id: contractId },
         data: dbData,
