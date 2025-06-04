@@ -1,6 +1,7 @@
 // app/(protected)/providers/page.tsx
 import { Metadata } from "next";
 import { ProviderList } from "@/components/providers/ProviderList";
+import { BlacklistSection } from "@/components/blacklist/BlacklistSection";
 import { auth } from "@/auth";
 import { UserRole } from "@prisma/client";
 import { Suspense } from "react";
@@ -8,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = {
   title: "Providers | Management Dashboard",
-  description: "View and manage all providers in the system",
+  description: "View and manage all providers and blacklist in the system",
 };
 
 export default async function ProvidersPage() {
@@ -25,12 +26,13 @@ export default async function ProvidersPage() {
   }
   
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-8">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Providers</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Providers & Security</h1>
           <p className="text-gray-500">
-            View and manage all providers in the system
+            Manage providers and sender blacklist for your system
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -43,9 +45,27 @@ export default async function ProvidersPage() {
         </div>
       </div>
       
-      <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-        <ProviderList />
-      </Suspense>
+      {/* Providers Section */}
+      <div className="space-y-4">
+        <div className="border-b border-gray-200 pb-2">
+          <h2 className="text-lg font-semibold text-gray-900">Providers</h2>
+          <p className="text-sm text-gray-500">View and manage all providers in the system</p>
+        </div>
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <ProviderList />
+        </Suspense>
+      </div>
+
+      {/* Blacklist Section */}
+      <div className="space-y-4">
+        <div className="border-b border-gray-200 pb-2">
+          <h2 className="text-lg font-semibold text-gray-900">Sender Blacklist</h2>
+          <p className="text-sm text-gray-500">Manage blacklisted senders and check for matches in BulkService data</p>
+        </div>
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <BlacklistSection />
+        </Suspense>
+      </div>
     </div>
   );
 }

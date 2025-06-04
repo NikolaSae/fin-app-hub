@@ -119,6 +119,7 @@ model User {
   notificationPreferences NotificationPreference?
   createdHumanitarianRenewals HumanitarianContractRenewal[] @relation("RenewalCreator")
   modifiedHumanitarianRenewals HumanitarianContractRenewal[] @relation("RenewalModifier")
+  senderBlacklists        SenderBlacklist[]      @relation("BlacklistCreator")
 
   // Added the inverse relation to LogEntry, using the relation name
   logEntries              LogEntry[]             @relation("LogCreator")
@@ -330,6 +331,28 @@ model HumanitarianContractRenewal {
   @@index([humanitarianOrgId])
   @@index([subStatus])
   @@index([proposedStartDate])
+}
+
+model SenderBlacklist {
+  id               String   @id @default(cuid())
+  senderName       String   // Sender name to blacklist
+  effectiveDate    DateTime // Date when blacklist becomes effective
+  description      String?  @db.Text // Optional description/reason for blacklisting
+  isActive         Boolean  @default(true) // Whether this blacklist entry is active
+  
+  // Detection tracking
+  matchCount       Int      @default(0) // Number of times this sender was detected
+  lastMatchDate    DateTime? // Last time a match was found
+  
+  // Audit fields
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdById      String
+  createdBy        User     @relation("BlacklistCreator", fields: [createdById], references: [id])
+
+  @@index([senderName])
+  @@index([effectiveDate])
+  @@index([isActive])
 }
 
 model Operator {

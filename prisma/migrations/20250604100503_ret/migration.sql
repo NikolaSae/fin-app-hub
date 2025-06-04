@@ -2,10 +2,10 @@
 CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'MANAGER', 'AGENT', 'USER');
 
 -- CreateEnum
-CREATE TYPE "ContractStatus" AS ENUM ('ACTIVE', 'EXPIRED', 'PENDING', 'RENEWAL_IN_PROGRESS');
+CREATE TYPE "ContractStatus" AS ENUM ('ACTIVE', 'EXPIRED', 'PENDING', 'RENEWAL_IN_PROGRESS', 'TERMINATED');
 
 -- CreateEnum
-CREATE TYPE "ContractType" AS ENUM ('PROVIDER', 'HUMANITARIAN', 'PARKING');
+CREATE TYPE "ContractType" AS ENUM ('PROVIDER', 'HUMANITARIAN', 'PARKING', 'BULK');
 
 -- CreateEnum
 CREATE TYPE "HumanitarianRenewalSubStatus" AS ENUM ('DOCUMENT_COLLECTION', 'LEGAL_REVIEW', 'FINANCIAL_APPROVAL', 'AWAITING_SIGNATURE', 'FINAL_PROCESSING');
@@ -14,7 +14,19 @@ CREATE TYPE "HumanitarianRenewalSubStatus" AS ENUM ('DOCUMENT_COLLECTION', 'LEGA
 CREATE TYPE "ServiceType" AS ENUM ('VAS', 'BULK', 'HUMANITARIAN', 'PARKING');
 
 -- CreateEnum
+CREATE TYPE "BillingType" AS ENUM ('PREPAID', 'POSTPAID');
+
+-- CreateEnum
 CREATE TYPE "ComplaintStatus" AS ENUM ('NEW', 'ASSIGNED', 'IN_PROGRESS', 'PENDING', 'RESOLVED', 'CLOSED', 'REJECTED');
+
+-- CreateEnum
+CREATE TYPE "LogActionType" AS ENUM ('ACTIVATION', 'DEACTIVATION', 'STATUS_CHANGE', 'NOTE');
+
+-- CreateEnum
+CREATE TYPE "LogStatus" AS ENUM ('IN_PROGRESS', 'FINISHED');
+
+-- CreateEnum
+CREATE TYPE "LogEntityType" AS ENUM ('PROVIDER', 'PARKING_SERVICE', 'BULK_SERVICE');
 
 -- CreateEnum
 CREATE TYPE "LogSeverity" AS ENUM ('INFO', 'WARNING', 'ERROR', 'CRITICAL');
@@ -117,6 +129,7 @@ CREATE TABLE "Provider" (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "imageUrl" TEXT,
 
     CONSTRAINT "Provider_pkey" PRIMARY KEY ("id")
 );
@@ -136,6 +149,22 @@ CREATE TABLE "HumanitarianOrg" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "HumanitarianOrg_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ParkingTransaction" (
+    "id" TEXT NOT NULL,
+    "parkingServiceId" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "group" TEXT NOT NULL,
+    "serviceName" TEXT NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
+    "quantity" DOUBLE PRECISION NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "serviceId" TEXT NOT NULL,
+
+    CONSTRAINT "ParkingTransaction_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -203,6 +232,23 @@ CREATE TABLE "HumanitarianContractRenewal" (
 );
 
 -- CreateTable
+CREATE TABLE "SenderBlacklist" (
+    "id" TEXT NOT NULL,
+    "senderName" TEXT NOT NULL,
+    "providerId" TEXT NOT NULL,
+    "effectiveDate" TIMESTAMP(3) NOT NULL,
+    "description" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "matchCount" INTEGER NOT NULL DEFAULT 0,
+    "lastMatchDate" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "SenderBlacklist_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Operator" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -266,6 +312,7 @@ CREATE TABLE "Service" (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "billingType" "BillingType",
 
     CONSTRAINT "Service_pkey" PRIMARY KEY ("id")
 );
@@ -345,6 +392,7 @@ CREATE TABLE "Complaint" (
     "resolvedAt" TIMESTAMP(3),
     "closedAt" TIMESTAMP(3),
     "humanitarianOrgId" TEXT,
+    "parkingServiceId" TEXT,
 
     CONSTRAINT "Complaint_pkey" PRIMARY KEY ("id")
 );
@@ -385,6 +433,27 @@ CREATE TABLE "Attachment" (
     "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Attachment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LogEntry" (
+    "id" TEXT NOT NULL,
+    "entityType" "LogEntityType" NOT NULL,
+    "entityId" TEXT NOT NULL,
+    "action" "LogActionType" NOT NULL,
+    "subject" TEXT NOT NULL,
+    "description" TEXT,
+    "status" "LogStatus" NOT NULL DEFAULT 'IN_PROGRESS',
+    "sendEmail" BOOLEAN NOT NULL DEFAULT false,
+    "providerId" TEXT,
+    "parkingServiceId" TEXT,
+    "bulkServiceId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+    "updatedById" TEXT,
+
+    CONSTRAINT "LogEntry_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -490,10 +559,19 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "Provider_name_key" ON "Provider"("name");
 
 -- CreateIndex
+CREATE INDEX "Provider_name_idx" ON "Provider"("name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "HumanitarianOrg_name_key" ON "HumanitarianOrg"("name");
 
 -- CreateIndex
 CREATE INDEX "HumanitarianOrg_name_idx" ON "HumanitarianOrg"("name");
+
+-- CreateIndex
+CREATE INDEX "ParkingTransaction_parkingServiceId_date_serviceName_idx" ON "ParkingTransaction"("parkingServiceId", "date", "serviceName");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ParkingTransaction_parkingServiceId_date_serviceName_group_key" ON "ParkingTransaction"("parkingServiceId", "date", "serviceName", "group");
 
 -- CreateIndex
 CREATE INDEX "ParkingService_name_idx" ON "ParkingService"("name");
@@ -530,6 +608,21 @@ CREATE INDEX "HumanitarianContractRenewal_subStatus_idx" ON "HumanitarianContrac
 
 -- CreateIndex
 CREATE INDEX "HumanitarianContractRenewal_proposedStartDate_idx" ON "HumanitarianContractRenewal"("proposedStartDate");
+
+-- CreateIndex
+CREATE INDEX "SenderBlacklist_senderName_idx" ON "SenderBlacklist"("senderName");
+
+-- CreateIndex
+CREATE INDEX "SenderBlacklist_providerId_idx" ON "SenderBlacklist"("providerId");
+
+-- CreateIndex
+CREATE INDEX "SenderBlacklist_effectiveDate_idx" ON "SenderBlacklist"("effectiveDate");
+
+-- CreateIndex
+CREATE INDEX "SenderBlacklist_isActive_idx" ON "SenderBlacklist"("isActive");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SenderBlacklist_senderName_providerId_key" ON "SenderBlacklist"("senderName", "providerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Operator_code_key" ON "Operator"("code");
@@ -580,7 +673,7 @@ CREATE INDEX "BulkService_serviceId_idx" ON "BulkService"("serviceId");
 CREATE INDEX "BulkService_providerId_idx" ON "BulkService"("providerId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "BulkService_provider_name_agreement_name_service_name_sende_key" ON "BulkService"("provider_name", "agreement_name", "service_name", "sender_name", "requests", "message_parts");
+CREATE UNIQUE INDEX "BulkService_provider_name_agreement_name_service_name_sende_key" ON "BulkService"("provider_name", "agreement_name", "service_name", "sender_name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Product_code_key" ON "Product"("code");
@@ -635,6 +728,24 @@ CREATE INDEX "Comment_isInternal_idx" ON "Comment"("isInternal");
 
 -- CreateIndex
 CREATE INDEX "Attachment_complaintId_idx" ON "Attachment"("complaintId");
+
+-- CreateIndex
+CREATE INDEX "LogEntry_entityType_entityId_idx" ON "LogEntry"("entityType", "entityId");
+
+-- CreateIndex
+CREATE INDEX "LogEntry_providerId_idx" ON "LogEntry"("providerId");
+
+-- CreateIndex
+CREATE INDEX "LogEntry_parkingServiceId_idx" ON "LogEntry"("parkingServiceId");
+
+-- CreateIndex
+CREATE INDEX "LogEntry_bulkServiceId_idx" ON "LogEntry"("bulkServiceId");
+
+-- CreateIndex
+CREATE INDEX "LogEntry_createdById_idx" ON "LogEntry"("createdById");
+
+-- CreateIndex
+CREATE INDEX "LogEntry_createdAt_idx" ON "LogEntry"("createdAt");
 
 -- CreateIndex
 CREATE INDEX "ActivityLog_action_idx" ON "ActivityLog"("action");
@@ -703,6 +814,12 @@ ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user
 ALTER TABLE "TwoFactorConfirmation" ADD CONSTRAINT "TwoFactorConfirmation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "ParkingTransaction" ADD CONSTRAINT "ParkingTransaction_parkingServiceId_fkey" FOREIGN KEY ("parkingServiceId") REFERENCES "ParkingService"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ParkingTransaction" ADD CONSTRAINT "ParkingTransaction_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Contract" ADD CONSTRAINT "Contract_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Provider"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -731,6 +848,12 @@ ALTER TABLE "HumanitarianContractRenewal" ADD CONSTRAINT "HumanitarianContractRe
 
 -- AddForeignKey
 ALTER TABLE "HumanitarianContractRenewal" ADD CONSTRAINT "HumanitarianContractRenewal_lastModifiedById_fkey" FOREIGN KEY ("lastModifiedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SenderBlacklist" ADD CONSTRAINT "SenderBlacklist_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Provider"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SenderBlacklist" ADD CONSTRAINT "SenderBlacklist_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ServiceContract" ADD CONSTRAINT "ServiceContract_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "Contract"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -781,6 +904,9 @@ ALTER TABLE "Complaint" ADD CONSTRAINT "Complaint_assignedAgentId_fkey" FOREIGN 
 ALTER TABLE "Complaint" ADD CONSTRAINT "Complaint_humanitarianOrgId_fkey" FOREIGN KEY ("humanitarianOrgId") REFERENCES "HumanitarianOrg"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Complaint" ADD CONSTRAINT "Complaint_parkingServiceId_fkey" FOREIGN KEY ("parkingServiceId") REFERENCES "ParkingService"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ComplaintStatusHistory" ADD CONSTRAINT "ComplaintStatusHistory_complaintId_fkey" FOREIGN KEY ("complaintId") REFERENCES "Complaint"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -791,6 +917,21 @@ ALTER TABLE "Comment" ADD CONSTRAINT "Comment_userId_fkey" FOREIGN KEY ("userId"
 
 -- AddForeignKey
 ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_complaintId_fkey" FOREIGN KEY ("complaintId") REFERENCES "Complaint"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LogEntry" ADD CONSTRAINT "LogEntry_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Provider"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LogEntry" ADD CONSTRAINT "LogEntry_parkingServiceId_fkey" FOREIGN KEY ("parkingServiceId") REFERENCES "ParkingService"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LogEntry" ADD CONSTRAINT "LogEntry_bulkServiceId_fkey" FOREIGN KEY ("bulkServiceId") REFERENCES "BulkService"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LogEntry" ADD CONSTRAINT "LogEntry_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LogEntry" ADD CONSTRAINT "LogEntry_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ActivityLog" ADD CONSTRAINT "ActivityLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
