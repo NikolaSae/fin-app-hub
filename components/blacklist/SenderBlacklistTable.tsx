@@ -1,3 +1,5 @@
+// components/blacklist/SenderBlacklistTable.tsx
+
 "use client";
 
 import React from 'react';
@@ -35,12 +37,11 @@ export function SenderBlacklistTable({
   isLoading,
   pagination,
   onPageChange,
-  onRefresh,
+  onRefresh, // Make sure this is passed down
   matchedProviders = {}
 }: SenderBlacklistTableProps) {
   const [updatingId, setUpdatingId] = React.useState<string | null>(null);
 
-  // Ensure entries isn't undefined
   const safeEntries = entries || [];
 
   const handlePageChange = (newPage: number) => {
@@ -57,7 +58,7 @@ export function SenderBlacklistTable({
 
       if (result.success) {
         toast.success(`Blacklist entry ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-        onRefresh();
+        onRefresh(); // Call the refresh function
       } else {
         toast.error(result.error || "Failed to update blacklist entry");
       }
@@ -65,7 +66,7 @@ export function SenderBlacklistTable({
       console.error("Error updating blacklist entry:", error);
       toast.error("An unexpected error occurred");
     } finally {
-      setUpdatingId(null);
+      setUpdatingId(null); // Reset updating state
     }
   };
 
@@ -80,7 +81,7 @@ export function SenderBlacklistTable({
 
       if (result.success) {
         toast.success("Blacklist entry deleted successfully");
-        onRefresh();
+        onRefresh(); // Call the refresh function
       } else {
         toast.error(result.error || "Failed to delete blacklist entry");
       }
@@ -88,7 +89,7 @@ export function SenderBlacklistTable({
       console.error("Error deleting blacklist entry:", error);
       toast.error("An unexpected error occurred");
     } finally {
-      setUpdatingId(null);
+      setUpdatingId(null); // Reset updating state
     }
   };
 

@@ -4,6 +4,8 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { createAuditLog } from "@/lib/security/black-log";
+import { LogBlackType } from "@prisma/client";
 
 interface CreateBlacklistEntryData {
   senderName: string;
@@ -15,16 +17,13 @@ interface CreateBlacklistEntryData {
 export async function createBlacklistEntry(data: CreateBlacklistEntryData) {
   try {
     const session = await auth();
-    
     if (!session?.user?.id) {
       return { success: false, error: "Unauthorized" };
     }
 
-    // Proveri da li već postoji unos za ovog sendera (globalno)
+    // Check for existing entry
     const existingEntry = await db.senderBlacklist.findFirst({
-      where: {
-        senderName: data.senderName
-      }
+      where: { senderName: data.senderName }
     });
 
     if (existingEntry) {
@@ -34,7 +33,7 @@ export async function createBlacklistEntry(data: CreateBlacklistEntryData) {
       };
     }
 
-    // Kreiraj JEDAN globalni unos bez provajdera
+    // Create entry
     const blacklistEntry = await db.senderBlacklist.create({
       data: {
         senderName: data.senderName,
@@ -42,32 +41,34 @@ export async function createBlacklistEntry(data: CreateBlacklistEntryData) {
         description: data.description,
         isActive: data.isActive ?? true,
         createdById: session.user.id
-      }
-    });
-
-    // Dohvati kreirani unos sa relacijama
-    const createdEntry = await db.senderBlacklist.findUnique({
-      where: { id: blacklistEntry.id },
+      },
       include: {
         createdBy: {
-          select: {
-            id: true,
-            name: true
-          }
+          select: { id: true, name: true }
         }
       }
     });
 
+    // Create audit log
+    await createAuditLog({
+      action: LogBlackType.CREATE,
+      entityId: blacklistEntry.id,
+      userId: session.user.id,
+      newData: blacklistEntry
+    });
+
     revalidatePath('/providers');
-    revalidatePath('/blacklist');
     
     return { 
       success: true, 
-      data: createdEntry ? [createdEntry] : [],
+      data: blacklistEntry,
       message: `Blacklist entry created for sender: ${data.senderName}`
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating blacklist entry:", error);
-    return { success: false, error: "Failed to create blacklist entry" };
+    return { 
+      success: false, 
+      error: error.message || "Failed to create blacklist entry" 
+    };
   }
 }

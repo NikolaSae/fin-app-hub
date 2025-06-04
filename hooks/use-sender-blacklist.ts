@@ -21,6 +21,12 @@ export function useSenderBlacklist() {
   });
   const [search, setSearch] = useState("");
   const [providerId, setProviderId] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0); // Add refresh key
+
+  // Add refresh function
+  const handleRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+  }, []);
 
   const fetchBlacklist = useCallback(async (page = 1) => {
     setIsLoading(true);
@@ -34,7 +40,7 @@ export function useSenderBlacklist() {
         ...(providerId && { providerId }),
       });
 
-      const response = await fetch(`/api/sender-blacklist?${params.toString()}`);
+      const response = await fetch(`/api/sender-blacklist?${params.toString()}&refreshKey=${refreshKey}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch blacklist: ${response.statusText}`);
@@ -55,11 +61,11 @@ export function useSenderBlacklist() {
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.pageSize, search, providerId]);
+  }, [pagination.pageSize, search, providerId, refreshKey]); // Add refreshKey
 
   useEffect(() => {
-    fetchBlacklist();
-  }, [fetchBlacklist]);
+    fetchBlacklist(pagination.page);
+  }, [fetchBlacklist, pagination.page]);
 
   return {
     entries,
@@ -71,5 +77,6 @@ export function useSenderBlacklist() {
     providerId,
     setProviderId,
     fetchBlacklist,
+    handleRefresh, // Return refresh function
   };
 }

@@ -120,6 +120,8 @@ model User {
   createdHumanitarianRenewals HumanitarianContractRenewal[] @relation("RenewalCreator")
   modifiedHumanitarianRenewals HumanitarianContractRenewal[] @relation("RenewalModifier")
   senderBlacklists        SenderBlacklist[]      @relation("BlacklistCreator")
+  modifiedBlacklists      SenderBlacklist[] @relation("BlacklistModifier")
+  auditLogs               BlacklistLog[] @relation("BlackLogCreator")
 
   // Added the inverse relation to LogEntry, using the relation name
   logEntries              LogEntry[]             @relation("LogCreator")
@@ -349,10 +351,38 @@ model SenderBlacklist {
   updatedAt        DateTime @updatedAt
   createdById      String
   createdBy        User     @relation("BlacklistCreator", fields: [createdById], references: [id])
+  logs             BlacklistLog[] @relation("BlacklistLogs")
+  modifiedById     String? // Add modifiedBy relation
+  modifiedBy       User?    @relation("BlacklistModifier", fields: [modifiedById], references: [id])
 
   @@index([senderName])
   @@index([effectiveDate])
   @@index([isActive])
+}
+model BlacklistLog {
+  id               String   @id @default(cuid())
+  action           LogBlackType  // Enum for actions
+  entityId         String   // ID of the modified entity
+  entityType       String   @default("SenderBlacklist")
+  oldData          Json?    // Previous state
+  newData          Json?    // New state after change
+  userId           String
+  user             User     @relation("BlackLogCreator", fields: [userId], references: [id])
+  blacklistEntry   SenderBlacklist? @relation("BlacklistLogs", fields: [entityId], references: [id])
+  timestamp        DateTime @default(now())
+  
+  @@index([action])
+  @@index([entityId])
+  @@index([timestamp])
+  @@index([userId])
+}
+
+enum LogBlackType {
+  CREATE
+  UPDATE
+  DELETE
+  ACTIVATE
+  DEACTIVATE
 }
 
 model Operator {

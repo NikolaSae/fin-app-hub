@@ -21,7 +21,7 @@ interface CreateBlacklistEntryDialogProps {
   onSuccess?: () => void;
 }
 
-export function CreateBlacklistEntryDialog({
+export default function CreateBlacklistEntryDialog({
   open,
   onOpenChange,
   onSuccess
@@ -62,6 +62,7 @@ export function CreateBlacklistEntryDialog({
           isActive: true,
         });
         onSuccess?.();
+        onOpenChange(false); // Close dialog after success
       } else {
         toast.error(result.error || "Failed to create blacklist entry");
       }

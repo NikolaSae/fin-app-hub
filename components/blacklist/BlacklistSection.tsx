@@ -1,14 +1,15 @@
+//components/blacklist/BlacklistSection.tsx
 "use client";
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Shield, AlertTriangle } from "lucide-react";
+import { Plus, Shield, AlertTriangle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SenderBlacklistTable } from "./SenderBlacklistTable";
 import { BlacklistFiltersComponent } from "./BlacklistFilters";
 import { useSenderBlacklist } from "@/hooks/use-sender-blacklist";
-import { CreateBlacklistEntryDialog } from "./CreateBlacklistEntryDialog";
+import CreateBlacklistEntryDialog from "./CreateBlacklistEntryDialog"; // Fixed import
 import { useCheckBlacklistedSenders } from "@/hooks/use-check-blacklisted-senders";
 
 export function BlacklistSection() {
@@ -21,7 +22,7 @@ export function BlacklistSection() {
     pagination, 
     handleFilterChange, 
     handlePageChange, 
-    handleRefresh 
+    handleRefresh
   } = useSenderBlacklist();
 
   // Hook for checking blacklisted senders in BulkService
@@ -128,10 +129,21 @@ export function BlacklistSection() {
                 Manage blacklisted senders. Active entries will be checked against BulkService data.
               </CardDescription>
             </div>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Blacklist Entry
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh} // Use the handleRefresh from hook
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Blacklist Entry
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -147,7 +159,7 @@ export function BlacklistSection() {
             isLoading={isLoading}
             pagination={pagination}
             onPageChange={handlePageChange}
-            onRefresh={handleRefresh}
+            onRefresh={handleRefresh} // Pass it down to table
             matchedProviders={matchedProviders}
           />
         </CardContent>
