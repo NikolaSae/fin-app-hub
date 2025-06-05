@@ -1,4 +1,5 @@
 // components/blacklist/CreateBlacklistEntryDialog.tsx
+// components/blacklist/CreateBlacklistEntryDialog.tsx
 "use client";
 
 import { useState } from "react";
@@ -30,7 +31,7 @@ export default function CreateBlacklistEntryDialog({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [formData, setFormData] = useState({
     senderName: "",
-    dateApplied: new Date(),
+    effectiveDate: new Date(), // Changed from dateApplied to effectiveDate
     description: "",
     isActive: true,
   });
@@ -43,26 +44,33 @@ export default function CreateBlacklistEntryDialog({
       return;
     }
 
+    // Validate effective date
+    if (!formData.effectiveDate) {
+      toast.error("Effective date is required");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const result = await createBlacklistEntry({
         senderName: formData.senderName.trim(),
-        effectiveDate: formData.dateApplied,
+        effectiveDate: formData.effectiveDate,
         description: formData.description.trim() || undefined,
         isActive: formData.isActive,
       });
 
       if (result.success) {
         toast.success(`Blacklist entry created for ${result.data?.length || 0} bulk providers`);
+        // Reset form
         setFormData({
           senderName: "",
-          dateApplied: new Date(),
+          effectiveDate: new Date(),
           description: "",
           isActive: true,
         });
         onSuccess?.();
-        onOpenChange(false); // Close dialog after success
+        onOpenChange(false);
       } else {
         toast.error(result.error || "Failed to create blacklist entry");
       }
@@ -75,13 +83,22 @@ export default function CreateBlacklistEntryDialog({
   };
 
   const handleCancel = () => {
+    // Reset form when canceling
     setFormData({
       senderName: "",
-      dateApplied: new Date(),
+      effectiveDate: new Date(),
       description: "",
       isActive: true,
     });
+    setCalendarOpen(false); // Close calendar if open
     onOpenChange(false);
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setFormData(prev => ({ ...prev, effectiveDate: date }));
+    }
+    setCalendarOpen(false);
   };
 
   return (
@@ -103,32 +120,45 @@ export default function CreateBlacklistEntryDialog({
               value={formData.senderName}
               onChange={(e) => setFormData(prev => ({ ...prev, senderName: e.target.value }))}
               required
+              disabled={isLoading}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Date Applied</Label>
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <Label>Effective Date *</Label>
+              <Popover 
+                open={calendarOpen} 
+                onOpenChange={setCalendarOpen}
+                modal={true}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => setCalendarOpen(true)}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(formData.dateApplied, "PPP")}
+                    {formData.effectiveDate ? format(formData.effectiveDate, "PPP") : "Select date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent 
+                  className="w-auto p-0" 
+                  align="start"
+                  side="bottom"
+                  sideOffset={4}
+                  onInteractOutside={(e) => {
+                    // Prevent closing when clicking inside the calendar
+                    e.preventDefault();
+                  }}
+                >
                   <Calendar
                     mode="single"
-                    selected={formData.dateApplied}
-                    onSelect={(date) => {
-                      if (date) {
-                        setFormData(prev => ({ ...prev, dateApplied: date }));
-                      }
-                      setCalendarOpen(false);
-                    }}
+                    selected={formData.effectiveDate}
+                    onSelect={handleDateSelect}
+                    disabled={(date) => date < new Date("1900-01-01")}
                     initialFocus
                   />
                 </PopoverContent>
@@ -142,6 +172,7 @@ export default function CreateBlacklistEntryDialog({
                   id="isActive"
                   checked={formData.isActive}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+                  disabled={isLoading}
                 />
                 <Label htmlFor="isActive" className="text-sm">
                   {formData.isActive ? "Active" : "Inactive"}
@@ -158,6 +189,7 @@ export default function CreateBlacklistEntryDialog({
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
+              disabled={isLoading}
             />
           </div>
 

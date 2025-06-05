@@ -23,17 +23,18 @@ export async function deleteBlacklistEntry(id: string) {
       return { success: false, error: "Entry not found" };
     }
 
-    // Delete entry
-    await db.senderBlacklist.delete({
-      where: { id }
-    });
-
-    // Create audit log
+    // Create audit log for deletion
     await createAuditLog({
       action: LogBlackType.DELETE,
       entityId: id,
       userId: session.user.id,
       oldData
+    });
+
+    // Delete the SenderBlacklist entry
+    // Related BlacklistLog entries will automatically have their entityId set to NULL
+    await db.senderBlacklist.delete({
+      where: { id }
     });
 
     revalidatePath('/providers');

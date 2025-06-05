@@ -1,4 +1,5 @@
 // hooks/use-sender-blacklist.ts
+// hooks/use-sender-blacklist.ts
 import { useState, useEffect, useCallback } from "react";
 import { SenderBlacklistWithProvider } from "@/lib/types/blacklist";
 
@@ -7,6 +8,14 @@ export interface BlacklistPagination {
   pageSize: number;
   total: number;
   totalPages: number;
+}
+
+export interface BlacklistFilters {
+  senderName?: string;
+  providerId?: string;
+  isActive?: boolean;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 export function useSenderBlacklist() {
@@ -19,13 +28,24 @@ export function useSenderBlacklist() {
     total: 0,
     totalPages: 1,
   });
-  const [search, setSearch] = useState("");
-  const [providerId, setProviderId] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0); // Add refresh key
+  const [filters, setFilters] = useState<BlacklistFilters>({});
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Add refresh function
   const handleRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1);
+  }, []);
+
+  // Handle filter changes
+  const handleFilterChange = useCallback((newFilters: BlacklistFilters) => {
+    setFilters(newFilters);
+    // Reset to first page when filters change
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, []);
+
+  // Handle page changes
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
   }, []);
 
   const fetchBlacklist = useCallback(async (page = 1) => {
@@ -36,11 +56,28 @@ export function useSenderBlacklist() {
       const params = new URLSearchParams({
         page: page.toString(),
         pageSize: pagination.pageSize.toString(),
-        ...(search && { search }),
-        ...(providerId && { providerId }),
       });
 
-      const response = await fetch(`/api/sender-blacklist?${params.toString()}&refreshKey=${refreshKey}`);
+      // Add filters to params
+      if (filters.senderName) {
+        params.append('senderName', filters.senderName);
+      }
+      if (filters.providerId) {
+        params.append('providerId', filters.providerId);
+      }
+      if (filters.isActive !== undefined) {
+        params.append('isActive', filters.isActive.toString());
+      }
+      if (filters.dateFrom) {
+        params.append('dateFrom', filters.dateFrom.toISOString());
+      }
+      if (filters.dateTo) {
+        params.append('dateTo', filters.dateTo.toISOString());
+      }
+
+      params.append('refreshKey', refreshKey.toString());
+
+      const response = await fetch(`/api/sender-blacklist?${params.toString()}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch blacklist: ${response.statusText}`);
@@ -48,7 +85,7 @@ export function useSenderBlacklist() {
 
       const data = await response.json();
       
-      setEntries(data.entries);
+      setEntries(data.entries || []);
       setPagination({
         page: data.pagination.page,
         pageSize: data.pagination.pageSize,
@@ -58,25 +95,29 @@ export function useSenderBlacklist() {
     } catch (err) {
       console.error("Fetch blacklist error:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
+      setEntries([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.pageSize, search, providerId, refreshKey]); // Add refreshKey
+  }, [pagination.pageSize, filters, refreshKey]);
 
   useEffect(() => {
     fetchBlacklist(pagination.page);
   }, [fetchBlacklist, pagination.page]);
+
+  // Calculate total count for display
+  const totalCount = pagination.total;
 
   return {
     entries,
     isLoading,
     error,
     pagination,
-    search,
-    setSearch,
-    providerId,
-    setProviderId,
+    filters,
+    totalCount,
+    handleFilterChange,
+    handlePageChange,
+    handleRefresh,
     fetchBlacklist,
-    handleRefresh, // Return refresh function
   };
 }

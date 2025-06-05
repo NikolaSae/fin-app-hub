@@ -362,13 +362,13 @@ model SenderBlacklist {
 model BlacklistLog {
   id               String   @id @default(cuid())
   action           LogBlackType  // Enum for actions
-  entityId         String   // ID of the modified entity
+  entityId         String?  // ID of the modified entity - NULLABLE
   entityType       String   @default("SenderBlacklist")
   oldData          Json?    // Previous state
   newData          Json?    // New state after change
   userId           String
   user             User     @relation("BlackLogCreator", fields: [userId], references: [id])
-  blacklistEntry   SenderBlacklist? @relation("BlacklistLogs", fields: [entityId], references: [id])
+  blacklistEntry   SenderBlacklist? @relation("BlacklistLogs", fields: [entityId], references: [id], onDelete: SetNull)
   timestamp        DateTime @default(now())
   
   @@index([action])

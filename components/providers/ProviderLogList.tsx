@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { LogActionType, LogStatus } from "@prisma/client";
 
@@ -27,6 +27,13 @@ import { toast } from "sonner";
 
 import { updateLogStatus } from "@/actions/log/updateLogStatus";
 
+type SortField = 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'action' | 'subject' | 'description' | 'status' | 'sendEmail' | 'provider';
+type SortDirection = 'asc' | 'desc' | null;
+
+interface SortConfig {
+  field: SortField | null;
+  direction: SortDirection;
+}
 
 interface LogEntryItem {
   id: string;
@@ -59,7 +66,6 @@ interface LogFiltersState {
     dateTo?: Date;
 }
 
-
 interface ProviderLogListProps {
     logRefreshKey: number;
 }
@@ -68,9 +74,9 @@ export default function ProviderLogList({ logRefreshKey }: ProviderLogListProps)
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
   const [filters, setFilters] = useState<LogFiltersState>({});
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: null, direction: null });
 
   const { logs, total, loading, error, refreshData } = useProviderLogs({ filters, pagination, logRefreshKey });
-
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
@@ -80,6 +86,109 @@ export default function ProviderLogList({ logRefreshKey }: ProviderLogListProps)
     setPagination(prev => ({ ...prev, page: 1 }));
     setFilters(newFilters);
   };
+
+  const handleSort = (field: SortField) => {
+    setSortConfig(prev => {
+      if (prev.field === field) {
+        // Cycle through: asc -> desc -> null
+        if (prev.direction === 'asc') {
+          return { field, direction: 'desc' };
+        } else if (prev.direction === 'desc') {
+          return { field: null, direction: null };
+        } else {
+          return { field, direction: 'asc' };
+        }
+      } else {
+        return { field, direction: 'asc' };
+      }
+    });
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortConfig.field !== field) {
+      return <ArrowUpDown className="h-4 w-4" />;
+    }
+    
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUp className="h-4 w-4" />;
+    } else if (sortConfig.direction === 'desc') {
+      return <ArrowDown className="h-4 w-4" />;
+    }
+    
+    return <ArrowUpDown className="h-4 w-4" />;
+  };
+
+  const sortedLogs = React.useMemo(() => {
+    if (!logs || !sortConfig.field || !sortConfig.direction) {
+      return logs || [];
+    }
+
+    return [...logs].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortConfig.field) {
+        case 'createdAt':
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        case 'updatedAt':
+          aValue = new Date(a.updatedAt).getTime();
+          bValue = new Date(b.updatedAt).getTime();
+          break;
+        case 'createdBy':
+          aValue = (a.createdBy?.name || '').toLowerCase();
+          bValue = (b.createdBy?.name || '').toLowerCase();
+          break;
+        case 'updatedBy':
+          aValue = (a.updatedBy?.name || '').toLowerCase();
+          bValue = (b.updatedBy?.name || '').toLowerCase();
+          break;
+        case 'action':
+          aValue = a.action;
+          bValue = b.action;
+          break;
+        case 'subject':
+          aValue = a.subject.toLowerCase();
+          bValue = b.subject.toLowerCase();
+          break;
+        case 'description':
+          aValue = (a.description || '').toLowerCase();
+          bValue = (b.description || '').toLowerCase();
+          break;
+        case 'status':
+          // Sort by status priority: IN_PROGRESS -> FINISHED
+          const getStatusPriority = (status: LogStatus) => {
+            switch (status) {
+              case 'IN_PROGRESS': return 1;
+              case 'FINISHED': return 2;
+              default: return 3;
+            }
+          };
+          aValue = getStatusPriority(a.status);
+          bValue = getStatusPriority(b.status);
+          break;
+        case 'sendEmail':
+          aValue = a.sendEmail ? 1 : 0;
+          bValue = b.sendEmail ? 1 : 0;
+          break;
+        case 'provider':
+          aValue = (a.provider?.name || '').toLowerCase();
+          bValue = (b.provider?.name || '').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [logs, sortConfig]);
 
    const getStatusBadge = (status: LogStatus) => {
      switch (status) {
@@ -121,6 +230,20 @@ export default function ProviderLogList({ logRefreshKey }: ProviderLogListProps)
         }
     };
 
+    const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+      <TableHead>
+        <Button
+          variant="ghost"
+          className="h-auto p-0 font-semibold text-left justify-start hover:bg-transparent"
+          onClick={() => handleSort(field)}
+        >
+          <span className="flex items-center gap-2">
+            {children}
+            {getSortIcon(field)}
+          </span>
+        </Button>
+      </TableHead>
+    );
 
    if (loading) {
      return (
@@ -129,7 +252,6 @@ export default function ProviderLogList({ logRefreshKey }: ProviderLogListProps)
        </div>
      );
    }
-
 
   return (
     <Card>
@@ -153,21 +275,21 @@ export default function ProviderLogList({ logRefreshKey }: ProviderLogListProps)
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Updated At</TableHead>
-                    <TableHead>Created By</TableHead>
-                    <TableHead>Updated By</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Email Sent</TableHead>
-                    <TableHead>Provider</TableHead>
+                    <SortableHeader field="createdAt">Timestamp</SortableHeader>
+                    <SortableHeader field="updatedAt">Updated At</SortableHeader>
+                    <SortableHeader field="createdBy">Created By</SortableHeader>
+                    <SortableHeader field="updatedBy">Updated By</SortableHeader>
+                    <SortableHeader field="action">Action</SortableHeader>
+                    <SortableHeader field="subject">Subject</SortableHeader>
+                    <SortableHeader field="description">Description</SortableHeader>
+                    <SortableHeader field="status">Status</SortableHeader>
+                    <SortableHeader field="sendEmail">Email Sent</SortableHeader>
+                    <SortableHeader field="provider">Provider</SortableHeader>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(logs || []).map(log => (
+                  {sortedLogs.map(log => (
                     <TableRow key={log.id}>
                       <TableCell>{format(new Date(log.createdAt), "PPP p")}</TableCell>
                       <TableCell>{format(new Date(log.updatedAt), "PPP p")}</TableCell>
@@ -245,4 +367,3 @@ export default function ProviderLogList({ logRefreshKey }: ProviderLogListProps)
     </Card>
   );
 }
-

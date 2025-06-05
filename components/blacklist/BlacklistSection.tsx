@@ -2,8 +2,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Plus, Shield, AlertTriangle, RefreshCw } from "lucide-react";
+import { Plus, Shield, AlertTriangle, RefreshCw, FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SenderBlacklistTable } from "./SenderBlacklistTable";
@@ -13,6 +14,7 @@ import CreateBlacklistEntryDialog from "./CreateBlacklistEntryDialog"; // Fixed 
 import { useCheckBlacklistedSenders } from "@/hooks/use-check-blacklisted-senders";
 
 export function BlacklistSection() {
+  const router = useRouter();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { 
     entries, 
@@ -61,6 +63,10 @@ export function BlacklistSection() {
   // Add safety checks for entries
   const activeEntries = entries?.filter(entry => entry.isActive) || [];
   const inactiveEntries = entries?.filter(entry => !entry.isActive) || [];
+
+  const handleNavigateToAuditLogs = () => {
+    router.push('/audit-logs');
+  };
 
   return (
     <div className="space-y-6">
@@ -131,14 +137,22 @@ export function BlacklistSection() {
             </div>
             <div className="flex gap-2">
               <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh} // Use the handleRefresh from hook
-                  disabled={isLoading}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
+                variant="outline"
+                size="sm"
+                onClick={handleNavigateToAuditLogs}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                View Audit Logs
+              </Button>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh} // Use the handleRefresh from hook
+                disabled={isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
               <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Blacklist Entry

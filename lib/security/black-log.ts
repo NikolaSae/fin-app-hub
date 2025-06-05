@@ -1,6 +1,6 @@
 //lib/security/black-log.ts
 
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { LogBlackType } from "@prisma/client";
 
 interface LogParams {
@@ -14,7 +14,9 @@ interface LogParams {
 
 export async function createAuditLog(params: LogParams) {
   try {
-    await prisma.blacklistLog.create({
+    console.log("Creating audit log with params:", params); // DEBUG
+    
+    const result = await db.blacklistLog.create({
       data: {
         action: params.action,
         entityId: params.entityId,
@@ -24,7 +26,11 @@ export async function createAuditLog(params: LogParams) {
         newData: params.newData ? JSON.parse(JSON.stringify(params.newData)) : undefined,
       }
     });
+    
+    console.log("Audit log created successfully:", result.id); // DEBUG
+    return result;
   } catch (error) {
     console.error("Failed to create audit log:", error);
+    throw error; // Re-throw to see if this is causing transaction rollback
   }
 }

@@ -15,13 +15,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { SenderBlacklistEntry } from "@/lib/types/blacklist";
 import { updateBlacklistEntry } from "@/actions/blacklist/update-blacklist-entry";
 import { deleteBlacklistEntry } from "@/actions/blacklist/delete-blacklist-entry";
 import { BlacklistPagination } from "@/hooks/use-sender-blacklist";
 import EmptyState from "@/components/EmptyState";
+
+type SortField = 'senderName' | 'effectiveDate' | 'status' | 'lastMatchDate' | 'description' | 'createdBy' | 'createdAt';
+type SortDirection = 'asc' | 'desc' | null;
+
+interface SortConfig {
+  field: SortField | null;
+  direction: SortDirection;
+}
 
 interface SenderBlacklistTableProps {
   entries: SenderBlacklistEntry[];
@@ -37,16 +45,106 @@ export function SenderBlacklistTable({
   isLoading,
   pagination,
   onPageChange,
-  onRefresh, // Make sure this is passed down
+  onRefresh,
   matchedProviders = {}
 }: SenderBlacklistTableProps) {
   const [updatingId, setUpdatingId] = React.useState<string | null>(null);
+  const [sortConfig, setSortConfig] = React.useState<SortConfig>({ field: null, direction: null });
 
   const safeEntries = entries || [];
 
   const handlePageChange = (newPage: number) => {
     onPageChange(newPage);
   };
+
+  const handleSort = (field: SortField) => {
+    setSortConfig(prev => {
+      if (prev.field === field) {
+        // Cycle through: asc -> desc -> null
+        if (prev.direction === 'asc') {
+          return { field, direction: 'desc' };
+        } else if (prev.direction === 'desc') {
+          return { field: null, direction: null };
+        } else {
+          return { field, direction: 'asc' };
+        }
+      } else {
+        return { field, direction: 'asc' };
+      }
+    });
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortConfig.field !== field) {
+      return <ArrowUpDown className="h-4 w-4" />;
+    }
+    
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUp className="h-4 w-4" />;
+    } else if (sortConfig.direction === 'desc') {
+      return <ArrowDown className="h-4 w-4" />;
+    }
+    
+    return <ArrowUpDown className="h-4 w-4" />;
+  };
+
+  const sortedEntries = React.useMemo(() => {
+    if (!sortConfig.field || !sortConfig.direction) {
+      return safeEntries;
+    }
+
+    return [...safeEntries].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortConfig.field) {
+        case 'senderName':
+          aValue = a.senderName?.toLowerCase() || '';
+          bValue = b.senderName?.toLowerCase() || '';
+          break;
+        case 'effectiveDate':
+          aValue = a.effectiveDate ? new Date(a.effectiveDate).getTime() : 0;
+          bValue = b.effectiveDate ? new Date(b.effectiveDate).getTime() : 0;
+          break;
+        case 'status':
+          // Sort by: Active (no matches) -> Detected (has matches) -> Inactive
+          const getStatusPriority = (entry: SenderBlacklistEntry) => {
+            if (!entry.isActive) return 3; // Inactive
+            const hasMatch = matchedProviders[entry.senderName] && matchedProviders[entry.senderName].length > 0;
+            return hasMatch ? 2 : 1; // Detected : Active
+          };
+          aValue = getStatusPriority(a);
+          bValue = getStatusPriority(b);
+          break;
+        case 'lastMatchDate':
+          aValue = a.lastMatchDate ? new Date(a.lastMatchDate).getTime() : 0;
+          bValue = b.lastMatchDate ? new Date(b.lastMatchDate).getTime() : 0;
+          break;
+        case 'description':
+          aValue = (a.description || '').toLowerCase();
+          bValue = (b.description || '').toLowerCase();
+          break;
+        case 'createdBy':
+          aValue = (a.createdBy?.name || '').toLowerCase();
+          bValue = (b.createdBy?.name || '').toLowerCase();
+          break;
+        case 'createdAt':
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [safeEntries, sortConfig, matchedProviders]);
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     setUpdatingId(id);
@@ -58,7 +156,7 @@ export function SenderBlacklistTable({
 
       if (result.success) {
         toast.success(`Blacklist entry ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-        onRefresh(); // Call the refresh function
+        onRefresh();
       } else {
         toast.error(result.error || "Failed to update blacklist entry");
       }
@@ -66,7 +164,7 @@ export function SenderBlacklistTable({
       console.error("Error updating blacklist entry:", error);
       toast.error("An unexpected error occurred");
     } finally {
-      setUpdatingId(null); // Reset updating state
+      setUpdatingId(null);
     }
   };
 
@@ -81,7 +179,7 @@ export function SenderBlacklistTable({
 
       if (result.success) {
         toast.success("Blacklist entry deleted successfully");
-        onRefresh(); // Call the refresh function
+        onRefresh();
       } else {
         toast.error(result.error || "Failed to delete blacklist entry");
       }
@@ -89,7 +187,7 @@ export function SenderBlacklistTable({
       console.error("Error deleting blacklist entry:", error);
       toast.error("An unexpected error occurred");
     } finally {
-      setUpdatingId(null); // Reset updating state
+      setUpdatingId(null);
     }
   };
 
@@ -98,7 +196,6 @@ export function SenderBlacklistTable({
       return <Badge variant="secondary">Inactive</Badge>;
     }
     
-    // Check if there's a match for this senderName
     const hasMatch = matchedProviders[entry.senderName] && matchedProviders[entry.senderName].length > 0;
     
     if (hasMatch) {
@@ -108,7 +205,6 @@ export function SenderBlacklistTable({
     return <Badge variant="outline">Active</Badge>;
   };
 
-  // Render matched providers as a list
   const renderMatchedProviders = (senderName: string) => {
     if (!matchedProviders[senderName] || matchedProviders[senderName].length === 0) {
       return '-';
@@ -129,6 +225,21 @@ export function SenderBlacklistTable({
       </div>
     );
   };
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead>
+      <Button
+        variant="ghost"
+        className="h-auto p-0 font-semibold text-left justify-start hover:bg-transparent"
+        onClick={() => handleSort(field)}
+      >
+        <span className="flex items-center gap-2">
+          {children}
+          {getSortIcon(field)}
+        </span>
+      </Button>
+    </TableHead>
+  );
 
   if (isLoading && safeEntries.length === 0) {
     return (
@@ -152,19 +263,19 @@ export function SenderBlacklistTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sender Name</TableHead>
+                <SortableHeader field="senderName">Sender Name</SortableHeader>
                 <TableHead className="min-w-[150px]">Matched Providers</TableHead>
-                <TableHead>Effective Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Match</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Created At</TableHead>
+                <SortableHeader field="effectiveDate">Effective Date</SortableHeader>
+                <SortableHeader field="status">Status</SortableHeader>
+                <SortableHeader field="lastMatchDate">Last Match</SortableHeader>
+                <SortableHeader field="description">Description</SortableHeader>
+                <SortableHeader field="createdBy">Created By</SortableHeader>
+                <SortableHeader field="createdAt">Created At</SortableHeader>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {safeEntries.map(entry => (
+              {sortedEntries.map(entry => (
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium">{entry.senderName}</TableCell>
                   <TableCell>
