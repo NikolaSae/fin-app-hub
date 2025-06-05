@@ -1,16 +1,28 @@
-///app/(protected)/contracts/expiring/page.tsx
-
-import { Suspense } from "react";
+// app/(protected)/contracts/expiring/page.tsx
 import { ExpiryTimelineChart } from "@/components/contracts/charts/ExpiryTimelineChart";
-import { ContractList } from "@/components/contracts/ContractList";
+import { EnhancedContractList } from "@/components/contracts/enhanced-contract-list";
 import { Metadata } from "next";
+import { getExpiringContractsTimeline } from "@/actions/contracts/get-expiring-contracts-timeline";
+import { getExpiringContracts } from "@/actions/contracts/get-expiring-contracts";
 
 export const metadata: Metadata = {
   title: "Expiring Contracts | Management Dashboard",
   description: "View contracts that are expiring soon",
 };
 
-export default function ExpiringContractsPage() {
+export default async function ExpiringContractsPage() {
+  const [timelineData, expiringContracts] = await Promise.all([
+    getExpiringContractsTimeline(),
+    getExpiringContracts()
+  ]);
+
+  // Get current server time for expiry calculations
+  const serverTime = new Date().toISOString();
+
+  // Debug logs
+  console.log("Timeline data:", timelineData);
+  console.log("Expiring contracts:", expiringContracts);
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -21,14 +33,16 @@ export default function ExpiringContractsPage() {
       </div>
       
       <div className="bg-white rounded-lg shadow p-6">
-        <Suspense fallback={<div>Loading expiry timeline...</div>}>
-          <ExpiryTimelineChart />
-        </Suspense>
+        <ExpiryTimelineChart data={timelineData} />
       </div>
       
-      <Suspense fallback={<div>Loading expiring contracts...</div>}>
-        <ContractList filter="expiring" />
-      </Suspense>
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Expiring Contracts List</h2>
+        <EnhancedContractList 
+          contracts={expiringContracts}
+          serverTime={serverTime}
+        />
+      </div>
     </div>
   );
 }

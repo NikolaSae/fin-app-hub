@@ -122,6 +122,9 @@ model User {
   senderBlacklists        SenderBlacklist[]      @relation("BlacklistCreator")
   modifiedBlacklists      SenderBlacklist[] @relation("BlacklistModifier")
   auditLogs               BlacklistLog[] @relation("BlackLogCreator")
+  createdRenewals         ContractRenewal[]           @relation("ContractRenewalCreator")
+  modifiedRenewals        ContractRenewal[]           @relation("ContractRenewalModifier")
+  uploadedRenewalFiles    ContractRenewalAttachment[] @relation("RenewalAttachmentUploader")
 
   // Added the inverse relation to LogEntry, using the relation name
   logEntries              LogEntry[]             @relation("LogCreator")
@@ -269,6 +272,7 @@ model Contract {
 
   // Renewals for humanitarian contracts
   humanitarianRenewals HumanitarianContractRenewal[]
+  renewals          ContractRenewal[]
 
   // Audit fields
   createdAt         DateTime @default(now())
@@ -288,6 +292,79 @@ model Contract {
   @@index([endDate]) // For efficient expiration checks
   @@index([operatorId])
 }
+
+enum ContractRenewalSubStatus {
+  DOCUMENT_COLLECTION    // Prikupljanje potrebnih dokumenata
+  LEGAL_REVIEW          // Pregled pravnog odeljenja
+  FINANCIAL_APPROVAL    // Finansijsko odobrenje
+  AWAITING_SIGNATURE    // Čekanje potpisa
+  FINAL_PROCESSING      // Finalna obrada pre aktivacije
+  TECHNICAL_REVIEW      // Tehnička provera (za provider/parking)
+  MANAGEMENT_APPROVAL   // Odobrenje menadžmenta
+}
+
+// Generički model za renewal process svih tipova ugovora
+model ContractRenewal {
+  id                  String                     @id @default(cuid())
+  contractId          String
+  contract            Contract                   @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  // Renewal specifics
+  subStatus           ContractRenewalSubStatus   @default(DOCUMENT_COLLECTION)
+  renewalStartDate    DateTime                   @default(now())
+  proposedStartDate   DateTime                   // Novi datum početka ugovora
+  proposedEndDate     DateTime                   // Novi datum kraja ugovora
+  proposedRevenue     Float?                     // Novi procenat prihoda (ako se menja)
+
+  // Document and approval tracking
+  documentsReceived   Boolean                    @default(false)
+  legalApproved       Boolean                    @default(false)
+  financialApproved   Boolean                    @default(false)
+  technicalApproved   Boolean                    @default(false)
+  managementApproved  Boolean                    @default(false)
+  signatureReceived   Boolean                    @default(false)
+
+  // Comments and notes
+  comments            String?                    @db.Text
+  internalNotes       String?                    @db.Text
+
+  // File attachments
+  attachments         ContractRenewalAttachment[]
+
+  // Audit fields
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  createdById         String
+  createdBy           User                       @relation("ContractRenewalCreator", fields: [createdById], references: [id])
+  lastModifiedById    String?
+  lastModifiedBy      User?                      @relation("ContractRenewalModifier", fields: [lastModifiedById], references: [id])
+
+  @@index([contractId])
+  @@index([subStatus])
+  @@index([proposedStartDate])
+  @@index([renewalStartDate])
+}
+
+// File attachments for renewal process
+model ContractRenewalAttachment {
+  id               String           @id @default(cuid())
+  renewalId        String
+  renewal          ContractRenewal  @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  
+  fileName         String
+  fileSize         Int
+  fileType         String          // pdf, docx, etc.
+  filePath         String          // Path to stored file
+  uploadedAt       DateTime        @default(now())
+  uploadedById     String
+  uploadedBy       User            @relation("RenewalAttachmentUploader", fields: [uploadedById], references: [id])
+  
+  description      String?         // Optional description of document
+  
+  @@index([renewalId])
+  @@index([uploadedAt])
+}
+
 
 // Humanitarian Contract Renewal Sub-statuses
 enum HumanitarianRenewalSubStatus {

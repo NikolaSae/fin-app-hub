@@ -33,7 +33,7 @@ interface ExpiryTimelineChartProps {
 }
 
 export function ExpiryTimelineChart({ 
-  data,
+  data = [], // Add default value
   title = "Contract Expiry Timeline"
 }: ExpiryTimelineChartProps) {
   // Format the tooltip content

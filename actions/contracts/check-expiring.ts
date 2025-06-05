@@ -1,9 +1,9 @@
 // /actions/contracts/check-expiring.ts
 'use server';
 
-import { db } from '@/lib/db'; // Pretpostavljena putanja do vašeg Prisma klijenta
-import { addDays } from 'date-fns'; // Pretpostavljena utility funkcija za rad sa datumima
-import { sendContractExpirationNotification } from '@/lib/contracts/notification-sender'; // Ovaj fajl ćemo kreirati kasnije
+import { db } from '@/lib/db';
+import { addDays, startOfDay, endOfDay } from 'date-fns';
+import { sendContractExpirationNotification } from '@/lib/contracts/notification-sender';
 import { auth } from '@/auth'; // Pretpostavljena putanja do vašeg auth helpera
 
 /**
@@ -14,42 +14,32 @@ import { auth } from '@/auth'; // Pretpostavljena putanja do vašeg auth helpera
  */
 export const checkExpiringContracts = async (daysThreshold: number = 30) => {
   // Opciono: Provera autorizacije ako ovu akciju mogu pokrenuti samo određeni korisnici
-  // const session = await auth();
-  // if (!session?.user) {
-  //   return { error: "Unauthorized" };
-  // }
+   const session = await auth();
+   if (!session?.user) {
+     return { error: "Unauthorized" };
+   }
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Početak dana
-    const expiryDateThreshold = addDays(today, daysThreshold);
+    const today = startOfDay(new Date());
+    const expiryDateThreshold = endOfDay(addDays(today, daysThreshold));
 
-    // Pronalaženje aktivnih ugovora kojima ističe rok unutar praga
     const expiringContracts = await db.contract.findMany({
       where: {
         status: 'ACTIVE',
         endDate: {
-          gte: today, // End date is today or in the future
-          lte: expiryDateThreshold, // End date is within the threshold
+          gte: today,
+          lte: expiryDateThreshold,
         },
       },
       include: {
-         reminders: { // Učitavamo postojeće podsetnike
-             where: {
-                 // Proveravamo da li već postoji podsetnik tipa "expiration" za ovaj opseg dana
-                 // Ovo je pojednostavljena provera, složenije bi zahtevale praćenje
-                 // tačnog datuma slanja notifikacije ili specifičan flag.
-                 // Za sada, proveravamo da li postoji bilo kakav podsetnik za "expiration" za ovaj ugovor.
-                 // Idealno bi bilo proveriti da li postoji podsetnik kreiran ZA OVO ISTICANJE.
-                 // Realističnija implementacija bi zahtevala dodatno polje na Reminder modelu
-                 // npr. expirationCheckedForDate ili referenca na specifičan ciklus provere.
-                 // Za ovu generaciju, pojednostavljamo proveru.
-                 reminderType: 'expiration',
-             }
-         },
-         createdBy: { // Učitavamo kreatora ugovora zbog potencijalne notifikacije
-            select: { id: true, email: true, name: true }
-         }
+        reminders: {
+          where: {
+            reminderType: 'expiration',
+          }
+        },
+        createdBy: {
+          select: { id: true, email: true, name: true }
+        }
       },
     });
 

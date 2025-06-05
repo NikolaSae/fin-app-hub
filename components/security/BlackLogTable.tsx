@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight, User, Calendar, FileText } from "lucide-react";
-import { useState } from "react";
+import { useState, Fragment } from "react";
 
 interface BlacklistLogWithUser extends BlacklistLog {
   user: {
@@ -227,21 +227,28 @@ export function BlackLogTable({ logs }: AuditLogTableProps) {
                   <TableHead className="w-[40px]"></TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Sender</TableHead>
-                  <TableHead className="flex items-center gap-1">
-                    <User className="h-4 w-4" />
-                    User
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      User
+                    </div>
                   </TableHead>
-                  <TableHead className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    Timestamp
+                  <TableHead className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Calendar className="h-4 w-4" />
+                      Timestamp
+                    </div>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.map((log) => (
-                  <>
-                    <TableRow key={log.id} className="cursor-pointer hover:bg-gray-50">
-                      <TableCell>
+                  <Fragment key={log.id}>
+                    <TableRow 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => toggleRow(log.id)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => toggleRow(log.id)}
                           className="p-1 hover:bg-gray-200 rounded"
@@ -255,9 +262,19 @@ export function BlackLogTable({ logs }: AuditLogTableProps) {
                       </TableCell>
                       <TableCell>{getActionBadge(log.action)}</TableCell>
                       <TableCell className="font-medium">{getSenderName(log)}</TableCell>
-                      <TableCell>{log.user.name || "Unknown User"}</TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {format(new Date(log.timestamp), "PPP p")}
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <User className="h-4 w-4" />
+                          {log.user.name || "Unknown User"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Calendar className="h-4 w-4" />
+                          <span className="text-sm text-gray-600">
+                            {format(new Date(log.timestamp), "PPP p")}
+                          </span>
+                        </div>
                       </TableCell>
                     </TableRow>
                     {expandedRows.has(log.id) && (
@@ -267,7 +284,7 @@ export function BlackLogTable({ logs }: AuditLogTableProps) {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
