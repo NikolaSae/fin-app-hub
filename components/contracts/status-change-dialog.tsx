@@ -114,34 +114,42 @@ export function StatusChangeDialog({
     }
   }, [open, currentStatus]);
 
-  const onSubmit = async (data: StatusChangeFormData) => {
-    if (data.status === currentStatus) {
-      toast.info('No changes to save');
-      onClose();
-      return;
-    }
+  const onSubmit = async (data: FormData) => {
+  try {
+    setIsLoading(true);
+    
+    // Call the API route instead of the action directly
+    const response = await fetch(`/api/contracts/${contract.id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        newStatus: data.newStatus,
+        comments: data.comments || ''
+      })
+    });
 
-    setIsSubmitting(true);
-    try {
-      const result = await updateContractStatus(
-        contractId, 
-        data.status, 
-        data.comments
-      );
+    const result = await response.json();
 
-      if (result.success) {
-        toast.success(result.message);
-        onClose();
-      } else {
-        toast.error(result.message);
+    if (result.success) {
+      toast.success(result.message);
+      setIsOpen(false);
+      if (onSuccess) {
+        onSuccess();
       }
-    } catch (error) {
-      console.error('Error updating contract status:', error);
-      toast.error('An unexpected error occurred');
-    } finally {
-      setIsSubmitting(false);
+      // Refresh the page or trigger a revalidation
+      window.location.reload(); // Simple approach, or use router.refresh()
+    } else {
+      toast.error(result.message);
     }
-  };
+  } catch (error) {
+    console.error('Error updating contract status:', error);
+    toast.error('Failed to update contract status');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const selectedStatus = form.watch('status');
   const selectedStatusOption = STATUS_OPTIONS.find(option => option.value === selectedStatus);

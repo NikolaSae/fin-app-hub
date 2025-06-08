@@ -1,6 +1,6 @@
-// /components/contracts/enhanced-contract-list.tsx
+// components/contracts/enhanced-contract-list.tsx
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Contract, ContractRenewalSubStatus } from "@/lib/types/contract-types";
 import {
   Table,
@@ -30,15 +30,17 @@ interface EnhancedContractListProps {
   onContractUpdate?: () => void;
 }
 
-// Helper function to check if contract is expiring soon
-function isContractExpiringSoon(endDate: string, serverTime: string): boolean {
+// Helper function to check contract expiration status
+function getContractExpiryStatus(endDate: string, serverTime: string) {
   const contractEndDate = new Date(endDate);
   const currentDate = new Date(serverTime);
   const diffInMs = contractEndDate.getTime() - currentDate.getTime();
   const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
   
-  // Consider contract expiring soon if it expires within 30 days
-  return diffInDays <= 30 && diffInDays > 0;
+  return {
+    isExpiringSoon: diffInDays <= 60 && diffInDays > 0,
+    isRecentlyExpired: diffInDays < 0 && Math.abs(diffInDays) <= 60
+  };
 }
 
 export function EnhancedContractList({ 
@@ -50,6 +52,18 @@ export function EnhancedContractList({
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+
+  // Debugging logs
+  useEffect(() => {
+    console.log("Server time:", serverTime);
+    console.log("Number of contracts:", contracts.length);
+    
+    contracts.forEach(contract => {
+      const { isExpiringSoon, isRecentlyExpired } = getContractExpiryStatus(contract.endDate, serverTime);
+      console.log(`Contract: ${contract.name} | End: ${contract.endDate} | 
+        Expiring Soon: ${isExpiringSoon} | Recently Expired: ${isRecentlyExpired}`);
+    });
+  }, [contracts, serverTime]);
 
   const handleRenewalAction = (contractId: string) => {
     const contract = contracts.find(c => c.id === contractId);
@@ -76,9 +90,6 @@ export function EnhancedContractList({
     }
   };
 
-  // Status change is now handled directly in the StatusChangeDialog component
-  // No need for a separate handler here since the dialog manages its own server action
-
   // When no contracts are available
   if (!contracts || contracts.length === 0) {
     return (
@@ -104,26 +115,34 @@ export function EnhancedContractList({
               <TableHead>Sub Status</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
+              <TableHead>Renewal Start</TableHead>
+              <TableHead>Proposed Start</TableHead>
+              <TableHead>Proposed End</TableHead>
               <TableHead>Partner</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {contracts.map((contract) => {
-              const isExpiringSoon = isContractExpiringSoon(contract.endDate, serverTime);
-              const currentRenewal = contract.renewals?.[0]; // Najnoviji renewal
+              const { isExpiringSoon, isRecentlyExpired } = getContractExpiryStatus(contract.endDate, serverTime);
+              const currentRenewal = contract.renewals?.[0]; // Latest renewal
+              
+              // Determine row styling
+              let rowClass = "";
+              if (isExpiringSoon) rowClass = "bg-orange-50 hover:bg-orange-100";
+              if (isRecentlyExpired) rowClass = "bg-yellow-50 hover:bg-yellow-100";
               
               return (
                 <TableRow 
                   key={contract.id} 
-                  className={isExpiringSoon ? "bg-orange-50 hover:bg-orange-100" : ""}
+                  className={rowClass}
                 >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Link href={`/contracts/${contract.id}`} className="hover:underline">
                         {contract.name}
                       </Link>
-                      {isExpiringSoon && (
+                      {(isExpiringSoon || isRecentlyExpired) && (
                         <AlertTriangle className="h-4 w-4 text-orange-500" />
                       )}
                     </div>
@@ -138,6 +157,7 @@ export function EnhancedContractList({
                     <StatusBadge 
                       status={contract.status} 
                       isExpiring={isExpiringSoon}
+                      isExpired={isRecentlyExpired}
                     />
                   </TableCell>
                   <TableCell>
@@ -156,7 +176,27 @@ export function EnhancedContractList({
                           Expiring Soon
                         </Badge>
                       )}
+                      {isRecentlyExpired && (
+                        <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">
+                          Recently Expired
+                        </Badge>
+                      )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {currentRenewal?.renewalStartDate 
+                      ? formatDate(currentRenewal.renewalStartDate) 
+                      : <span className="text-muted-foreground text-sm">-</span>}
+                  </TableCell>
+                  <TableCell>
+                    {currentRenewal?.proposedStartDate 
+                      ? formatDate(currentRenewal.proposedStartDate) 
+                      : <span className="text-muted-foreground text-sm">-</span>}
+                  </TableCell>
+                  <TableCell>
+                    {currentRenewal?.proposedEndDate 
+                      ? formatDate(currentRenewal.proposedEndDate) 
+                      : <span className="text-muted-foreground text-sm">-</span>}
                   </TableCell>
                   <TableCell>
                     {contract.provider?.name || 
@@ -204,14 +244,19 @@ export function EnhancedContractList({
 // Helper component for status badges
 function StatusBadge({ 
   status, 
-  isExpiring = false 
+  isExpiring = false,
+  isExpired = false
 }: { 
   status: string; 
   isExpiring?: boolean; 
+  isExpired?: boolean;
 }) {
-  const getVariant = (status: string, isExpiring: boolean) => {
+  const getVariant = (status: string, isExpiring: boolean, isExpired: boolean) => {
     if (isExpiring && status === 'ACTIVE') {
       return "bg-orange-100 text-orange-800 border-orange-200";
+    }
+    if (isExpired && status === 'EXPIRED') {
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
     }
     
     const variants: Record<string, string> = {
@@ -226,7 +271,7 @@ function StatusBadge({
     return variants[status] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
-  const badgeClass = getVariant(status, isExpiring);
+  const badgeClass = getVariant(status, isExpiring, isExpired);
   
   return (
     <Badge className={`font-medium ${badgeClass}`}>
@@ -300,8 +345,8 @@ function ContractActionsMenu({
         )}
         
         <DropdownMenuItem onClick={onStatusChange}>
-          <AlertTriangle className="mr-2 h-4 w-4" />
-          Change Status
+            <AlertTriangle className="mr-2 h-4 w-4" />
+            Change Status
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

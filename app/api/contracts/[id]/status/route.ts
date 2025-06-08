@@ -1,192 +1,176 @@
 // app/api/contracts/[id]/status/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { ContractStatus } from '@prisma/client';
-
-interface UpdateStatusRequest {
-  status: ContractStatus;
-  notes?: string;
-}
+import { ContractStatus, ContractRenewalSubStatus } from '@prisma/client';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const contractId = params.id;
+    const body = await request.json();
+    const { newStatus, comments } = body;
+
+    console.log('🔍 API Route - Starting updateContractStatus:', { contractId, newStatus, comments });
+
+    // Validacija input parametara
+    if (!contractId || !contractId.trim()) {
+      console.error('❌ Invalid contractId:', contractId);
+      return NextResponse.json({
+        success: false,
+        message: 'Contract ID is required'
+      }, { status: 400 });
     }
 
-    const { id: contractId } = await params;
-    const body: UpdateStatusRequest = await request.json();
-    const { status, notes } = body;
-
-    if (!status) {
-      return NextResponse.json({ error: 'Status is required' }, { status: 400 });
+    if (!Object.values(ContractStatus).includes(newStatus)) {
+      console.error('❌ Invalid contract status:', newStatus);
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid contract status'
+      }, { status: 400 });
     }
 
-    // Proverava da li ugovor postoji
+    // Validacija da ugovor postoji
     const existingContract = await db.contract.findUnique({
       where: { id: contractId },
       include: {
-        humanitarianOrg: true,
-        provider: true,
-        parkingService: true
+        renewals: {
+          orderBy: {
+            createdAt: "desc"
+          },
+          take: 1
+        }
       }
     });
 
+    console.log('📄 Found contract:', existingContract ? 'Yes' : 'No');
     if (!existingContract) {
-      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
+      console.error('❌ Contract not found with ID:', contractId);
+      return NextResponse.json({
+        success: false,
+        message: 'Contract not found'
+      }, { status: 404 });
     }
 
-    // Koristi transakciju da osigura konzistentnost podataka
-    const result = await db.$transaction(async (tx) => {
-      // Ažuriraj status ugovora
-      const updatedContract = await tx.contract.update({
-        where: { id: contractId },
-        data: {
-          status,
-          lastModifiedById: session.user.id,
-          updatedAt: new Date(),
-          // Dodaj notes u description ili posebno polje ako postoji
-          ...(notes && { description: notes })
-        },
-        include: {
-          humanitarianOrg: true,
-          provider: true,
-          parkingService: true,
-          createdBy: true,
-          lastModifiedBy: true
-        }
-      });
+    console.log('🏷️ Current status:', existingContract.status, '-> New status:', newStatus);
 
-      let renewalId: string | undefined;
+    // Validacija business logike
+    const validationResult = validateStatusChange(existingContract.status, newStatus);
+    console.log('✅ Validation result:', validationResult);
+    
+    if (!validationResult.isValid) {
+      console.error('❌ Status change validation failed:', validationResult.message);
+      return NextResponse.json({
+        success: false,
+        message: validationResult.message
+      }, { status: 400 });
+    }
 
-      // Ako je status postavljen na RENEWAL_IN_PROGRESS i ugovor je humanitarni,
-      // automatski kreiraj HumanitarianContractRenewal entitet
-      if (status === 'RENEWAL_IN_PROGRESS' && existingContract.type === 'HUMANITARIAN') {
-        // Proverava da li već postoji renewal za ovaj ugovor
-        const existingRenewal = await tx.humanitarianContractRenewal.findFirst({
-          where: { contractId: contractId }
-        });
-
-        if (!existingRenewal) {
-          // Izračunava predložene datume (logika može biti prilagođena)
-          const currentEndDate = new Date(existingContract.endDate);
-          const proposedStartDate = new Date(currentEndDate);
-          const proposedEndDate = new Date(currentEndDate);
-          proposedEndDate.setFullYear(proposedEndDate.getFullYear() + 1); // +1 godine
-
-          // Kreiraj HumanitarianContractRenewal entitet
-          const renewal = await tx.humanitarianContractRenewal.create({
-            data: {
-              contractId: contractId,
-              humanitarianOrgId: existingContract.humanitarianOrgId!,
-              proposedStartDate,
-              proposedEndDate,
-              proposedRevenue: existingContract.revenuePercentage,
-              subStatus: 'DOCUMENT_COLLECTION',
-              documentsReceived: false,
-              legalApproved: false,
-              financialApproved: false,
-              signatureReceived: false,
-              notes: notes ? `Automatski kreiran renewal. ${notes}` : 'Automatski kreiran renewal pri postavljanju statusa na RENEWAL_IN_PROGRESS.',
-              createdById: session.user.id,
-              lastModifiedById: session.user.id
-            }
-          });
-
-          renewalId = renewal.id;
-        } else {
-          renewalId = existingRenewal.id;
-        }
+    // Update contract status
+    console.log('💾 Updating contract status...');
+    const updatedContract = await db.contract.update({
+      where: { id: contractId },
+      data: {
+        status: newStatus,
+        updatedAt: new Date()
       }
-
-      return { contract: updatedContract, renewalId };
     });
+
+    console.log('✅ Contract updated successfully');
+
+    // If starting renewal, create a new renewal record
+    if (newStatus === ContractStatus.RENEWAL_IN_PROGRESS) {
+      console.log('🔄 Creating renewal record...');
+      
+      try {
+        await db.contractRenewal.create({
+          data: {
+            contractId: contractId,
+            subStatus: ContractRenewalSubStatus.DOCUMENT_COLLECTION,
+            proposedStartDate: existingContract.endDate,
+            proposedEndDate: new Date(existingContract.endDate.getTime() + (365 * 24 * 60 * 60 * 1000)), // +1 year
+            proposedRevenue: existingContract.revenuePercentage,
+            documentsReceived: false,
+            legalApproved: false,
+            financialApproved: false,
+            technicalApproved: false,
+            managementApproved: false,
+            signatureReceived: false,
+            comments: comments || 'Renewal process started',
+            createdById: 'system', // Replace with actual user ID from session
+          }
+        });
+        console.log('✅ Renewal record created successfully');
+      } catch (renewalError) {
+        console.error('❌ Error creating renewal record:', renewalError);
+        // Ne prekidamo proces ako renewal kreiranje ne uspe
+        // ali logujemo grešku
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      contract: result.contract,
-      renewalId: result.renewalId,
-      message: result.renewalId 
-        ? 'Contract status updated and renewal process initialized'
-        : 'Contract status updated successfully'
+      message: `Contract status updated to ${newStatus.replace(/_/g, ' ').toLowerCase()}`,
+      contract: updatedContract,
+      shouldRefresh: true
     });
 
   } catch (error) {
-    console.error('Error updating contract status:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-// GET endpoint za dohvatanje trenutnog statusa
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id: contractId } = await params;
-
-    const contract = await db.contract.findUnique({
-      where: { id: contractId },
-      select: {
-        id: true,
-        status: true,
-        type: true,
-        updatedAt: true,
-        lastModifiedBy: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
+    console.error('❌ Error in updateContractStatus API:', error);
+    
+    // Specifične greške za Prisma
+    if (error && typeof error === 'object' && 'code' in error) {
+      const prismaError = error as any;
+      console.error('Prisma error code:', prismaError.code);
+      console.error('Prisma error meta:', prismaError.meta);
+      
+      if (prismaError.code === 'P2025') {
+        return NextResponse.json({
+          success: false,
+          message: 'Contract not found or already deleted'
+        }, { status: 404 });
       }
-    });
-
-    if (!contract) {
-      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
-    }
-
-    // Ako je humanitarni ugovor u renewal statusu, dohvati i renewal info
-    let renewalInfo = null;
-    if (contract.type === 'HUMANITARIAN' && contract.status === 'RENEWAL_IN_PROGRESS') {
-      renewalInfo = await db.humanitarianContractRenewal.findFirst({
-        where: { contractId: contractId },
-        select: {
-          id: true,
-          subStatus: true,
-          documentsReceived: true,
-          legalApproved: true,
-          financialApproved: true,
-          signatureReceived: true,
-          updatedAt: true
-        }
-      });
+      
+      if (prismaError.code === 'P2002') {
+        return NextResponse.json({
+          success: false,
+          message: 'Database constraint violation'
+        }, { status: 400 });
+      }
     }
 
     return NextResponse.json({
-      contract,
-      renewalInfo
-    });
-
-  } catch (error) {
-    console.error('Error fetching contract status:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+      success: false,
+      message: 'Failed to update contract status: ' + (error instanceof Error ? error.message : 'Unknown error')
+    }, { status: 500 });
   }
+}
+
+function validateStatusChange(currentStatus: ContractStatus, newStatus: ContractStatus) {
+  console.log('🔍 Validating status change:', { currentStatus, newStatus });
+  
+  const validTransitions: Record<ContractStatus, ContractStatus[]> = {
+    [ContractStatus.DRAFT]: [ContractStatus.ACTIVE, ContractStatus.TERMINATED],
+    [ContractStatus.ACTIVE]: [ContractStatus.RENEWAL_IN_PROGRESS, ContractStatus.EXPIRED, ContractStatus.TERMINATED],
+    [ContractStatus.PENDING]: [ContractStatus.ACTIVE, ContractStatus.RENEWAL_IN_PROGRESS, ContractStatus.TERMINATED],
+    [ContractStatus.RENEWAL_IN_PROGRESS]: [ContractStatus.ACTIVE, ContractStatus.EXPIRED, ContractStatus.TERMINATED],
+    [ContractStatus.EXPIRED]: [ContractStatus.RENEWAL_IN_PROGRESS, ContractStatus.TERMINATED],
+    [ContractStatus.TERMINATED]: [] // No transitions from terminated
+  };
+
+  const allowedTransitions = validTransitions[currentStatus] || [];
+  console.log('📋 Allowed transitions from', currentStatus, ':', allowedTransitions);
+  
+  if (!allowedTransitions.includes(newStatus)) {
+    const errorMessage = `Cannot change status from ${currentStatus.replace(/_/g, ' ')} to ${newStatus.replace(/_/g, ' ')}`;
+    console.error('❌ Invalid transition:', errorMessage);
+    return {
+      isValid: false,
+      message: errorMessage
+    };
+  }
+
+  console.log('✅ Status change validation passed');
+  return { isValid: true, message: '' };
 }
