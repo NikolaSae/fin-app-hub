@@ -5,14 +5,7 @@ import React from 'react';
 
 import "./globals.css";
 
-// *** Import Sonner Toaster Component ***
-// Proverite da li je putanja ispravna za vaš projekat
-// Ako koristite shadcn/ui verziju sonner-a:
 import { Toaster } from "@/components/ui/sonner";
-// Ako koristite direktno sonner biblioteku:
-// import { Toaster } from "sonner";
-
-
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -39,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-primary`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}
       >
            {children}
         <Toaster />

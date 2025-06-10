@@ -1,4 +1,4 @@
-//auth.ts
+// auth.ts
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/db";
@@ -17,52 +17,60 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Initial sign in - add role to token
+      // Initial sign in - add user details to token
       if (user) {
-        console.log("[JWT] Initial sign in, adding role to token");
-        const dbUser = await db.user.findUnique({
-          where: { id: user.id },
-          select: { role: true, id: true, email: true }
-        });
-        
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.id = dbUser.id;
-        }
+        console.log("[JWT] Initial sign in, adding user details to token");
+        token.id = user.id;
+        token.role = user.role;
+        token.name = user.name;
+        token.image = user.image;
       }
 
-      // If role is missing from token, fetch it
-      if (token.id && !token.role) {
-        console.log("[JWT] Role missing from token, fetching from DB");
+      // If user details are missing from token, fetch them
+      if (token.id && (!token.role || !token.name || !token.image)) {
+        console.log("[JWT] User details missing from token, fetching from DB");
         const dbUser = await db.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true }
+          select: { 
+            role: true, 
+            name: true, 
+            image: true 
+          }
         });
         
         if (dbUser) {
           token.role = dbUser.role;
+          token.name = dbUser.name;
+          token.image = dbUser.image;
         }
       }
 
-      // Handle session updates (if you implement role changes)
-      if (trigger === "update" && session?.role) {
-        token.role = session.role;
+      // Handle session updates (e.g., profile changes)
+      if (trigger === "update" && session) {
+        console.log("[JWT] Updating token from session update");
+        if (session.name) token.name = session.name;
+        if (session.image) token.image = session.image;
+        if (session.role) token.role = session.role;
       }
       
       return token;
     },
 
     async session({ session, token }) {
-      // Add role to session
-      if (token.role && session.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).id = token.id;
+      // Add additional user details to session
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.name = token.name as string | null;
+        session.user.image = token.image as string | null;
       }
       
-      console.log("[SESSION] Session created with role:", {
+      console.log("[SESSION] Session created:", {
+        userId: session.user?.id,
         userEmail: session.user?.email,
-        userRole: (session.user as any)?.role,
-        userId: (session.user as any)?.id
+        userName: session.user?.name,
+        userImage: session.user?.image,
+        userRole: session.user?.role
       });
       
       return session;
@@ -91,7 +99,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               email: true, 
               password: true, 
               role: true,
-              isActive: true 
+              isActive: true,
+              name: true,       // Added
+              image: true       // Added
             }
           });
           
@@ -106,13 +116,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             console.log("[AUTH] Password match, user authorized:", {
               id: user.id,
               email: user.email,
-              role: user.role
+              role: user.role,
+              name: user.name,   // Added
+              image: user.image  // Added
             });
             
             return {
               id: user.id,
               email: user.email,
               role: user.role,
+              name: user.name,   // Added
+              image: user.image  // Added
             };
           }
         }
