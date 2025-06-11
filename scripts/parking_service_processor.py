@@ -43,7 +43,7 @@ def return_db_connection(conn):
 def get_db_params():
     """Get database parameters based on environment configuration"""
     # Check if we should use local database
-    if os.getenv("USE_LOCAL_DB", "false").lower() == "true":
+    if os.getenv("USE_LOCAL_DB", "true").lower() == "true":
         logging.info("Using LOCAL database configuration")
         return {
             "host": "localhost",
@@ -79,6 +79,7 @@ os.makedirs(FOLDER_PATH, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 os.makedirs(ERROR_FOLDER, exist_ok=True)
 os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+
 
 def extract_service_code(service_name):
     """Extract first four digits from serviceName - matches exact 4-digit codes"""
@@ -437,6 +438,69 @@ def convert_date_format(date_str):
     except Exception as e:
         return None
 
+def extract_year_from_filename(filename):
+    """Extract year from filename"""
+    try:
+        # Try to find 4-digit year in filename
+        year_match = re.search(r'(\d{4})', filename)
+        if year_match:
+            year = int(year_match.group(1))
+            # Validate that it's a reasonable year (between 2000 and current year + 1)
+            current_year = datetime.now().year
+            if 2000 <= year <= current_year + 1:
+                return str(year)
+        
+        # If no year found, use current year
+        return str(datetime.now().year)
+    except Exception as e:
+        logging.warning(f"Could not extract year from filename {filename}: {e}")
+        return str(datetime.now().year)
+
+def update_parking_service_file_info(conn, parking_service_id, filename, file_path, file_size, import_status, user_id):
+    """Update ParkingService with file information"""
+    try:
+        cur = conn.cursor()
+        
+        # Get file stats
+        mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if filename.endswith('.xlsx') else "application/vnd.ms-excel"
+        
+        update_sql = """
+        UPDATE "ParkingService" 
+        SET 
+            "originalFileName" = %s,
+            "originalFilePath" = %s,
+            "fileSize" = %s,
+            "mimeType" = %s,
+            "lastImportDate" = %s,
+            "importedBy" = %s,
+            "importStatus" = %s,
+            "updatedAt" = %s
+        WHERE "id" = %s
+        """
+        
+        cur.execute(update_sql, (
+            filename,
+            file_path,
+            file_size,
+            mime_type,
+            datetime.now(),
+            user_id,
+            import_status,
+            datetime.now(),
+            parking_service_id
+        ))
+        
+        conn.commit()
+        logging.info(f"Updated ParkingService file info for: {parking_service_id}")
+        cur.close()
+        
+    except Exception as e:
+        logging.error(f"Error updating ParkingService file info: {e}")
+        try:
+            conn.rollback()
+        except:
+            pass
+
 def sanitize_parking_record(row):
     """Sanitize parking records"""
     try:
@@ -495,6 +559,18 @@ def process_excel(input_file):
         parking_service_id, ps_created = get_or_create_parking_service(conn, provider_name)
         if not parking_service_id:
             raise Exception(f"Could not get/create parking service for {provider_name}")
+
+        # Update ParkingService with file information
+        file_size = os.path.getsize(input_file)
+        update_parking_service_file_info(
+            conn, 
+            parking_service_id, 
+            os.path.basename(input_file), 
+            input_file, 
+            file_size, 
+            "in_progress", 
+            current_user_id
+        )
 
         if ps_created:
             log_to_database(
@@ -601,17 +677,14 @@ def process_excel(input_file):
 
         logging.info(f"Processed {input_file}: {len(output_records)} records")
         
-        log_to_database(
-            conn,
-            entity_type="System",
-            entity_id="complete",
-            action="PROCESS_COMPLETE",
-            subject=f"Successfully processed {os.path.basename(input_file)}",
-            description=f"Created {len(output_records)} parking records",
-            user_id=current_user_id
-        )
-        
-        return output_records
+        # Return both records and metadata needed for file organization
+        return {
+            'records': output_records,
+            'parking_service_id': parking_service_id,
+            'provider_name': provider_name,
+            'filename': os.path.basename(input_file),
+            'current_user_id': current_user_id
+        }
         
     except Exception as e:
         logging.error(f"Error processing file {input_file}: {e}")
@@ -738,74 +811,187 @@ def import_to_postgresql(csv_path):
         if conn:
             return_db_connection(conn)
 
-def move_file(source_path, destination_folder, success=True):
-    """Move processed files"""
+def create_parking_service_directory(provider_name, year):
+    """Create directory structure for parking service"""
     try:
-        filename = os.path.basename(source_path)
-        destination_path = os.path.join(destination_folder, filename)
-        shutil.move(source_path, destination_path)
-        logging.info(f"File moved to {'processed' if success else 'errors'}: {filename}")
+        # Sanitize provider name for filesystem
+        safe_provider_name = re.sub(r'[^\w\s-]', '', provider_name)
+        safe_provider_name = re.sub(r'[-\s]+', '-', safe_provider_name)
+        
+        # Create directory path
+        base_path = os.path.join(PROJECT_ROOT, "public", "parking-servis", safe_provider_name, "reports", year)
+        
+        # Create directory if it doesn't exist
+        os.makedirs(base_path, exist_ok=True)
+        
+        logging.info(f"Created directory structure: {base_path}")
+        return base_path
+        
     except Exception as e:
-        logging.error(f"Error moving file {source_path}: {e}")
+        logging.error(f"Error creating directory structure: {e}")
+        return None
 
-def process_all_files():
-    """Main processing function"""
-    if not test_database_connection():
-        logging.error("Cannot proceed without database connection")
-        return
-    
-    current_user_id = get_current_user()
-    if not current_user_id:
-        logging.error("Cannot proceed without current user")
-        return
-    
-    file_pattern = os.path.join(FOLDER_PATH, "Servis__MicropaymentMerchantReport_*mParking*.xls*")
-    files = glob.glob(file_pattern)
-    
-    if not files:
-        logging.info(f"No parking files found in: {FOLDER_PATH}")
-        return
-
-    logging.info(f"Found {len(files)} files to process")
-    
-    all_data = []
-    processed_files = []
-    error_files = []
-
-    for file_path in files:
+def move_file_to_service_directory(source_file, parking_service_id, provider_name, filename, user_id):
+    """Move processed file to parking service directory structure"""
+    conn = None
+    try:
+        # Extract year from filename
+        year = extract_year_from_filename(filename)
+        
+        # Create directory structure
+        target_dir = create_parking_service_directory(provider_name, year)
+        if not target_dir:
+            raise Exception(f"Could not create directory for {provider_name}")
+        
+        # Move file to target directory
+        target_file = os.path.join(target_dir, filename)
+        shutil.move(source_file, target_file)
+        
+        # Update database with new file location
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        update_sql = """
+        UPDATE "ParkingService" 
+        SET 
+            "originalFilePath" = %s,
+            "importStatus" = %s,
+            "updatedAt" = %s
+        WHERE "id" = %s
+        """
+        
+        cur.execute(update_sql, (
+            target_file,
+            "completed",
+            datetime.now(),
+            parking_service_id
+        ))
+        
+        conn.commit()
+        cur.close()
+        
+        # Log the successful move
+        log_to_database(
+            conn,
+            entity_type="ParkingService",
+            entity_id=parking_service_id,
+            action="FILE_MOVED",
+            subject=f"File moved to {target_file}",
+            user_id=user_id
+        )
+        
+        logging.info(f"File moved successfully: {source_file} -> {target_file}")
+        return target_file
+        
+    except Exception as e:
+        logging.error(f"Error moving file {source_file}: {e}")
+        # If move fails, try to move to error folder
         try:
-            file_data = process_excel(file_path)
-            all_data.extend(file_data)
-            processed_files.append(file_path)
-        except Exception as e:
-            logging.error(f"Failed to process {file_path}: {e}")
-            error_files.append(file_path)
+            error_file = os.path.join(ERROR_FOLDER, filename)
+            shutil.move(source_file, error_file)
+            logging.info(f"File moved to error folder: {error_file}")
+        except Exception as move_error:
+            logging.error(f"Could not move file to error folder: {move_error}")
+        
+        if conn:
+            try:
+                log_to_database(
+                    conn,
+                    entity_type="ParkingService",
+                    entity_id=parking_service_id,
+                    action="FILE_MOVE_ERROR",
+                    subject=f"Failed to move file {filename}",
+                    description=str(e),
+                    severity="ERROR",
+                    user_id=user_id
+                )
+            except:
+                pass
+        
+        return None
+    finally:
+        if conn:
+            return_db_connection(conn)
 
-    if all_data:
-        try:
-            save_to_csv(all_data, OUTPUT_FILE)
-            import_to_postgresql(OUTPUT_FILE)
+def main():
+    """Main function to process all files"""
+    try:
+        # Test database connection first
+        if not test_database_connection():
+            logging.error("Database connection failed. Exiting.")
+            return
+        
+        # Initialize connection pool
+        init_db_pool()
+        
+        # Get all Excel files from input folder
+        excel_files = glob.glob(os.path.join(FOLDER_PATH, "*.xlsx"))
+        excel_files.extend(glob.glob(os.path.join(FOLDER_PATH, "*.xls")))
+        
+        if not excel_files:
+            logging.info("No Excel files found in input folder")
+            return
+        
+        logging.info(f"Found {len(excel_files)} Excel files to process")
+        
+        all_records = []
+        
+        for file_path in excel_files:
+            try:
+                logging.info(f"Processing file: {os.path.basename(file_path)}")
+                
+                # Process the Excel file
+                result = process_excel(file_path)
+                
+                if result and result.get('records'):
+                    all_records.extend(result['records'])
+                    
+                    # Move file to appropriate directory structure
+                    move_file_to_service_directory(
+                        file_path,
+                        result['parking_service_id'],
+                        result['provider_name'],
+                        result['filename'],
+                        result['current_user_id']
+                    )
+                    
+                    logging.info(f"Successfully processed and moved: {result['filename']}")
+                else:
+                    # Move to error folder if no records
+                    error_file = os.path.join(ERROR_FOLDER, os.path.basename(file_path))
+                    shutil.move(file_path, error_file)
+                    logging.warning(f"No records found, moved to error folder: {error_file}")
+                    
+            except Exception as e:
+                logging.error(f"Error processing file {os.path.basename(file_path)}: {e}")
+                # Move problematic file to error folder
+                try:
+                    error_file = os.path.join(ERROR_FOLDER, os.path.basename(file_path))
+                    shutil.move(file_path, error_file)
+                    logging.info(f"Moved problematic file to error folder: {error_file}")
+                except Exception as move_error:
+                    logging.error(f"Could not move file to error folder: {move_error}")
+                continue
+        
+        # Save all records to CSV
+        if all_records:
+            save_to_csv(all_records, OUTPUT_FILE)
+            logging.info(f"Saved {len(all_records)} records to {OUTPUT_FILE}")
             
-            for file_path in processed_files:
-                move_file(file_path, PROCESSED_FOLDER, success=True)
-        except Exception as e:
-            logging.error(f"Error in data processing: {e}")
-            for file_path in processed_files:
-                move_file(file_path, ERROR_FOLDER, success=False)
-    
-    for file_path in error_files:
-        move_file(file_path, ERROR_FOLDER, success=False)
-    
-    logging.info(f"Processing summary:")
-    logging.info(f"  - Successful: {len(processed_files)} files")
-    logging.info(f"  - Failed: {len(error_files)} files")
-    logging.info(f"  - Total records: {len(all_data)}")
+            # Import to PostgreSQL
+            import_to_postgresql(OUTPUT_FILE)
+            logging.info("Data import to PostgreSQL completed")
+        else:
+            logging.info("No records to save")
+            
+    except Exception as e:
+        logging.error(f"Main process error: {e}")
+        raise
+    finally:
+        # Close connection pool
+        if connection_pool:
+            connection_pool.closeall()
+            logging.info("Database connection pool closed")
 
 if __name__ == "__main__":
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Input folder: {FOLDER_PATH}")
-    print("=" * 50)
-    
-    process_all_files()   
-    print("✅ Script executed successfully!", flush=True)
-    print("✅ Parking data processing completed!")
+    main()

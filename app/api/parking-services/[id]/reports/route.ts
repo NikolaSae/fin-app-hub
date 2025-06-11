@@ -1,15 +1,25 @@
 // app/api/parking-services/[id]/reports/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import db from "@/lib/db";
 
-const prisma = new PrismaClient();
-
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const parkingServiceId = params.id;
-
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    // Pretpostavimo da postoji tabela parkingReports sa kolonom parkingServiceId
-    const reports = await prisma.parkingReport.findMany({
+    // Properly await the params promise
+    const { id } = await params;
+    const parkingServiceId = id;
+
+    if (!parkingServiceId) {
+      return NextResponse.json(
+        { error: "Missing parking service ID" },
+        { status: 400 }
+      );
+    }
+
+    // Ensure model name matches your Prisma schema
+    const reports = await db.parkingReport.findMany({
       where: { parkingServiceId },
       orderBy: { createdAt: "desc" },
       select: {
@@ -23,8 +33,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ reports });
   } catch (error) {
     console.error("Failed to fetch reports:", error);
-    return NextResponse.json({ error: "Failed to fetch reports" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json(
+      { error: "Failed to fetch reports" },
+      { status: 500 }
+    );
   }
 }
