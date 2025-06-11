@@ -16,6 +16,7 @@ import PageHeader from "@/components/PageHeader";
 import DetailSkeleton from "@/components/skeletons/DetailSkeleton";
 import { getContractsCountForParkingService } from "@/actions/parking-services/getContractsCount";
 import { getServicesCountForParkingService } from "@/actions/parking-services/getServicesCount";
+import ParkingServiceReports from "@/components/parking-services/ParkingServiceReports";
 
 export const metadata: Metadata = {
   title: "Parking Service Details | Contract Management System",
@@ -64,6 +65,7 @@ export default async function ParkingServiceDetailsPage({
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="services-overview">Services Overview</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger> {/* nova kartica */}
         </TabsList>
         
         <TabsContent value="details">
@@ -97,6 +99,13 @@ export default async function ParkingServiceDetailsPage({
                   parkingServiceName={parkingService.name}
                 />
               </Suspense>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="reports">
+          <Card>
+            <CardContent className="pt-6">
+              <ParkingServiceReports parkingServiceId={id} />
             </CardContent>
           </Card>
         </TabsContent>

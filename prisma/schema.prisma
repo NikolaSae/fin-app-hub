@@ -209,6 +209,16 @@ model ParkingService {
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  // NOVI FIELDOVI ZA FILE TRACKING
+  originalFileName  String?   // Originalno ime fajla
+  originalFilePath  String?   // Putanja do originalnog fajla
+  fileSize          Int?      // Veličina fajla u bajtovima
+  mimeType          String?   // MIME tip fajla (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
+  lastImportDate    DateTime? // Kada je poslednji put importovan
+  importedBy        String?   // Ko je importovao
+  importStatus      String?   // "success", "failed", "in_progress"
+  
   transactions ParkingTransaction[]
   // Relations
   contracts   Contract[]
