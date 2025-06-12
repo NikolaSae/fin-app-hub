@@ -49,6 +49,7 @@ export const protectedRoutes = [
   "/complaints",
   "/complaints/new",
   "/complaints/admin",
+  "/admin/complaints",
   "/operators", // DODANO
   "/operators/new", // DODANO
   "/operators/[id]", // DODANO

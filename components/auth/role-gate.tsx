@@ -1,3 +1,5 @@
+//components/auth/role-gate.tsx
+
 "use client";
 
 import { useCurrentRole } from "@/hooks/use-current-role";

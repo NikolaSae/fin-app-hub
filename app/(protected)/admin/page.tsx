@@ -1,3 +1,5 @@
+//app/(protected)/admin/page.tsx
+
 "use client";
 
 import { admin } from "@/actions/admin";
