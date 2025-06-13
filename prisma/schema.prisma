@@ -207,6 +207,7 @@ model ParkingService {
   additionalEmails String[] // Novo polje za array email adresa
   phone       String?
   address     String?
+  additionalEmails String[]
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

@@ -1,17 +1,14 @@
 //app/(protected)/parking-services/[id]/edit/page.tsx
 
 import { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getParkingServiceById } from "@/actions/parking-services/getParkingServiceById";
-import { update } from "@/actions/parking-services/update";
 import ParkingServiceForm from "@/components/parking-services/ParkingServiceForm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PageHeader from "@/components/PageHeader";
-import { UpdateParkingServiceParams } from "@/lib/types/parking-service-types"; // Import the type
 
 export const metadata: Metadata = {
   title: "Edit Parking Service | Contract Management System",
-  description: "Edit parking service details in the contract management system",
+  description: "Edit parking service in the contract management system",
 };
 
 export default async function EditParkingServicePage({
@@ -19,21 +16,16 @@ export default async function EditParkingServicePage({
 }: {
   params: { id: string };
 }) {
-  // Await params before accessing its properties
-  const { id } = await params;
-
-  // Fetch the parking service using the awaited id
+  const { id } = params;
   const parkingServiceResult = await getParkingServiceById(id);
-
-  // Check if the fetch was successful and data exists
+  
   if (!parkingServiceResult.success || !parkingServiceResult.data) {
-    // If not found or error, call notFound()
     notFound();
   }
-
-  // Extract the parking service data
+  
   const parkingService = parkingServiceResult.data;
 
+<<<<<<< HEAD
   // Server action to update the parking service
   async function updateParkingServiceAction(formData: FormData) {
   "use server";
@@ -71,17 +63,19 @@ export default async function EditParkingServicePage({
   }
 }
 
+=======
+>>>>>>> 1dec103f1654c65550e3704a1fb8da634bb9dc80
   return (
     <div className="container mx-auto py-6 space-y-6">
       <PageHeader
-        title={`Edit ${parkingService.name}`}
-        description="Update parking service details"
+        title="Edit Parking Service"
+        description={`Edit ${parkingService.name}`}
         backLink={{
-          // Use the awaited id in the backLink href
           href: `/parking-services/${id}`,
           label: "Back to Service Details",
         }}
       />
+<<<<<<< HEAD
 
       <Card>
         <CardHeader>
@@ -103,6 +97,15 @@ export default async function EditParkingServicePage({
           />
         </CardContent>
       </Card>
+=======
+      
+      <div className="max-w-2xl">
+        <ParkingServiceForm 
+          initialData={parkingService}
+          isEditing={true}
+        />
+      </div>
+>>>>>>> 1dec103f1654c65550e3704a1fb8da634bb9dc80
     </div>
   );
 }
