@@ -36,38 +36,40 @@ export default async function EditParkingServicePage({
 
   // Server action to update the parking service
   async function updateParkingServiceAction(formData: FormData) {
-    "use server";
+  "use server";
+  const rawData = Object.fromEntries(formData.entries());
+  
+  // Process additional emails
+  const additionalEmails = rawData.additionalEmails
+    ? (rawData.additionalEmails as string).split(',').map(email => email.trim()).filter(Boolean)
+    : [];
 
-    const rawData = Object.fromEntries(formData.entries());
+  // ✅ Build clean data object without spreading rawData
+  const data: UpdateParkingServiceParams = {
+    id,
+    name: rawData.name as string,
+    contactName: rawData.contactName as string || undefined,
+    email: rawData.email as string || undefined,
+    phone: rawData.phone as string || undefined,
+    address: rawData.address as string || undefined,
+    description: rawData.description as string || undefined,
+    isActive: rawData.isActive === "on" || rawData.isActive === "true",
+    additionalEmails, // Clean array
+  };
 
-    // Process boolean fields and ensure ID is included using the awaited id
-    const data: UpdateParkingServiceParams = {
-      ...rawData,
-      id: id, // Use the awaited id
-      isActive: rawData.isActive === "on" || rawData.isActive === "true",
-    } as UpdateParkingServiceParams; // Type assertion to match expected type
-
-    try {
-      // Call the update action with the data including the awaited id
-      const result = await update(data);
-
-      // Redirect to the parking service details page if successful
-      if (result.success) {
-        // Use the awaited id in the redirect path
-        redirect(`/parking-services/${id}`);
-      }
-
-      // Return the result for client-side handling (e.g., displaying errors)
-      return result;
-    } catch (error) {
-      console.error("Error updating parking service:", error);
-      // Return a consistent error structure
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to update parking service. Please try again."
-      };
+  try {
+    const result = await update(data);
+    if (result.success) {
+      redirect(`/parking-services/${id}`);
     }
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update parking service"
+    };
   }
+}
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -90,7 +92,11 @@ export default async function EditParkingServicePage({
             // Pass the server action function
             action={updateParkingServiceAction}
             // Pass the fetched initial data
-            initialData={parkingService}
+            initialData={{
+              ...parkingService,
+              // Convert array to comma-separated string for form input
+              additionalEmails: parkingService.additionalEmails?.join(", ") || ""
+            }}
             // Indicate that the form is for editing
             isEditing={true}
             submitLabel="Update Parking Service"

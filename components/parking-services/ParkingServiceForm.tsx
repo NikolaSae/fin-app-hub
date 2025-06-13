@@ -1,13 +1,10 @@
 //components/parking-services/ParkingServiceForm.tsx
-
-
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-// Corrected import to use the schema that is actually exported and matches the form structure
 import { createParkingServiceSchema } from "@/schemas/parking-service";
 import {
   Form,
@@ -22,75 +19,87 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ParkingServiceFormData } from "@/lib/types/parking-service-types";
-// Imports for action functions - ensure these match the export names in your action files
+import { ParkingService } from "@prisma/client";
 import { create } from "@/actions/parking-services/create";
 import { update } from "@/actions/parking-services/update";
 
 interface ParkingServiceFormProps {
-  initialData?: ParkingServiceFormData;
+  initialData?: ParkingService & { additionalEmails?: string[] };
   isEditing?: boolean;
+  submitLabel?: string;
 }
 
 export default function ParkingServiceForm({
   initialData,
-  isEditing = false
+  isEditing = false,
+  submitLabel = isEditing ? "Update Parking Service" : "Create Parking Service"
 }: ParkingServiceFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<ParkingServiceFormData>({
-    // Use the correctly imported create schema for validation
+  const form = useForm({
     resolver: zodResolver(createParkingServiceSchema),
-    defaultValues: initialData || {
+    defaultValues: {
       name: "",
       contactName: "",
       email: "",
+      additionalEmails: "",
       phone: "",
       address: "",
       description: "",
       isActive: true,
-    },
+      ...initialData,
+      additionalEmails: initialData?.additionalEmails?.join(", ") || ""
+    }
   });
 
-  const onSubmit = async (data: ParkingServiceFormData) => {
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        ...initialData,
+        additionalEmails: initialData.additionalEmails?.join(", ") || ""
+      });
+    }
+  }, [initialData, form]);
+
+  const onSubmit = async (formData: any) => {
     try {
       setIsSubmitting(true);
+      
+      const additionalEmailsArray = formData.additionalEmails
+        ? formData.additionalEmails.split(',').map((email: string) => email.trim()).filter(Boolean)
+        : [];
+
+      const serverData = {
+        ...formData,
+        additionalEmails: additionalEmailsArray
+      };
 
       let result;
       if (isEditing && initialData?.id) {
-        // Call the correctly imported update action
-        // The update action expects the id along with the updated data
-        result = await update({ id: initialData.id, ...data });
+        result = await update({ 
+          ...serverData, 
+          id: initialData.id 
+        });
       } else {
-        // Call the correctly imported create action
-        // The create action expects the data for the new service
-        result = await create(data);
+        result = await create(serverData);
       }
 
-      if (result.success) {
-         toast.success(isEditing ? "Parking service updated successfully" : "Parking service created successfully");
-         // Redirect to the details page on success
-         if (result.data?.id) {
-            router.push(`/parking-services/${result.data.id}`);
-         } else {
-             // Fallback redirect if ID is not returned (shouldn't happen if action is correct)
-             router.push('/parking-services');
-         }
+      if (result?.success) {
+        toast.success(
+          isEditing 
+            ? "Parking service updated successfully" 
+            : "Parking service created successfully"
+        );
+        router.push(result.data?.id ? `/parking-services/${result.data.id}` : '/parking-services');
       } else {
-         // Display error message from the action result
-         toast.error(result.error || (isEditing ? "Failed to update parking service" : "Failed to create parking service"));
+        toast.error(result?.error || (isEditing 
+          ? "Failed to update parking service" 
+          : "Failed to create parking service"));
       }
-
-      // router.refresh(); // router.push typically handles refresh for app router navigation
-
     } catch (error) {
       console.error("Error submitting form:", error);
-      // Fallback toast for unexpected errors
-      toast.error(isEditing
-        ? "Failed to update parking service due to an unexpected error."
-        : "Failed to create parking service due to an unexpected error."
-      );
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -121,7 +130,7 @@ export default function ParkingServiceForm({
               <FormItem>
                 <FormLabel>Contact Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter contact person's name" {...field} />
+                  <Input placeholder="Enter contact person's name" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -133,16 +142,37 @@ export default function ParkingServiceForm({
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Primary Email</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="Enter contact email"
+                    placeholder="Enter primary email"
                     {...field}
                     value={field.value || ""}
                   />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="additionalEmails"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Additional Emails</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="email1@example.com, email2@example.com"
+                    {...field}
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormMessage />
+                <p className="text-sm text-muted-foreground">
+                  Separate multiple emails with commas
+                </p>
               </FormItem>
             )}
           />
@@ -237,11 +267,7 @@ export default function ParkingServiceForm({
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? (
-              isEditing ? "Updating..." : "Creating..."
-            ) : (
-              isEditing ? "Update Parking Service" : "Create Parking Service"
-            )}
+            {isSubmitting ? "Processing..." : submitLabel}
           </Button>
         </div>
       </form>

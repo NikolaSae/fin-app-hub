@@ -139,6 +139,12 @@ export default function ParkingServiceDetails({
                 <span>{parkingService.email}</span>
               </div>
             )}
+            {parkingService.additionalEmails && (
+              <div className="flex items-start gap-2">
+                <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <span>{parkingService.additionalEmails}</span>
+              </div>
+            )}
             {parkingService.phone && (
               <div className="flex items-start gap-2">
                 <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />

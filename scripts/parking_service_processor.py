@@ -43,7 +43,7 @@ def return_db_connection(conn):
 def get_db_params():
     """Get database parameters based on environment configuration"""
     # Check if we should use local database
-    if os.getenv("USE_LOCAL_DB", "false").lower() == "true":
+    if os.getenv("USE_LOCAL_DB", "true").lower() == "true":
         logging.info("Using LOCAL database configuration")
         return {
             "host": "localhost",

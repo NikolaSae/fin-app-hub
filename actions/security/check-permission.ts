@@ -176,7 +176,7 @@ export async function checkPermission(
  * @param role User role
  * @returns Array of permission names available to the role
  */
-export function getPermissionsForRole(role: UserRole): string[] {
+export async function getPermissionsForRole(role: UserRole): Promise<string[]> {
   return PERMISSIONS
     .filter(permission => permission.roles.includes(role))
     .map(permission => permission.name);
@@ -186,7 +186,7 @@ export function getPermissionsForRole(role: UserRole): string[] {
  * Get all permissions grouped by resource
  * @returns Object with resources as keys and arrays of permissions as values
  */
-export function getAllPermissionsByResource(): Record<string, Permission[]> {
+export async function getAllPermissionsByResource(...): Promise<Record<string, Permission[]>> {
   const result: Record<string, Permission[]> = {};
   
   for (const permission of PERMISSIONS) {

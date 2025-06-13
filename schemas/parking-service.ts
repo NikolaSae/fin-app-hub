@@ -1,5 +1,4 @@
 //schemas/parking-service.ts
-
 import { z } from "zod";
 
 // Schema for validating new parking service creation
@@ -13,6 +12,13 @@ export const createParkingServiceSchema = z.object({
     .max(100, "Email must be less than 100 characters")
     .optional()
     .nullable(),
+  // Novo polje za dodatne email adrese
+  additionalEmails: z
+    .array(z.string().email("Please enter a valid email address"))
+    .max(5, "Maximum 5 additional email addresses allowed")
+    .nullable()
+    .optional()
+    .default([]),
   phone: z
     .string()
     .max(20, "Phone number must be less than 20 characters")

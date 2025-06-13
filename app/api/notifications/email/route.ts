@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/notifications/email-sender";
 import { getEmailTemplate } from "@/lib/notifications/templates";
 import { NotificationType } from "@prisma/client";
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     let emailRecipients: string[] = validatedData.emails || [];
     
     if (validatedData.userIds?.length) {
-      const users = await prisma.user.findMany({
+      const users = await db.user.findMany({
         where: {
           id: { in: validatedData.userIds },
           isActive: true,
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     const failureCount = results.filter(r => !r.success).length;
     
     // Log the activity
-    await prisma.activityLog.create({
+    await db.activityLog.create({
       data: {
         action: "SEND_EMAIL_NOTIFICATIONS",
         entityType: validatedData.entityType || "EMAIL",

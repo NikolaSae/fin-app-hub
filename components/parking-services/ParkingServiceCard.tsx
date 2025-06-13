@@ -52,6 +52,14 @@ export default function ParkingServiceCard({ service }: ParkingServiceCardProps)
                 <span className="truncate">{service.email}</span>
               </div>
             )}
+
+            <div className="space-y-1">
+            {service.additionalEmails && (
+              <div className="flex items-center text-sm gap-2 text-muted-foreground">
+                <Mail className="h-3.5 w-3.5" />
+                <span className="truncate">{service.additionalEmails}</span>
+              </div>
+            )}
             
             {service.phone && (
               <div className="flex items-center text-sm gap-2 text-muted-foreground">

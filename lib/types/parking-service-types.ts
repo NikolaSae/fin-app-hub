@@ -15,7 +15,7 @@ export interface CreateParkingServiceParams {
   phone?: string;
   address?: string;
   isActive?: boolean;
-  // New file tracking fields
+  additionalEmails?: string[];
   originalFileName?: string;
   originalFilePath?: string;
   fileSize?: number;
@@ -35,7 +35,7 @@ export interface UpdateParkingServiceParams {
   phone?: string;
   address?: string;
   isActive?: boolean;
-  // New file tracking fields
+  additionalEmails?: string[];
   originalFileName?: string;
   originalFilePath?: string;
   fileSize?: number;
@@ -94,4 +94,15 @@ export interface ImportStatusUpdate {
   lastImportDate: Date;
   importedBy: string;
   errorMessage?: string;
+}
+export interface ParkingServiceFormData {
+  id?: string;
+  name: string;
+  contactName?: string;
+  email?: string;
+  additionalEmails?: string; // String for form input (comma-separated)
+  phone?: string;
+  address?: string;
+  description?: string;
+  isActive: boolean;
 }

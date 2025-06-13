@@ -7,6 +7,7 @@ import { getParkingServiceById } from "@/actions/parking-services/getParkingServ
 import ParkingServiceDetails from "@/components/parking-services/ParkingServiceDetails";
 import ParkingServiceContracts from "@/components/parking-services/ParkingServiceContracts";
 import ParkingServiceServicesOverview from "@/components/parking-services/ParkingServiceServicesOverview";
+import ParkingServiceContacts from "@/components/parking-services/ParkingServiceContacts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -63,6 +64,7 @@ export default async function ParkingServiceDetailsPage({
       <Tabs defaultValue="details">
         <TabsList className="mb-4">
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="contacts">Contacts</TabsTrigger>
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="services-overview">Services Overview</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger> {/* nova kartica */}
@@ -75,6 +77,16 @@ export default async function ParkingServiceDetailsPage({
                 parkingService={parkingService}
                 contractsCount={contractsCount}
                 servicesCount={servicesCount}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="contacts">
+          <Card>
+            <CardContent className="pt-6">
+              <ParkingServiceContacts 
+                parkingService={parkingService}
               />
             </CardContent>
           </Card>
