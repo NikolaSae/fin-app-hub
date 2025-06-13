@@ -1,5 +1,4 @@
 //components/parking-services/ParkingServiceDetails.tsx
-
 "use client";
 
 import { useState } from "react";
@@ -17,6 +16,7 @@ import {
   FileEdit,
   Trash,
   AlertCircle,
+  Copy,
 } from "lucide-react";
 import { ParkingServiceDetail } from "@/lib/types/parking-service-types";
 import { formatDate } from "@/lib/utils";
@@ -67,6 +67,11 @@ export default function ParkingServiceDetails({
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleCopy = (text: string, message: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(message);
   };
 
   return (
@@ -136,13 +141,107 @@ export default function ParkingServiceDetails({
             {parkingService.email && (
               <div className="flex items-start gap-2">
                 <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <span>{parkingService.email}</span>
+                <div className="w-full">
+                  <span className="font-medium">Primary Email:</span>
+                  <div className="flex justify-between items-center">
+                    <span>{parkingService.email}</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        asChild
+                        className="h-8 w-8"
+                      >
+                        <a href={`mailto:${parkingService.email}`}>
+                          <Mail className="h-4 w-4" />
+                        </a>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => 
+                          handleCopy(
+                            parkingService.email!, 
+                            "Email copied to clipboard"
+                          )
+                        }
+                        className="h-8 w-8"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {parkingService.additionalEmails && parkingService.additionalEmails.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="w-full">
+                  <span className="font-medium">Additional Emails:</span>
+                  <div className="space-y-1">
+                    {parkingService.additionalEmails.map((email, index) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span className="text-sm">{email}</span>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            asChild
+                            className="h-8 w-8"
+                          >
+                            <a href={`mailto:${email}`}>
+                              <Mail className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => 
+                              handleCopy(email, "Email copied to clipboard")
+                            }
+                            className="h-8 w-8"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
             {parkingService.phone && (
               <div className="flex items-start gap-2">
                 <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <span>{parkingService.phone}</span>
+                <div className="flex justify-between items-center w-full">
+                  <span>{parkingService.phone}</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      asChild
+                      className="h-8 w-8"
+                    >
+                      <a href={`tel:${parkingService.phone.replace(/\s+/g, '')}`}>
+                        <Phone className="h-4 w-4" />
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => 
+                        handleCopy(
+                          parkingService.phone!, 
+                          "Phone number copied to clipboard"
+                        )
+                      }
+                      className="h-8 w-8"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
             {parkingService.address && (
@@ -154,7 +253,8 @@ export default function ParkingServiceDetails({
             {!parkingService.contactName &&
              !parkingService.email &&
              !parkingService.phone &&
-             !parkingService.address && (
+             !parkingService.address &&
+             (!parkingService.additionalEmails || parkingService.additionalEmails.length === 0) && (
               <div className="flex items-center text-muted-foreground">
                 <AlertCircle className="h-4 w-4 mr-2" />
                 No contact information available

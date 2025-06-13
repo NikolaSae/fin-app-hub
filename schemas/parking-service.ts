@@ -23,6 +23,7 @@ export const createParkingServiceSchema = z.object({
     .max(200, "Address must be less than 200 characters")
     .optional()
     .nullable(),
+  additionalEmails: z.array(z.string().email("Invalid email format")).optional().default([]),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -37,10 +38,11 @@ export const updateParkingServiceSchema = createParkingServiceSchema
 export const parkingServiceFiltersSchema = z.object({
   searchTerm: z.string().optional(),
   isActive: z.boolean().optional(),
-  sortBy: z.enum(["name", "createdAt", "updatedAt"]).optional().default("name"),
+  sortBy: z.enum(["name", "createdAt", "updatedAt", "lastImportDate"]).optional().default("name"),
   sortDirection: z.enum(["asc", "desc"]).optional().default("asc"),
   page: z.number().int().positive().optional().default(1),
   pageSize: z.number().int().positive().optional().default(10),
+  hasImportedFiles: z.boolean().optional(),
 });
 
 // Type for parkingServiceFiltersSchema

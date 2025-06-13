@@ -1,13 +1,12 @@
 //components/parking-services/ParkingServiceForm.tsx
-
+//components/parking-services/ParkingServiceForm.tsx
 
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-// Corrected import to use the schema that is actually exported and matches the form structure
 import { createParkingServiceSchema } from "@/schemas/parking-service";
 import {
   Form,
@@ -21,9 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { ParkingServiceFormData } from "@/lib/types/parking-service-types";
-// Imports for action functions - ensure these match the export names in your action files
 import { create } from "@/actions/parking-services/create";
 import { update } from "@/actions/parking-services/update";
 
@@ -40,7 +39,6 @@ export default function ParkingServiceForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<ParkingServiceFormData>({
-    // Use the correctly imported create schema for validation
     resolver: zodResolver(createParkingServiceSchema),
     defaultValues: initialData || {
       name: "",
@@ -49,44 +47,47 @@ export default function ParkingServiceForm({
       phone: "",
       address: "",
       description: "",
+      additionalEmails: [],
       isActive: true,
     },
+  });
+
+  // Use field array for managing additional emails
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "additionalEmails",
   });
 
   const onSubmit = async (data: ParkingServiceFormData) => {
     try {
       setIsSubmitting(true);
 
+      // Filter out empty email addresses
+      const cleanedData = {
+        ...data,
+        additionalEmails: data.additionalEmails?.filter(email => email.trim() !== "") || []
+      };
+
       let result;
       if (isEditing && initialData?.id) {
-        // Call the correctly imported update action
-        // The update action expects the id along with the updated data
-        result = await update({ id: initialData.id, ...data });
+        result = await update({ id: initialData.id, ...cleanedData });
       } else {
-        // Call the correctly imported create action
-        // The create action expects the data for the new service
-        result = await create(data);
+        result = await create(cleanedData);
       }
 
       if (result.success) {
          toast.success(isEditing ? "Parking service updated successfully" : "Parking service created successfully");
-         // Redirect to the details page on success
          if (result.data?.id) {
             router.push(`/parking-services/${result.data.id}`);
          } else {
-             // Fallback redirect if ID is not returned (shouldn't happen if action is correct)
              router.push('/parking-services');
          }
       } else {
-         // Display error message from the action result
          toast.error(result.error || (isEditing ? "Failed to update parking service" : "Failed to create parking service"));
       }
 
-      // router.refresh(); // router.push typically handles refresh for app router navigation
-
     } catch (error) {
       console.error("Error submitting form:", error);
-      // Fallback toast for unexpected errors
       toast.error(isEditing
         ? "Failed to update parking service due to an unexpected error."
         : "Failed to create parking service due to an unexpected error."
@@ -94,6 +95,14 @@ export default function ParkingServiceForm({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const addEmailField = () => {
+    append("");
+  };
+
+  const removeEmailField = (index: number) => {
+    remove(index);
   };
 
   return (
@@ -133,11 +142,11 @@ export default function ParkingServiceForm({
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Primary Email</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="Enter contact email"
+                    placeholder="Enter primary contact email"
                     {...field}
                     value={field.value || ""}
                   />
@@ -201,6 +210,61 @@ export default function ParkingServiceForm({
               </FormItem>
             )}
           />
+
+          {/* Additional Emails Section */}
+          <div className="col-span-1 md:col-span-2">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <FormLabel>Additional Email Addresses</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addEmailField}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Email
+                </Button>
+              </div>
+              
+              {fields.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No additional email addresses added yet.
+                </p>
+              )}
+
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex items-center gap-2">
+                  <FormField
+                    control={form.control}
+                    name={`additionalEmails.${index}`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="Enter additional email address"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeEmailField(index)}
+                    className="px-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <FormField
             control={form.control}

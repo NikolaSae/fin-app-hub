@@ -18,6 +18,13 @@ export async function create(data: CreateParkingServiceParams) {
 
     const validatedData = createParkingServiceSchema.parse(data);
 
+    // Filter out empty additional emails if they exist
+    if (validatedData.additionalEmails) {
+      validatedData.additionalEmails = validatedData.additionalEmails.filter(
+        email => email && email.trim() !== ''
+      );
+    }
+
     const parkingService = await db.parkingService.create({
       data: validatedData,
     });
