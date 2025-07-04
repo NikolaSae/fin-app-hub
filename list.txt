@@ -73,550 +73,761 @@ Maintain detailed commit messages for better tracking.
 
 1. Reports & Analytics Structure
 1.1 App Routes
-
-1.1.1 /app/(protected)/analytics/page.tsx - Main analytics dashboard
-1.1.2 /app/(protected)/analytics/financials/page.tsx - Financial analytics view
-1.1.3 /app/(protected)/analytics/sales/page.tsx - Sales performance analytics
-/app/(protected)/analytics/complaints/page.tsx - Complaint analytics
-/app/(protected)/analytics/providers/page.tsx - Provider performance analytics
-/app/(protected)/reports/page.tsx - Report generation interface
-/app/(protected)/reports/generate/page.tsx - Custom report creator
-/app/(protected)/reports/scheduled/page.tsx - Scheduled reports management
+/app/(protected)/analytics/page.tsx
+/app/(protected)/analytics/financials/page.tsx
+/app/(protected)/analytics/financials/actions.ts
+/app/(protected)/analytics/sales/page.tsx
+/app/(protected)/analytics/complaints/page.tsx
+/app/(protected)/analytics/providers/page.tsx
+/app/(protected)/reports/page.tsx
+/app/(protected)/reports/generate/page.tsx
+/app/(protected)/reports/scheduled/page.tsx
 
 1.2 Components
-
-1.2.1 /components/analytics/FinancialOverview.tsx - Financial summary component
-1.2.2 /components/analytics/SalesChart.tsx - Sales visualization
-/components/analytics/ComplaintAnalytics.tsx - Complaint trend analysis
-/components/analytics/KpiDashboard.tsx - KPI metrics display
-/components/analytics/AnomalyDetection.tsx - Anomaly highlight component
-/components/analytics/DataFilters.tsx - Analytics filtering controls
-/components/reports/ExportOptions.tsx - Export format selection
-/components/reports/ScheduleForm.tsx - Report scheduling interface
-/components/reports/ReportPreview.tsx - Preview generated reports
-/components/reports/ExcelGenerator.tsx - Excel report generator
+/components/analytics/FinancialOverview.tsx
+/components/analytics/SalesChart.tsx
+/components/analytics/ComplaintAnalytics.tsx
+/components/analytics/KpiDashboard.tsx
+/components/analytics/AnomalyDetection.tsx
+/components/analytics/DataFilters.tsx
+/components/reports/ExportOptions.tsx
+/components/reports/ScheduleForm.tsx
+/components/reports/ReportPreview.tsx
+/components/reports/ExcelGenerator.tsx
 /components/analytics/ServicePerformance.tsx
 /components/analytics/SalesOverview.tsx
 /components/analytics/RevenueBreakdown.tsx
 /components/analytics/ContractAnalytics.tsx
 
 1.3 Actions & API Routes
-
-1.3.1. /actions/analytics/get-financial-data.ts - Financial data retriever
-/actions/analytics/get-sales-metrics.ts - Sales metrics calculator
-/actions/analytics/get-complaint-stats.ts - Complaint statistics
-/actions/reports/generate-excel.ts - Generate Excel reports
-/actions/reports/schedule-report.ts - Schedule report generation
-/actions/reports/get-recent-reports'
-/app/api/analytics/financials/route.ts - Financial data API
-/app/api/analytics/sales/route.ts - Sales data API
-/app/api/reports/generate/route.ts - Report generation API
-
+/actions/analytics/get-financial-data.ts
+/actions/analytics/get-sales-metrics.ts
+/actions/analytics/get-complaint-stats.ts
+/actions/reports/generate-excel.ts
+/actions/reports/schedule-report.ts
+/actions/reports/get-recent-reports.ts
+/app/api/analytics/financials/route.ts
+/app/api/analytics/sales/route.ts
+/app/api/reports/generate/route.ts
+/app/api/security/performance/route.ts
+/app/api/security/performance/summary/route.ts
 
 1.4 Utils & Services
-
-1.4.1 /lib/analytics/financial-calculations.ts - Financial calculation utilities
-/lib/analytics/anomaly-detection.ts - Detect unusual patterns
-/lib/reports/excel-generator.ts - Excel file creation
-/lib/reports/scheduled-jobs.ts - Scheduled report functionality
-/hooks/use-complaint-analytics'
+/lib/analytics/financial-calculations.ts
+/lib/analytics/anomaly-detection.ts
+/lib/reports/excel-generator.ts
+/lib/reports/scheduled-jobs.ts
+/hooks/use-complaint-analytics.ts
 /hooks/use-service-performance.ts
 /hooks/use-sales-data.ts
 /hooks/use-revenue-breakdown.ts
+/hooks/use-contract-analytics.ts
+/utils/excel-generator.ts
+/utils/anomaly-detection.ts
 
 2. Notifications Structure
 2.1 App Routes
-
-2.1.1 /app/(protected)/notifications/page.tsx - Notification center
-/app/(protected)/notifications/settings/page.tsx - Notification preferences
-/app/(protected)/admin/notifications/page.tsx - Admin notification management
+/app/(protected)/notifications/page.tsx
+/app/(protected)/notifications/settings/page.tsx
+/app/(protected)/admin/notifications/page.tsx
 
 2.2 Components
+/components/notifications/NotificationList.tsx
+/components/notifications/NotificationBadge.tsx
+/components/notifications/AlertBanner.tsx
+/components/notifications/EmailPreview.tsx
+/components/notifications/NotificationSettings.tsx
+/components/notifications/AdminNotificationControls.tsx
 
-2.2.1 /components/notifications/NotificationList.tsx - List of notifications
-/components/notifications/NotificationBadge.tsx - Unread notification indicator
-/components/notifications/AlertBanner.tsx - Important alert display
-/components/notifications/EmailPreview.tsx - Email template preview
-/components/notifications/NotificationSettings.tsx - User notification preferences
-/components/notifications/AdminNotificationControls.tsx - Admin controls
+2.3 Actions & API Routes
+/actions/notifications/mark-as-read.ts
+/actions/notifications/update-preferences.ts
+/app/api/notifications/route.ts
+/app/api/notifications/email/route.ts
+/app/api/notifications/push/route.ts
 
-Actions & API Routes
-
-/actions/notifications/mark-as-read.ts - Mark notifications as read
-/actions/notifications/update-preferences.ts - Update notification preferences
-/app/api/notifications/route.ts - Notifications CRUD API
-/app/api/notifications/email/route.ts - Email notification sending
-/app/api/notifications/push/route.ts - Push notification sending
-
-Utils & Services
-
-/lib/notifications/email-sender.ts - Email notification service
-/lib/notifications/in-app-notifier.ts - In-app notification logic
-/lib/notifications/cron-alerts.ts - Scheduled alert generation
-/lib/notifications/templates.ts - Notification templates
+2.4 Utils & Services
+/lib/notifications/email-sender.ts
+/lib/notifications/in-app-notifier.ts
+/lib/notifications/cron-alerts.ts
+/lib/notifications/templates.ts
+/lib/notifications/anomaly-alert.ts
+/lib/notifications/complaint-status.ts
+/lib/mail.ts
 
 3. Security & Performance Structure
 3.1 Middleware
-
-3.1.1. /middleware.ts - Role-based access control and rate limiting
-/app/(protected)/admin/security/page.tsx - Main security dashboard
-/app/(protected)/admin/security/activity-logs/page.tsx - Activity logs viewer
-/app/(protected)/admin/security/user-roles/page.tsx - User role management
-/app/(protected)/admin/security/performance/page.tsx - Performance monitoring
+/middleware.ts
+/app/(protected)/admin/security/page.tsx
+/app/(protected)/admin/security/activity-logs/page.tsx
+/app/(protected)/admin/security/user-roles/page.tsx
+/app/(protected)/admin/security/performance/page.tsx
 /actions/security/get-performance-metrics.ts
 
-3.2. Components
+3.2 Components
+/components/security/PermissionGate.tsx
+/components/security/ActivityLog.tsx
+/components/security/PerformanceMetrics.tsx
+/components/security/ActivityLogTable.tsx
+/components/security/SystemResources.tsx
+/components/security/BlackLogTable.tsx
+/components/security/DatabasePerformance.tsx
+/components/security/APIResponseTimes.tsx
+/components/security/UserRoleManagement.tsx
+/components/security/RolePermissions.tsx
 
-3.2.1. /components/security/PermissionGate.tsx - Role-based UI component
-3.2.2. /components/security/ActivityLog.tsx - User activity display
-/components/security/PerformanceMetrics.tsx - Performance monitoring UI
+3.3 Actions & API Routes
+/actions/security/log-event.ts
+/actions/security/check-permission.ts
+/actions/security/get-distinct-entity-types.ts
+/app/api/security/logs/route.ts
+/app/api/security/permissions/route.ts
 
-3.3. Actions & API Routes
-
-/actions/security/log-event.ts - Security event logger
-/actions/security/check-permission.ts - Permission verification
-/app/api/security/logs/route.ts - Security logs API
-/app/api/security/permissions/route.ts - Permission management API
-
-3.4. Utils & Services
-
-/lib/security/auth-helpers.ts - Authentication utilities
-/lib/security/rate-limiter.ts - API request rate limiting
-/lib/security/permission-checker.ts - Permission validation
-/lib/security/audit-logger.ts - Security audit logging
-/lib/security/backup-service.ts - Database backup utilities
+3.4 Utils & Services
+/lib/security/auth-helpers.ts
+/lib/security/rate-limiter.ts
+/lib/security/permission-checker.ts
+/lib/security/audit-logger.ts
+/lib/security/backup-service.ts
+/lib/security/black-log.ts
 
 4. Shared Types & Schemas
+/schemas/analytics.ts
+/schemas/notification.ts
+/schemas/security.ts
+/lib/types/analytics-types.ts
+/lib/types/notification-types.ts
+/lib/types/security-types.ts
+/lib/types/interfaces.ts
+/lib/types/enums.ts
 
-4.1.1/schemas/analytics.ts - Analytics validation schemas
-/schemas/notification.ts - Notification validation schemas
-/schemas/security.ts - Security log validation schemas
-/lib/types/analytics-types.ts - Analytics type definitions
-/lib/types/notification-types.ts - Notification type definitions
-/lib/types/security-types.ts - Security-related type definitions
+5. Servisi & Proizvodi
+5.1 App Routes
+/app/(protected)/services/page.tsx
+/app/(protected)/services/[serviceType]/page.tsx
+/app/(protected)/services/[serviceType]/[id]/page.tsx
+/app/(protected)/services/[serviceType]/[id]/edit/page.tsx
+/app/(protected)/products/page.tsx
+/app/(protected)/products/[id]/page.tsx
+/app/(protected)/services/import/page.tsx
 
-This structure aligns with Next.js App Router conventions while providing a clear organization for your reports, analytics, notifications, and security components.
-
-
-
-
- 5. Servisi & Proizvodi
-5.1. App Routes
-
-5.1.1. /app/(protected)/services/page.tsx - Main services listing page
-/app/(protected)/services/[serviceType]/page.tsx - Service type specific view (VAS, Bulk, etc.)
-/app/(protected)/services/[serviceType]/[id]/page.tsx - Individual service details
-/app/(protected)/services/[serviceType]/[id]/edit/page.tsx - Edit service page
-/app/(protected)/products/page.tsx - Products listing page
-/app/(protected)/products/[id]/page.tsx - Individual product details page
-/app/(protected)/services/import/page.tsx - CSV import interface
-
-5.2. Components
-
-5.2.1. /components/services/ServiceForm.tsx - Reusable form for creating/editing services
-/components/services/ServiceList.tsx - Tabular list of services
+5.2 Components
+/components/services/ServiceForm.tsx
+/components/services/ServiceList.tsx
 /components/services/ServiceDetails.tsx
-/components/services/ServiceFilters.tsx - Filter controls for services
-/components/services/ServiceStats.tsx - Service statistics display
-/components/services/ServiceCard.tsx - Card component for service display
-/components/services/category/VasServiceCard.tsx - VAS-specific service card
-/components/services/category/BulkServiceCard.tsx - Bulk-specific service card
-/components/services/category/HumanServiceCard.tsx - Humanitarian service card
-/components/services/category/ParkingServiceCard.tsx - Parking service card
-/components/products/ProductForm.tsx - Form for product creation/editing
-/components/products/ProductList.tsx - List of products
-/components/products/ProductCard.tsx - Product display card
-/components/services/ImportForm.tsx - CSV import form and validation UI
+/components/services/ServiceFilters.tsx
+/components/services/ServiceStats.tsx
+/components/services/ServiceCard.tsx
+/components/services/category/VasServiceCard.tsx
+/components/services/category/BulkServiceCard.tsx
+/components/services/category/HumanServiceCard.tsx
+/components/services/category/ParkingServiceCard.tsx
+/components/products/ProductForm.tsx
+/components/products/ProductList.tsx
+/components/products/ProductCard.tsx
+/components/services/ImportForm.tsx
+/components/services/ProviderProcessorForm.tsx
+/components/services/ParkingServiceProcessorForm.tsx
 
-5.3. Actions & API Routes
+5.3 Actions & API Routes
+/actions/services/create.ts
+/actions/services/update.ts
+/actions/services/delete.ts
+/actions/services/import.ts
+/actions/services/export.ts
+/actions/services/importVasData.ts
+/actions/products/create.ts
+/actions/products/update.ts
+/actions/products/delete.ts
+/app/api/services/route.ts
+/app/api/services/[id]/route.ts
+/app/api/services/import/route.ts
+/app/api/products/route.ts
+/app/api/products/[id]/route.ts
+/app/api/services/parking/[parkingId]/route.ts
+/app/api/services/humanitarian/[orgId]/route.ts
+/app/api/services/bulk/[bulkId]/route.ts
 
-5.3.1. /actions/services/create.ts - Create new service
-/actions/services/update.ts - Update existing service
-/actions/services/delete.ts - Delete service
-/actions/services/import.ts - Import services from CSV
-/actions/services/export.ts - Export services data
-/actions/products/create.ts - Create new product
-/actions/products/update.ts - Update product
-/actions/products/delete.ts - Delete product
-/app/api/services/route.ts - Services CRUD API
-/app/api/services/[id]/route.ts - Individual service API
-/app/api/services/import/route.ts - CSV import endpoint
-/app/api/products/route.ts - Products CRUD API
-/app/api/products/[id]/route.ts - Individual product API
+5.4 Hooks & Utils
+/hooks/use-services.ts
+/hooks/use-products.ts
+/hooks/use-service-stats.ts
+/hooks/use-service-categories.ts
+/hooks/use-providers-by-service.ts
+/lib/services/csv-processor.ts
+/lib/services/validators.ts
+/lib/services/statistics.ts
+/lib/services/constants.ts
+/lib/services/activity-log-service.ts
+/utils/csv-validator.ts
+/utils/import-processor.ts
 
-5.4. Hooks & Utils
+5.5 Types & Schemas
+/schemas/service.ts
+/schemas/product.ts
+/lib/types/service-types.ts
+/lib/types/product-types.ts
 
-5.4.1. /hooks/use-services.ts - Custom hook for service data
-/hooks/use-products.ts - Custom hook for products
-/hooks/use-service-stats.ts - Hook for service statistics
-/lib/services/csv-processor.ts - CSV processing utilities
-/lib/services/validators.ts - Service validation utilities
-/lib/services/statistics.ts - Statistics calculation functions
-/lib/services/constants.ts - Service type constants and configurations
+6. Complaints
+6.1 Database Schema
+/prisma/schema.prisma
 
-5.5. Types & Schemas
+6.2 Type Definitions & Schemas
+/schemas/complaint.ts
+/lib/types/complaint-types.ts
 
-5.5.1. /schemas/service.ts - Zod validation schema for services
-/schemas/product.ts - Zod validation schema for products
-/lib/types/service-types.ts - TypeScript types for services
-/lib/types/product-types.ts - TypeScript types for products
-/lib/types/csv-types.ts - Types for CSV import/export
+6.3 API Routes
+/app/api/complaints/route.ts
+/app/api/complaints/[id]/route.ts
+/app/api/complaints/[id]/comments/route.ts
+/app/api/complaints/[id]/status/route.ts
+/app/api/complaints/[id]/attachments/route.ts
+/app/api/complaints/statistics/route.ts
+/app/api/complaints/export/route.ts
+/app/api/services/categories/route.ts
 
+6.4 Server Actions
+/actions/complaints/create.ts
+/actions/complaints/update.ts
+/actions/complaints/delete.ts
+/actions/complaints/comment.ts
+/actions/complaints/change-status.ts
+/actions/complaints/import.ts
+/actions/complaints/export.ts
+/actions/services/get-by-category.ts
+/actions/products/get-by-service.ts
+/actions/providers/get-by-service.ts
 
+6.5 UI Pages
+/app/(protected)/complaints/page.tsx
+/app/(protected)/complaints/new/page.tsx
+/app/(protected)/complaints/[id]/page.tsx
+/app/(protected)/complaints/[id]/edit/page.tsx
+/app/(protected)/admin/complaints/page.tsx
+/app/(protected)/admin/complaints/statistics/page.tsx
+/app/(protected)/admin/complaints/reports/page.tsx
 
+6.6 Components
+/components/complaints/ComplaintForm.tsx
+/components/complaints/ComplaintList.tsx
+/components/complaints/CommentSection.tsx
+/components/complaints/StatusBadge.tsx
+/components/complaints/ComplaintFilters.tsx
+/components/complaints/ServiceCategoryFilter.tsx
+/components/complaints/ProviderFilter.tsx
+/components/complaints/DateRangeFilter.tsx
+/components/complaints/ComplaintTimeline.tsx
+/components/complaints/FileUpload.tsx
+/components/complaints/StatisticsCard.tsx
+/components/complaints/NotificationBanner.tsx
+/components/complaints/AmountSummary.tsx
+/components/complaints/ProductSelection.tsx
+/components/complaints/ServiceSelection.tsx
+/components/complaints/ComplaintFormWrapper.tsx
+/components/complaints/AssignComplaint.tsx
+/components/complaints/CsvImport.tsx
 
- 6. complaints
+6.7 Charts & Statistics
+/components/complaints/charts/TrendChart.tsx
+/components/complaints/charts/StatusChart.tsx
+/components/complaints/charts/MonthlyComparisonChart.tsx
+/components/complaints/charts/ServiceCategoryBreakdown.tsx
+/components/complaints/charts/ProviderPerformance.tsx
+/components/complaints/reports/ExcelExport.tsx
+/components/complaints/reports/KpiDashboard.tsx
 
-6.1. Database Schema Updates
-
-6.1.1. /prisma/schema.prisma - Add complaint models with proper relations to users, services, products, and providers
-
-6.2. Type Definitions & Schemas
-
-6.2.1. /schemas/complaint.ts - Zod validation schema for complaint data validation
-/schemas/service.ts - Service types validation schemas
-/schemas/product.ts - Product validation for complaint association
-/schemas/provider.ts - Provider validation schemas
-/lib/types/interfaces.ts - TypeScript interfaces for complaint system
-/lib/types/enums.ts - Status enums and service category definitions
-/lib/types/complaint-types.ts - Specialized complaint type definitions
-
-6.3. API Routes
-
-6.3.1. /app/api/complaints/route.ts - Main endpoint for complaint management
-/app/api/complaints/[id]/route.ts - Operations on specific complaints
-/app/api/complaints/[id]/comments/route.ts - Comment management for complaints
-/app/api/complaints/[id]/status/route.ts - Status change handling
-/app/api/complaints/[id]/attachments/route.ts - File attachment handling
-/app/api/complaints/statistics/route.ts - Statistics data endpoints
-/app/api/complaints/export/route.ts - Export complaint data
-/app/api/services/categories/route.ts - Service category information
-
-6.4. Server Actions
-
-6.4.1. /actions/complaints/create.ts - Create new complaint records
-/actions/complaints/update.ts - Update existing complaints
-/actions/complaints/delete.ts - Remove complaint entries
-/actions/complaints/comment.ts - Add tracking comments
-/actions/complaints/change-status.ts - Update complaint status
-/actions/complaints/import.ts - Import complaint data
-/actions/complaints/export.ts - Export complaint reports
-/actions/services/get-by-category.ts - Retrieve services by category
-/actions/products/get-by-service.ts - Get products associated with services
-/actions/providers/get-by-service.ts - Get providers by service type
-
-6.5. UI Pages
-
-6.5.1. /app/(protected)/complaints/page.tsx - Main complaints listing
-/app/(protected)/complaints/new/page.tsx - Create new complaint
-/app/(protected)/complaints/[id]/page.tsx - View complaint details
-/app/(protected)/complaints/[id]/edit/page.tsx - Edit complaint
-/app/(protected)/admin/complaints/page.tsx - Admin complaints management
-/app/(protected)/admin/complaints/statistics/page.tsx - Statistics dashboard
-/app/(protected)/admin/complaints/reports/page.tsx - Report generation
-
-6.6. Components
-
-6.6.1. /components/complaints/ComplaintForm.tsx - Form for creating/editing complaints
-/components/complaints/ComplaintList.tsx - Tabular list of complaints
-/components/complaints/CommentSection.tsx - Thread of complaint comments
-/components/complaints/StatusBadge.tsx - Visual status indicator
-/components/complaints/ComplaintFilters.tsx - Filter controls container
-/components/complaints/ServiceCategoryFilter.tsx - Filter by service category
-/components/complaints/ProviderFilter.tsx - Filter by provider
-/components/complaints/DateRangeFilter.tsx - Date-based filtering
-/components/complaints/ComplaintTimeline.tsx - Chronological view of changes
-/components/complaints/FileUpload.tsx - File attachment component
-/components/complaints/StatisticsCard.tsx - Statistics display card
-/components/complaints/NotificationBanner.tsx - Status change notifications
-/components/complaints/AmountSummary.tsx - Financial summary of complaints
-/components/complaints/ProductSelection.tsx - Product selector with validation
-/components/complaints/ServiceSelection.tsx - Service selection component
-
-6.7. Charts & Statistics
-
-6.7.1. /components/complaints/charts/TrendChart.tsx - Trend visualization
-/components/complaints/charts/StatusChart.tsx - Status distribution chart
-/components/complaints/charts/MonthlyComparisonChart.tsx - Monthly comparison visualization
-/components/complaints/charts/ServiceCategoryBreakdown.tsx - Service breakdown chart
-/components/complaints/charts/ProviderPerformance.tsx - Provider performance metrics
-/components/complaints/reports/ExcelExport.tsx - Excel export component
-/components/complaints/reports/KpiDashboard.tsx - KPI visualization dashboard
-
-6.8. Hooks & Utils
-
-6.8.1. /hooks/use-complaints.ts - Data fetching for complaints
-/hooks/use-service-categories.ts - Service category data hook
-/hooks/use-products-by-service.ts - Product filtering by service
-/hooks/use-providers-by-service.ts - Provider filtering by service
-/lib/actions/complaints.ts - Core complaint manipulation functions
-/utils/complaint-notification.ts - Notification generation utilities
-/utils/complaint-statistics.ts - Statistical calculation functions
-/utils/excel-generator.ts - Excel report generation
-/utils/anomaly-detection.ts - Unusual complaint pattern detection
-/utils/date-filters.ts - Date manipulation utilities
-
-6.9. Import & Validation
-
-6.9.1. /components/complaints/CsvImport.tsx - CSV import interface
-/utils/csv-validator.ts - Validate imported data
-/utils/import-processor.ts - Process validated import data
-
-6.10. Notification System
-
-6.10.1 /lib/notifications/complaint-status.ts - Status change notifications
-/lib/notifications/anomaly-alert.ts - Anomaly detection alerts
-/components/notifications/AlertBanner.tsx - Alert display component
-
-
-
+6.8 Hooks & Utils
+/hooks/use-complaints.ts
+/lib/actions/complaints.ts
+/utils/complaint-notification.ts
+/utils/complaint-statistics.ts
+/utils/date-filters.ts
+/utils/complaint-status.ts
+/lib/notifications/complaint-status.ts
 
 7. Contracts Structure
-7.1. App Routes
-7.1.1. /app/(protected)/contracts/page.tsx - Main contracts listing page
-/app/(protected)/contracts/new/page.tsx - Create new contract page
-/app/(protected)/contracts/[id]/page.tsx - Individual contract details view
-/app/(protected)/contracts/[id]/edit/page.tsx - Edit contract page
-/app/(protected)/contracts/expiring/page.tsx - Soon to expire contracts view
-/app/(protected)/contracts/providers/page.tsx - Provider contracts view
-/app/(protected)/contracts/humanitarian/page.tsx - Humanitarian org contracts view
-/app/(protected)/contracts/parking/page.tsx - Parking service contracts view
-/app/(protected)/admin/contracts/page.tsx - Admin contracts management dashboard
-7.2. Components
-7.2.1. /components/contracts/ContractForm.tsx - Form for creating/editing contracts
-/components/contracts/ContractList.tsx - Tabular list of all contracts
-/components/contracts/ContractDetails.tsx - Contract details display
-/components/contracts/ContractFilters.tsx - Filter controls for contracts
-/components/contracts/ContractStatusBadge.tsx - Visual status indicator
-/components/contracts/ExpiryWarning.tsx - Warning for soon-expiring contracts
-/components/contracts/AttachmentUpload.tsx - File upload for contract docs
-/components/contracts/AttachmentList.tsx - List of contract attachments
-/components/contracts/ServiceSelector.tsx - Service selection for contracts
-/components/contracts/RevenueBreakdown.tsx - Revenue split display
-/components/contracts/ReminderForm.tsx - Setting reminders for contracts
-/components/contracts/category/ProviderContractCard.tsx - Provider contract display
-/components/contracts/category/HumanitarianContractCard.tsx - Humanitarian contract display
-/components/contracts/category/ParkingContractCard.tsx - Parking contract display
-7.3. Actions & API Routes
-7.3.1. /actions/contracts/create.ts - Create new contract
-/actions/contracts/update.ts - Update existing contract
-/actions/contracts/delete.ts - Delete contract
-/actions/contracts/check-expiring.ts - Check for soon-expiring contracts
-/actions/contracts/add-attachment.ts - Add document attachment
-/actions/contracts/add-service.ts - Add service to contract
-/actions/contracts/remove-service.ts - Remove service from contract
-/actions/contracts/create-reminder.ts - Set contract reminder
-/actions/contracts/acknowledge-reminder.ts - Mark reminder as acknowledged
-/app/api/contracts/route.ts - Contracts CRUD API
-/app/api/contracts/[id]/route.ts - Individual contract API
-/app/api/contracts/[id]/attachments/route.ts - Contract attachments API
-/app/api/contracts/[id]/services/route.ts - Contract services API
-/app/api/contracts/[id]/reminders/route.ts - Contract reminders API
-/app/api/contracts/expiring/route.ts - Soon-expiring contracts API
-7.4. Hooks & Utils
-7.4.1. /hooks/use-contracts.ts - Custom hook for contract data
-/hooks/use-expiring-contracts.ts - Hook for soon-expiring contracts
-/hooks/use-contract-reminders.ts - Hook for contract reminders
-/lib/contracts/validators.ts - Contract validation utilities
-/lib/contracts/reminder-scheduler.ts - Scheduled reminder functionality
-/lib/contracts/expiration-checker.ts - Contract expiration utilities
-/lib/contracts/revenue-calculator.ts - Revenue calculation utilities
-/lib/contracts/notification-sender.ts - Contract notification utilities
-/lib/contracts/pdf-generator.ts - PDF contract generator
-7.5. Types & Schemas
-7.5.1. /schemas/contract.ts - Zod validation schema for contracts
-/schemas/contract-attachment.ts - Schema for contract attachments
-/schemas/contract-reminder.ts - Schema for contract reminders
-/lib/types/contract-types.ts - TypeScript types for contracts
-/lib/types/contract-status.ts - Contract status types and utilities
-7.6. Charts & Statistics
-7.6.1. /components/contracts/charts/ExpiryTimelineChart.tsx - Contract expiration timeline
-/components/contracts/charts/ContractTypeDistribution.tsx - Contract type breakdown
-/components/contracts/charts/RevenueProjection.tsx - Projected revenue from contracts
-/components/contracts/reports/ContractKpiDashboard.tsx - KPI visualization dashboard
+7.1 App Routes
+/app/(protected)/contracts/page.tsx
+/app/(protected)/contracts/new/page.tsx
+/app/(protected)/contracts/[id]/page.tsx
+/app/(protected)/contracts/[id]/edit/page.tsx
+/app/(protected)/contracts/expiring/page.tsx
+/app/(protected)/contracts/providers/page.tsx
 
+7.2 Components
+/components/contracts/ContractForm.tsx
+/components/contracts/ContractList.tsx
+/components/contracts/ContractDetails.tsx
+/components/contracts/ContractFilters.tsx
+/components/contracts/ContractStatusBadge.tsx
+/components/contracts/ExpiryWarning.tsx
+/components/contracts/AttachmentUpload.tsx
+/components/contracts/AttachmentList.tsx
+/components/contracts/ServiceSelector.tsx
+/components/contracts/RevenueBreakdown.tsx
+/components/contracts/ReminderForm.tsx
+/components/contracts/category/ProviderContractCard.tsx
+/components/contracts/category/HumanitarianContractCard.tsx
+/components/contracts/category/ParkingContractCard.tsx
+/components/contracts/ContractStatusManager.tsx
+/components/contracts/status-change-dialog.tsx
+/components/contracts/renewal-dialog.tsx
+/components/contracts/renewal-substatus-dialog.tsx
 
+7.3 Actions & API Routes
+/actions/contracts/create.ts
+/actions/contracts/update.ts
+/actions/contracts/delete.ts
+/actions/contracts/check-expiring.ts
+/actions/contracts/add-attachment.ts
+/actions/contracts/add-service.ts
+/actions/contracts/remove-service.ts
+/actions/contracts/create-reminder.ts
+/actions/contracts/acknowledge-reminder.ts
+/app/api/contracts/route.ts
+/app/api/contracts/[id]/route.ts
+/app/api/contracts/[id]/attachments/route.ts
+/app/api/contracts/[id]/services/route.ts
+/app/api/contracts/[id]/reminders/route.ts
+/app/api/contracts/expiring/route.ts
+/app/api/contracts/timeline/expiry/route.ts
+/app/api/contracts/statistics/expiry/route.ts
 
-Sekcija 8: Providers Structure [G - KOMPLETIRANO (osim jednog opcionog)]
+7.4 Hooks & Utils
+/hooks/use-contracts.ts
+/hooks/use-expiring-contracts.ts
+/hooks/use-contract-reminders.ts
+/lib/contracts/validators.ts
+/lib/contracts/reminder-scheduler.ts
+/lib/contracts/expiration-checker.ts
+/lib/contracts/revenue-calculator.ts
+/lib/contracts/notification-sender.ts
+/lib/contracts/pdf-generator.ts
 
+7.5 Types & Schemas
+/schemas/contract.ts
+/schemas/contract-attachment.ts
+/schemas/contract-reminder.ts
+/lib/types/contract-types.ts
+/lib/types/contract-status.ts
+
+8. Providers Structure [G - KOMPLETIRANO]
 8.1 App Routes
 /app/(protected)/providers/page.tsx [G]
 /app/(protected)/providers/new/page.tsx [G]
 /app/(protected)/providers/[id]/page.tsx [G]
 /app/(protected)/providers/[id]/edit/page.tsx [G]
+
 8.2 Components
 /components/providers/ProviderList.tsx [G]
 /components/providers/ProviderForm.tsx [G]
 /components/providers/ProviderDetails.tsx [G]
 /components/providers/ProviderFilters.tsx [G]
 /components/providers/ProviderCard.tsx [M]
+/components/providers/ProviderServicesOverview.tsx
+/components/providers/ProviderServicesForContracts.tsx
+/components/providers/ProviderLogList.tsx
+
 8.3 Actions & API Routes
 /actions/providers/create.ts [G]
 /actions/providers/update.ts [G]
 /actions/providers/delete.ts [G]
+/actions/providers/get.ts
+/actions/providers/get-providers.ts
+/actions/providers/getAllProviders.ts
+/actions/providers/getProviderDetails.ts
+/actions/providers/getServicesForNewContracts.ts
 /app/api/providers/route.ts [G]
 /app/api/providers/[id]/route.ts [G]
+/app/api/providers/[id]/contracts/route.ts
+/app/api/providers/[id]/edit/route.ts
+/app/api/providers/[id]/status/route.ts
+/app/api/providers/[id]/bulk-services/route.ts
+/app/api/providers/[id]/vas-services/route.ts
+/app/api/providers/vas-import/route.ts
+/app/api/providers/upload/route.ts
+
 8.4 Hooks & Utils
 /hooks/use-providers.ts [G]
+/hooks/use-provider-logs.ts
 /lib/providers/validators.ts [G]
-\lib\providers\providers.ts
+/lib/providers/providers.ts
 
 8.5 Types & Schemas
 /schemas/provider.ts [G]
 /lib/types/provider-types.ts [G]
-Sekcija 9: Humanitarian Organizations Structure [G - KOMPLETIRANO]
 
+9. Humanitarian Organizations Structure [G - KOMPLETIRANO]
 9.1 App Routes
 /app/(protected)/humanitarian-orgs/page.tsx [G]
 /app/(protected)/humanitarian-orgs/new/page.tsx [G]
 /app/(protected)/humanitarian-orgs/[id]/page.tsx [G]
 /app/(protected)/humanitarian-orgs/[id]/edit/page.tsx [G]
 /app/(protected)/humanitarian-renewals/page.tsx [G]
+
 9.2 Components
 /components/humanitarian-orgs/HumanitarianOrgList.tsx [G]
 /components/humanitarian-orgs/HumanitarianOrgForm.tsx [G]
 /components/humanitarian-orgs/HumanitarianOrgDetails.tsx [G]
 /components/humanitarian-orgs/HumanitarianOrgFilters.tsx [G]
 /components/humanitarian-orgs/HumanitarianOrgContracts.tsx [G]
+
 9.3 Actions & API Routes
 /actions/humanitarian-orgs/create.ts [G]
 /actions/humanitarian-orgs/update.ts [G]
 /actions/humanitarian-orgs/delete.ts [G]
+/actions/humanitarian-orgs/get.ts
 /actions/humanitarian-renewals/create.ts [G]
- /actions/humanitarian-renewals/update.ts [G]
+/actions/humanitarian-renewals/update.ts [G]
 /actions/humanitarian-renewals/list.ts [G]
 /app/api/humanitarian-orgs/route.ts [G]
- /app/api/humanitarian-renewals/route.ts [G]
- /app/api/humanitarian-renewals/[id]/route.ts [G]
 /app/api/humanitarian-orgs/[id]/route.ts [G]
 /app/api/humanitarian-orgs/[id]/contracts/route.ts [G]
+/app/api/humanitarian-orgs/[id]/services/route.ts
+/app/api/humanitarian-renewals/route.ts [G]
+/app/api/humanitarian-renewals/[id]/route.ts [G]
+/app/api/humanitarian-renewals/statistics/route.ts
+
 9.4 Hooks & Utils
 /hooks/use-humanitarian-orgs.ts [G]
 /hooks/use-humanitarian-org-contracts.ts [G]
 /hooks/use-humanitarian-renewals.ts [G]
 /lib/humanitarian-orgs/validators.ts [G]
+
 9.5 Types & Schemas
 /schemas/humanitarian-org.ts [G]
 /schemas/humanitarian-renewal.ts [G]
 /lib/types/humanitarian-org-types.ts [G]
+/lib/types/humanitarian-renewal-types.ts
 
+10. Operators [G - KOMPLETIRANO]
+10.1 App Routes
+/app/(protected)/operators/page.tsx [G]
+/app/(protected)/operators/new/page.tsx [G]
+/app/(protected)/operators/[id]/page.tsx [G]
+/app/(protected)/operators/[id]/edit/page.tsx [G]
 
-treba da zavrsimo izradu fajlova za Operatora, ovo je spisak svih fajlova
-10. Operators
+10.2 Components
+/components/operators/OperatorList.tsx [G]
+/components/operators/OperatorForm.tsx [G]
+/components/operators/OperatorDetails.tsx [G]
+/components/operators/OperatorFilters.tsx [G]
+/components/operators/OperatorCard.tsx [G]
+/components/operators/OperatorContracts.tsx [G]
 
-10.1. App Routes
-/app/(protected)/operators/page.tsx - Main operators listing page - kreiran
-/app/(protected)/operators/new/page.tsx - Create new operator page - kreiran
-/app/(protected)/operators/[id]/page.tsx - Individual operator details view - kreiran
-/app/(protected)/operators/[id]/edit/page.tsx - Edit operator page - kreiran
+10.3 Actions & API Routes
+/actions/operators/index.ts [G]
+/actions/operators/getAllOperators.ts [G]
+/actions/operators/getContractsByOperatorId.ts [G]
+/actions/operators/getOperatorById.ts [G]
+/actions/operators/getOperators.ts [G]
+/actions/operators/create.ts [G]
+/actions/operators/update.ts [G]
+/actions/operators/delete.ts [G]
+/app/api/operators/route.ts [G]
+/app/api/operators/[id]/route.ts [G]
+/app/api/operators/[id]/contracts/route.ts [G]
+/app/api/operators/contracts/route.ts
 
-10.2. Components
-/components/operators/OperatorList.tsx - Tabular list of all operators  - kreiran
-/components/operators/OperatorForm.tsx - Form for creating/editing operators - kreiran
-/components/operators/OperatorDetails.tsx - Operator details display - kreiran
-/components/operators/OperatorFilters.tsx - Filter controls for operators - kreiran
-/components/operators/OperatorCard.tsx - Card component for operator display - kreiran
-/components/operators/OperatorContracts.tsx - List of contracts associated with an operator - kreiran
+10.4 Hooks & Utils
+/hooks/use-operators.ts [G]
+/lib/operators/validators.ts [G]
 
-10.3. Actions & API Routes
-// actions/operators/index.ts -kreiran
-/actions/operators/getAllOperators.ts - kreiran
-/actions/operators/getContractsByOperatorId.ts - kreiran
-/actions/operators/getOperatorById.ts - kreiran
-/actions/operators/getOperators.ts - kreiran
-/actions/operators/create.ts - Create new operator - kreiran
-/actions/operators/update.ts - Update existing operator - kreiran
-/actions/operators/delete.ts - Delete operator - kreiran
-/app/api/operators/route.ts - Operators CRUD API - kreiran
-/app/api/operators/[id]/route.ts - Individual operator API - kreiran
-/app/api/operators/[id]/contracts/route.ts - Operator contracts API - kreiran
+10.5 Types & Schemas
+/schemas/operator.ts [G]
+/lib/types/operator-types.ts [G]
 
-10.4. Hooks & Utils
-/hooks/use-operators.ts - Custom hook for operator data - kreiran
-/lib/operators/validators.ts - Operator validation utilities - kreiran
-
-10.5. Types & Schemas
-/schemas/operator.ts - Zod validation schema for operators - kreiran
-/lib/types/operator-types.ts - TypeScript types for operators - kreiran
-
-
-
-11. Parking Services Structure
+11. Parking Services Structure [G - KOMPLETIRANO]
 11.1 App Routes
-/app/(protected)/parking-services/page.tsx - Main parking services listing page  
-/app/(protected)/parking-services/new/page.tsx - Create new parking service page 
-/app/(protected)/parking-services/[id]/page.tsx - Individual parking service details view  
-/app/(protected)/parking-services/[id]/edit/page.tsx - Edit parking service page  
+/app/(protected)/parking-services/page.tsx [G]
+/app/(protected)/parking-services/new/page.tsx [G]
+/app/(protected)/parking-services/[id]/page.tsx [G]
+/app/(protected)/parking-services/[id]/edit/page.tsx [G]
+
 11.2 Components
-/components/parking-services/ParkingServiceList.tsx - Tabular list of all parking services 
-/components/parking-services/ParkingServiceForm.tsx - Form for creating/editing parking services 
-/components/parking-services/ParkingServiceDetails.tsx - Parking service details display 
-/components/parking-services/ParkingServiceFilters.tsx - Filter controls for parking services 
-/components/parking-services/ParkingServiceCard.tsx - Card component for parking service display
-/components/parking-services/ParkingServiceContracts.tsx - List of contracts associated with a parking service 
+/components/parking-services/ParkingServiceList.tsx [G]
+/components/parking-services/ParkingServiceForm.tsx [G]
+/components/parking-services/ParkingServiceDetails.tsx [G]
+/components/parking-services/ParkingServiceFilters.tsx [G]
+/components/parking-services/ParkingServiceCard.tsx [G]
+/components/parking-services/ParkingServiceContracts.tsx [G]
+/components/parking-services/ParkingServiceReports.tsx
+/components/parking-services/ParkingServiceServicesOverview.tsx
+
 11.3 Actions & API Routes
-/actions/parking-services/index.ts - Export all parking service actions
-/actions/parking-services/getAllParkingServices.ts - Get all parking services
-/actions/parking-services/getContractsByParkingServiceId.ts - Get contracts by parking service ID
-/actions/parking-services/getParkingServiceById.ts - Get parking service by ID
-/actions/parking-services/getParkingServices.ts - Get parking services with filtering
-/actions/parking-services/create.ts - Create new parking service
-/actions/parking-services/update.ts - Update existing parking service
-/actions/parking-services/delete.ts - Delete parking service 
-/app/api/parking-services/route.ts - Parking services CRUD API 
-/app/api/parking-services/[id]/route.ts - Individual parking service API 
-/app/api/parking-services/[id]/contracts/route.ts - Parking service contracts API 
+/actions/parking-services/index.ts [G]
+/actions/parking-services/getAllParkingServices.ts [G]
+/actions/parking-services/getContractsByParkingServiceId.ts [G]
+/actions/parking-services/getParkingServiceById.ts [G]
+/actions/parking-services/getParkingServices.ts [G]
+/actions/parking-services/create.ts [G]
+/actions/parking-services/update.ts [G]
+/actions/parking-services/delete.ts [G]
+/actions/parking-services/getParkingServiceStats.ts
+/actions/parking-services/getActiveContractsCount.ts
+/actions/parking-services/getServicesForParkingServiceContracts.ts
+/app/api/parking-services/route.ts [G]
+/app/api/parking-services/[id]/route.ts [G]
+/app/api/parking-services/[id]/contracts/route.ts [G]
+/app/api/parking-services/[id]/services/route.ts
+/app/api/parking-services/[id]/reports/route.ts
+/app/api/parking-services/upload/route.ts
+/app/api/parking-services/rename-file/route.ts
+/app/api/parking-services/parking-import/route.ts
+
 11.4 Hooks & Utils
-/hooks/use-parking-services.ts - Custom hook for parking service data 
-/hooks/use-parking-service-contracts.ts - Hook for parking service contracts
-/lib/parking-services/validators.ts - Parking service validation utilities
+/hooks/use-parking-services.ts [G]
+/hooks/use-parking-service-contracts.ts [G]
+/lib/parking-services/validators.ts [G]
+
 11.5 Types & Schemas
-/schemas/parking-service.ts - Zod validation schema for parking services
-/lib/types/parking-service-types.ts - TypeScript types for parking services
-Now for the Bulk Services section:
-12. Bulk Services Structure
+/schemas/parking-service.ts [G]
+/lib/types/parking-service-types.ts [G]
+
+12. Bulk Services Structure [G - KOMPLETIRANO]
 12.1 App Routes
-/app/(protected)/bulk-services/page.tsx - Main bulk services listing page - kreirao
-/app/(protected)/bulk-services/new/page.tsx - Create new bulk service page - kreirao
-/app/(protected)/bulk-services/[id]/page.tsx - Individual bulk service details view - kreirao
-/app/(protected)/bulk-services/[id]/edit/page.tsx - Edit bulk service page - kreirao
-/app/(protected)/bulk-services/import/page.tsx - Import bulk services from CSV - kreirao
+/app/(protected)/bulk-services/page.tsx [G]
+/app/(protected)/bulk-services/new/page.tsx [G]
+/app/(protected)/bulk-services/[id]/page.tsx [G]
+/app/(protected)/bulk-services/[id]/edit/page.tsx [G]
+/app/(protected)/bulk-services/import/page.tsx [G]
+
 12.2 Components
-/components/bulk-services/BulkServiceList.tsx - Tabular list of all bulk services - kreirao
-/components/bulk-services/BulkServiceForm.tsx - Form for creating/editing bulk services - kreirao
-/components/bulk-services/BulkServiceDetails.tsx - Bulk service details display - kreirao
-/components/bulk-services/BulkServiceFilters.tsx - Filter controls for bulk services - kreirao
-/components/bulk-services/BulkServiceCard.tsx - Card component for bulk service display - kreirao
-/components/bulk-services/BulkServiceStats.tsx - Statistics for bulk services - kreirao
-/components/bulk-services/ImportForm.tsx - CSV import form for bulk services - kreirao
+/components/bulk-services/BulkServiceList.tsx [G]
+/components/bulk-services/BulkServiceForm.tsx [G]
+/components/bulk-services/BulkServiceDetails.tsx [G]
+/components/bulk-services/BulkServiceFilters.tsx [G]
+/components/bulk-services/BulkServiceCard.tsx [G]
+/components/bulk-services/BulkServiceStats.tsx [G]
+/components/bulk-services/ImportForm.tsx [G]
+
 12.3 Actions & API Routes
-/actions/bulk-services/index.ts - Export all bulk service actions - kreirao
-/actions/bulk-services/getAllBulkServices.ts - Get all bulk services - kreirao
-/actions/bulk-services/getBulkServiceById.ts - Get bulk service by ID - kreirao
-/actions/bulk-services/getBulkServices.ts - Get bulk services with filtering - kreirao
-/actions/bulk-services/getBulkServicesByProviderId.ts - Get bulk services by provider ID - kreirao
-/actions/bulk-services/create.ts - Create new bulk service - kreirao
-/actions/bulk-services/update.ts - Update existing bulk service - kreirao
-/actions/bulk-services/delete.ts - Delete bulk service - kreirao
-/actions/bulk-services/import.ts - Import bulk services from CSV - kreirao
-/actions/bulk-services/export.ts - Export bulk services to CSV - kreirao
-/app/api/bulk-services/route.ts - Bulk services CRUD API - kreirao
-/app/api/bulk-services/[id]/route.ts - Individual bulk service API - kreirao
-/app/api/bulk-services/import/route.ts - CSV import endpoint - kreirao
-/app/api/bulk-services/export/route.ts - CSV export endpoint - kreirao
+/actions/bulk-services/index.ts [G]
+/actions/bulk-services/getAllBulkServices.ts [G]
+/actions/bulk-services/getBulkServiceById.ts [G]
+/actions/bulk-services/getBulkServices.ts [G]
+/actions/bulk-services/getBulkServicesByProviderId.ts [G]
+/actions/bulk-services/create.ts [G]
+/actions/bulk-services/update.ts [G]
+/actions/bulk-services/delete.ts [G]
+/actions/bulk-services/import.ts [G]
+/actions/bulk-services/export.ts [G]
+/app/api/bulk-services/route.ts [G]
+/app/api/bulk-services/[id]/route.ts [G]
+/app/api/bulk-services/import/route.ts [G]
+/app/api/bulk-services/export/route.ts [G]
+
 12.4 Hooks & Utils
-/hooks/use-bulk-services.ts - Custom hook for bulk service data - kreirao
-/lib/bulk-services/validators.ts - Bulk service validation utilities - kreirao
-/lib/bulk-services/csv-processor.ts - CSV processing for bulk services - kreirao
-/lib/bulk-services/statistics.ts - Statistical calculations for bulk services - kreirao
+/hooks/use-bulk-services.ts [G]
+/lib/bulk-services/validators.ts [G]
+/lib/bulk-services/csv-processor.ts [G]
+/lib/bulk-services/statistics.ts [G]
+
 12.5 Types & Schemas
-/schemas/bulk-service.ts - Zod validation schema for bulk services - kreirao
-/lib/types/bulk-service-types.ts - TypeScript types for bulk services - kreirao
+/schemas/bulk-service.ts [G]
+/lib/types/bulk-service-types.ts [G]
 
+13. Authentication & Authorization
+13.1 App Routes
+/app/auth/layout.tsx
+/app/auth/login/page.tsx
+/app/auth/register/page.tsx
+/app/auth/reset/page.tsx
+/app/auth/new-password/page.tsx
+/app/auth/new-verification/page.tsx
+/app/auth/error/page.tsx
 
+13.2 Components
+/components/auth/login-form.tsx
+/components/auth/register-form.tsx
+/components/auth/reset-form.tsx
+/components/auth/new-password-form.tsx
+/components/auth/new-verification-form.tsx
+/components/auth/error-card.tsx
+/components/auth/back-button.tsx
+/components/auth/header.tsx
+/components/auth/social.tsx
+/components/auth/card-wrapper.tsx
+/components/auth/role-gate.tsx
+/components/auth/user-button.tsx
+/components/auth/client-side-user-button.tsx
+/components/auth/logout-button.tsx
+/components/auth/login-button.tsx
+/components/form-success.tsx
+/components/form-error.tsx
 
+13.3 Actions & API Routes
+/actions/login.ts
+/actions/register.ts
+/actions/logout.ts
+/actions/reset.ts
+/actions/new-verification.ts
+/app/api/auth/[...nextauth]/route.ts
+/app/api/users/route.ts
+/app/api/users/[id]/route.ts
 
+13.4 Hooks & Utils
+/hooks/use-current-user.ts
+/hooks/use-current-role.ts
+/lib/auth/auth-utils.ts
+/lib/auth/adapters/listAuthenticatorsByUserId.ts
+/lib/session.ts
+/lib/auth.ts
+/auth.config.ts
+/data/user.ts
+/data/account.ts
+/data/verification-token.ts
+/data/password-reset-token.ts
+/data/two-factor-token.ts
+/data/two-factor-confirmation.ts
 
+14. Core Infrastructure
+14.1 Configuration
+./tsconfig.json
+./next.config.mjs
+./tailwind.config.ts
+./postcss.config.mjs
+./package.json
+./.env
+./.gitignore
+./.eslintrc.json
+./next-env.d.ts
+./auth.ts
+./package-lock.json
+./README.md
+./setup.bat
+./.pub
+./components.json
+./next-auth.d.ts
+./auth.config.ts
+
+14.2 Utilities
+./lib/db.ts
+./lib/utils.ts
+./lib/exceptions.ts
+./lib/tokens.ts
+./lib/formatters.ts
+./utils/format.ts
+./contexts/theme-context.tsx
+./components/theme-toggle.tsx
+./components/theme-customizer.tsx
+./types/theme.ts
+./hooks/useDebounce.ts
+./lib/session.ts
+./lib/auth.ts
+./utils/excel-generator.ts
+./utils/anomaly-detection.ts
+./utils/csv-validator.ts
+./utils/complaint-status.ts
+./utils/complaint-statistics.ts
+./utils/import-processor.ts
+./utils/date-filters.ts
+./utils/complaint-notification.ts
+./utils/theme-script.ts
+./lib/formatters.ts
+./lib/utils.ts
+./lib/tokens.ts
+
+14.3 UI Components
+./components/ui/tooltip.tsx
+./components/ui/form.tsx
+./components/ui/badge.tsx
+./components/ui/input.tsx
+./components/ui/textarea.tsx
+./components/ui/avatar.tsx
+./components/ui/radio-group.tsx
+./components/ui/skeleton.tsx
+./components/ui/date-picker.tsx
+./components/ui/button.tsx
+./components/ui/use-toast1.tsx
+./components/ui/navigation-menu.tsx
+./components/ui/calendar.tsx
+./components/ui/separator.tsx
+./components/ui/progress.tsx
+./components/ui/toast1.tsx
+./components/ui/data-table-pagination.tsx
+./components/ui/sonner.tsx
+./components/ui/alert-dialog.tsx
+./components/ui/spinner.tsx
+./components/ui/popover.tsx
+./components/ui/alert.tsx
+./components/ui/tabs.tsx
+./components/ui/table.tsx
+./components/ui/toaster1.tsx
+./components/ui/dialog.tsx
+./components/ui/select.tsx
+./components/ui/date-range.tsx
+./components/ui/label.tsx
+./components/ui/heading.tsx
+./components/ui/pagination.tsx
+./components/ui/dropdown-menu.tsx
+./components/ui/scroll-area.tsx
+./components/ui/card.tsx
+./components/ui/timeline.tsx
+./components/ui/switch.tsx
+./components/ui/checkbox.tsx
+
+14.4 Shared Components
+./components/Table.tsx
+./components/TableHelper.tsx
+./components/SearchInput.tsx
+./components/BackButton.tsx
+./components/PageHeader.tsx
+./components/EmptyState.tsx
+./components/Table/PaginationControls.tsx
+./components/Table/TableHeader.tsx
+./components/skeletons/DetailSkeleton.tsx
+./components/skeletons/ListSkeleton.tsx
+./components/skeletons/ProviderDetailSkeleton.tsx
+./components/user-info.tsx
+./components/form-success.tsx
+./components/form-error.tsx
+./components/toast/portal-toasty.tsx
+./components/toast/toast-context.tsx
+./components/theme-toggle.tsx
+./components/theme-customizer.tsx
+
+14.5 Scripts & Tools
+./scripts/vas_provider_processor.py
+./scripts/parking_service_processor.py
+./scripts/email_processor.py
+./scripts/vas-import/utils/ParkingImportUtils.ts
+./scripts/vas-import/processors/ExcelProcessor.tsx
+./scripts/vas-import/VasImportService.tsx
+./scripts/vas-import/getOrCreateContract.tsx
+./scripts/vas-import/ParkingServiceProcessor.tsx
+./scripts/parsemail.py
+./scripts/data/vas_output.csv
+./scripts/data/parking_output.csv
+./scripts/python-eml.py
+./scripts/eml_parse.py
+./scripts/msg_parse.py
+
+14.6 App Structure
+./app/layout.tsx
+./app/page.tsx
+./app/icon.png
+./app/globals.css
+./app/fonts/GeistMonoVF.woff
+./app/fonts/GeistVF.woff
+./app/(protected)/layout.tsx
+./app/(protected)/_components/newbar.tsx
+./app/(protected)/_components/sidebar.tsx
+./app/(protected)/_components/navbar.tsx
+
+14.7 Data Schemas
+./schemas/index.ts
+./schemas/auth.ts
+./schemas/security.ts
+./schemas/notification.ts
+./schemas/analytics.ts
+./data/user.ts
+./data/account.ts
+./data/verification-token.ts
+./data/password-reset-token.ts
+./data/two-factor-token.ts
+./data/two-factor-confirmation.ts
+./data/complaint.ts
 
 
 
